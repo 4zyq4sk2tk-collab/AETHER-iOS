@@ -1,0 +1,73 @@
+name: AETHER Native iOS ARM64 IPA Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Compile Native ARM64 Mach-O iOS App & Package Hardened IPA
+        shell: zsh {0}
+        run: |
+          set -euo pipefail
+          SDK_PATH="$(xcrun --sdk iphoneos --show-sdk-path)"
+          echo "Using iPhoneOS SDK: $SDK_PATH"
+
+          rm -rf build-ios AETHER-iOS.ipa
+          mkdir -p build-ios/Payload/AETHER.app/www
+
+          xcrun --sdk iphoneos clang \
+            -arch arm64 \
+            -isysroot "$SDK_PATH" \
+            -miphoneos-version-min=15.0 \
+            -fobjc-arc \
+            -O2 \
+            -framework UIKit \
+            -framework WebKit \
+            -framework SafariServices \
+            -framework Foundation \
+            ios/main.m \
+            -o build-ios/Payload/AETHER.app/AETHER
+
+          chmod +x build-ios/Payload/AETHER.app/AETHER
+          xcrun strip -rSTx build-ios/Payload/AETHER.app/AETHER
+          file build-ios/Payload/AETHER.app/AETHER
+
+          cp ios/Info.plist build-ios/Payload/AETHER.app/Info.plist
+          plutil -convert binary1 build-ios/Payload/AETHER.app/Info.plist
+          printf "APPL????" > build-ios/Payload/AETHER.app/PkgInfo
+
+          cp apple-touch-icon.png build-ios/Payload/AETHER.app/AppIcon60x60@2x.png
+          cp apple-touch-icon.png build-ios/Payload/AETHER.app/AppIcon60x60@3x.png
+
+          cp index.html aether-data-bundle.js manifest.json sw.js apple-touch-icon.png apple-touch-icon.svg build-ios/Payload/AETHER.app/www/
+
+          codesign --force --deep --sign - --timestamp=none build-ios/Payload/AETHER.app
+          (cd build-ios && ditto -c -k --sequesterRsrc --keepParent Payload ../AETHER-iOS.ipa)
+          ls -lh AETHER-iOS.ipa
+
+      - name: Upload AETHER-iOS IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AETHER-iOS
+          path: AETHER-iOS.ipa
+          retention-days: 30
+
+      - name: Publish IPA to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v3.0.0-ios
+          name: "AETHER iOS v3.0 (Native ARM64 Mach-O Sideload IPA + Direct Phone Live Engine)"
+          files: AETHER-iOS.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

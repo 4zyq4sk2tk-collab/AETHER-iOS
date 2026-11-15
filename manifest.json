@@ -1,0 +1,26 @@
+{
+  "name": "AETHER // Intelligence Beyond Markets",
+  "short_name": "AETHER",
+  "description": "69 Küresel/Yerel Varlık, 621 BIST Hissesi ve %65 Kasa Zırhı + %35 Asimetrik Sepet Bağımsız iOS Terminali",
+  "start_url": "./?source=ios-app",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#030305",
+  "theme_color": "#030305",
+  "lang": "tr-TR",
+  "icons": [
+    {
+      "src": "./apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./apple-touch-icon.svg",
+      "sizes": "180x180 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

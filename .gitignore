@@ -1,0 +1,8 @@
+node_modules/
+www/
+trained_daily_model.json
+mkk_float_ledger.json
+realtime_anomaly_log.json
+AETHER-Sideload.ipa
+AETHER-iOS.ipa
+*.log
