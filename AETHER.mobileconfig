@@ -16,9 +16,9 @@
       <key>Label</key>
       <string>AETHER</string>
       <key>PayloadDescription</key>
-      <string>AETHER Yatırım, Portföy ve Reel Getiri Uygulaması (Tam Ekran Bağımsız iOS Sürümü)</string>
+      <string>AETHER — Enflasyona Karşı Akıllı Sepet ve Yatırım Rehberi</string>
       <key>PayloadDisplayName</key>
-      <string>AETHER Yatırım Uygulaması</string>
+      <string>AETHER iOS Uygulaması</string>
       <key>PayloadIdentifier</key>
       <string>com.aether.market.webclip</string>
       <key>PayloadType</key>
@@ -34,9 +34,9 @@
     </dict>
   </array>
   <key>PayloadDescription</key>
-  <string>AETHER Yatırım &amp; Portföy v4.0 — Piyasa Özeti, 69 Yatırım Aracı Reel Getiri Analizi, Kişisel Portföy Takibi ve 621 BIST Bilanço Tarayıcısı</string>
+  <string>AETHER Tam Ekran Bağımsız iOS Uygulaması — Çevrimdışı Önbellek ve Canlı Piyasa Akışı</string>
   <key>PayloadDisplayName</key>
-  <string>AETHER Yatırım v4.0 iOS Paketi</string>
+  <string>AETHER iOS Uygulama Paketi</string>
   <key>PayloadIdentifier</key>
   <string>com.aether.market.profile</string>
   <key>PayloadOrganization</key>

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aether-ios-standalone-v5';
+const CACHE_NAME = 'aether-ios-standalone-v7';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -35,23 +35,23 @@ self.addEventListener('fetch', (event) => {
 
   if (url.pathname.endsWith('/api/market-data')) {
     event.respondWith(
-      fetch(req)
+      fetch(req, { cache: 'no-store' })
         .then((res) => {
           if (res && res.ok) {
             const clone = res.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+            caches.open(CACHE_NAME).then((cache) => cache.put('./api/market-data', clone));
           }
           return res;
         })
-        .catch(() => caches.match(req))
+        .catch(() => caches.match('./api/market-data'))
     );
     return;
   }
 
   if (url.origin === self.location.origin) {
     event.respondWith(
-      caches.match(req).then((cachedRes) => {
-        const netPromise = fetch(req)
+      caches.match(req, { ignoreSearch: true }).then((cachedRes) => {
+        const netPromise = fetch(req, { cache: 'no-cache' })
           .then((res) => {
             if (res && res.ok) {
               const clone = res.clone();
@@ -59,12 +59,12 @@ self.addEventListener('fetch', (event) => {
             }
             return res;
           })
-          .catch(() => cachedRes || caches.match('./index.html'));
+          .catch(() => cachedRes || caches.match('./index.html', { ignoreSearch: true }));
 
         if (!cachedRes) return netPromise;
 
         const timeoutFallback = new Promise((resolve) =>
-          setTimeout(() => resolve(cachedRes), 1600)
+          setTimeout(() => resolve(cachedRes), 1400)
         );
         return Promise.race([netPromise, timeoutFallback]);
       })

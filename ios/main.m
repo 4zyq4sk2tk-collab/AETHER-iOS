@@ -12,12 +12,24 @@
     return UIStatusBarStyleLightContent;
 }
 
+- (void)openExternalSafariSheet:(NSURL *)url {
+    if (!url) return;
+    NSString *scheme = [url.scheme lowercaseString];
+    if ([scheme isEqualToString:@"http"] || [scheme isEqualToString:@"https"]) {
+        SFSafariViewController *sf = [[SFSafariViewController alloc] initWithURL:url];
+        sf.preferredBarTintColor = [UIColor colorWithRed:7.0/255.0 green:8.0/255.0 blue:13.0/255.0 alpha:1.0];
+        sf.preferredControlTintColor = [UIColor colorWithRed:96.0/255.0 green:165.0/255.0 blue:250.0/255.0 alpha:1.0];
+        [self presentViewController:sf animated:YES completion:nil];
+    }
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
-    UIColor *obsidian = [UIColor colorWithRed:3.0/255.0 green:3.0/255.0 blue:5.0/255.0 alpha:1.0];
+    UIColor *obsidian = [UIColor colorWithRed:7.0/255.0 green:8.0/255.0 blue:13.0/255.0 alpha:1.0];
     self.view.backgroundColor = obsidian;
 
     WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
+    config.websiteDataStore = [WKWebsiteDataStore defaultDataStore];
     config.allowsInlineMediaPlayback = YES;
     @try {
         [config.preferences setValue:@YES forKey:@"allowFileAccessFromFileURLs"];
@@ -50,21 +62,39 @@
         [self.webView loadFileURL:indexUrl allowingReadAccessToURL:wwwDir];
     } else {
         NSURL *cloudUrl = [NSURL URLWithString:@"https://4zyq4sk2tk-collab.github.io/AETHER-iOS/?source=ios-native"];
-        [self.webView loadRequest:[NSURLRequest requestWithURL:cloudUrl]];
+        if (cloudUrl) {
+            [self.webView loadRequest:[NSURLRequest requestWithURL:cloudUrl]];
+        }
     }
+}
+
+- (void)webView:(WKWebView *)webView
+decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction
+decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
+    NSURL *url = navigationAction.request.URL;
+    if (!url) {
+        decisionHandler(WKNavigationActionPolicyCancel);
+        return;
+    }
+    NSString *scheme = [url.scheme lowercaseString];
+    if ([scheme isEqualToString:@"file"] || [scheme isEqualToString:@"about"] || [scheme isEqualToString:@"data"]) {
+        decisionHandler(WKNavigationActionPolicyAllow);
+        return;
+    }
+    if (navigationAction.navigationType == WKNavigationTypeLinkActivated &&
+        ([scheme isEqualToString:@"http"] || [scheme isEqualToString:@"https"])) {
+        [self openExternalSafariSheet:url];
+        decisionHandler(WKNavigationActionPolicyCancel);
+        return;
+    }
+    decisionHandler(WKNavigationActionPolicyAllow);
 }
 
 - (WKWebView *)webView:(WKWebView *)webView
 createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
    forNavigationAction:(WKNavigationAction *)navigationAction
         windowFeatures:(WKWindowFeatures *)windowFeatures {
-    NSURL *url = navigationAction.request.URL;
-    if (url && ([url.scheme isEqualToString:@"http"] || [url.scheme isEqualToString:@"https"])) {
-        SFSafariViewController *sf = [[SFSafariViewController alloc] initWithURL:url];
-        sf.preferredBarTintColor = [UIColor colorWithRed:6.0/255.0 green:9.0/255.0 blue:19.0/255.0 alpha:1.0];
-        sf.preferredControlTintColor = [UIColor colorWithRed:56.0/255.0 green:189.0/255.0 blue:248.0/255.0 alpha:1.0];
-        [self presentViewController:sf animated:YES completion:nil];
-    }
+    [self openExternalSafariSheet:navigationAction.request.URL];
     return nil;
 }
 
@@ -78,7 +108,7 @@ createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
-    self.window.backgroundColor = [UIColor colorWithRed:3.0/255.0 green:3.0/255.0 blue:5.0/255.0 alpha:1.0];
+    self.window.backgroundColor = [UIColor colorWithRed:7.0/255.0 green:8.0/255.0 blue:13.0/255.0 alpha:1.0];
     self.window.rootViewController = [[AetherViewController alloc] init];
     [self.window makeKeyAndVisible];
     return YES;

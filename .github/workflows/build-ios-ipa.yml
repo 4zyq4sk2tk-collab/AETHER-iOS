@@ -66,8 +66,8 @@ jobs:
       - name: Publish IPA to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v4.0.0-ios
-          name: "AETHER Yatırım & Portföy v4.0 (Tam Optimize Native ARM64 iOS IPA)"
+          tag_name: v6.0.0-ios
+          name: "AETHER v6.0 — Enflasyona Karşı Akıllı Sepet & Yatırım Rehberi (ARM64 iOS IPA)"
           files: AETHER-iOS.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
