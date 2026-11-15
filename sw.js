@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aether-ios-standalone-v4';
+const CACHE_NAME = 'aether-ios-standalone-v5';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -33,13 +33,14 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(req.url);
 
-  // API istekleri: Önce ağdan canlı çekip önbelleğe yaz, sunucu kapalıysa anında önbellekten dön
   if (url.pathname.endsWith('/api/market-data')) {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+          if (res && res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+          }
           return res;
         })
         .catch(() => caches.match(req))
@@ -47,11 +48,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Uygulama kabuğu (index.html, aether-data-bundle.js): Önce cihaz önbelleğinden 0.02 sn'de anında aç, arka planda güncelle (Stale-While-Revalidate)
   if (url.origin === self.location.origin) {
     event.respondWith(
       caches.match(req).then((cachedRes) => {
-        const networkFetch = fetch(req)
+        const netPromise = fetch(req)
           .then((res) => {
             if (res && res.ok) {
               const clone = res.clone();
@@ -60,7 +60,13 @@ self.addEventListener('fetch', (event) => {
             return res;
           })
           .catch(() => cachedRes || caches.match('./index.html'));
-        return cachedRes || networkFetch;
+
+        if (!cachedRes) return netPromise;
+
+        const timeoutFallback = new Promise((resolve) =>
+          setTimeout(() => resolve(cachedRes), 1600)
+        );
+        return Promise.race([netPromise, timeoutFallback]);
       })
     );
   }

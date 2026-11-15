@@ -16,9 +16,9 @@
       <key>Label</key>
       <string>AETHER</string>
       <key>PayloadDescription</key>
-      <string>AETHER Tam Ekran Bağımsız iOS Yatırım ve Kasa Zırhı Uygulaması (PC ve Wi-Fi Bağımsız)</string>
+      <string>AETHER Yatırım, Portföy ve Reel Getiri Uygulaması (Tam Ekran Bağımsız iOS Sürümü)</string>
       <key>PayloadDisplayName</key>
-      <string>AETHER iOS Uygulaması</string>
+      <string>AETHER Yatırım Uygulaması</string>
       <key>PayloadIdentifier</key>
       <string>com.aether.market.webclip</string>
       <key>PayloadType</key>
@@ -26,7 +26,7 @@
       <key>PayloadUUID</key>
       <string>556F026D-7AD7-4665-B85F-B5C8A49F9EE9</string>
       <key>PayloadVersion</key>
-      <integer>3</integer>
+      <integer>4</integer>
       <key>Precomposed</key>
       <true/>
       <key>URL</key>
@@ -34,13 +34,13 @@
     </dict>
   </array>
   <key>PayloadDescription</key>
-  <string>AETHER // Tam Ekran Bağımsız iOS Uygulaması — Kalıcı HTTPS + Offline ServiceWorker ile PC ve Wi-Fi Kapalıyken 0.01 sn'de Açılır, 69 Küresel/Yerel Varlık ve 621 BIST Hissesini 4.5G/5G Üzerinden Canlı Çeker</string>
+  <string>AETHER Yatırım &amp; Portföy v4.0 — Piyasa Özeti, 69 Yatırım Aracı Reel Getiri Analizi, Kişisel Portföy Takibi ve 621 BIST Bilanço Tarayıcısı</string>
   <key>PayloadDisplayName</key>
-  <string>AETHER // Tam Ekran Bağımsız iOS App Paketi</string>
+  <string>AETHER Yatırım v4.0 iOS Paketi</string>
   <key>PayloadIdentifier</key>
   <string>com.aether.market.profile</string>
   <key>PayloadOrganization</key>
-  <string>AETHER Intelligence</string>
+  <string>AETHER</string>
   <key>PayloadRemovalDisallowed</key>
   <false/>
   <key>PayloadType</key>
@@ -48,6 +48,6 @@
   <key>PayloadUUID</key>
   <string>9A4E1120-7AD7-4665-B85F-B5C8A49F9ED5</string>
   <key>PayloadVersion</key>
-  <integer>3</integer>
+  <integer>4</integer>
 </dict>
 </plist>
