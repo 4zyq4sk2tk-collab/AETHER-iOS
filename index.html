@@ -633,8 +633,68 @@
       font-size: 12px;
     }
     .auto-sched-row:last-child { border-bottom: none; }
+
+    /* SADE KADEMELİ AÇILIM (PROGRESSIVE DISCLOSURE) VE AKILLI PARA KARTLARI */
+    details.clean-fold {
+      background: var(--bg-input);
+      border: 1px solid var(--border-hairline);
+      border-radius: 13px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    details.clean-fold > summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 11px 13px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      user-select: none;
+    }
+    details.clean-fold > summary::-webkit-details-marker { display: none; }
+    details.clean-fold > summary::after {
+      content: '▾';
+      font-size: 13px;
+      color: var(--text-muted);
+      transition: transform 0.16s var(--spring);
+    }
+    details.clean-fold[open] > summary {
+      color: #fff;
+      border-bottom: 1px solid var(--border-hairline);
+    }
+    details.clean-fold[open] > summary::after { transform: rotate(180deg); }
+
+    .compass-hero {
+      background: radial-gradient(circle at 90% 10%, rgba(16, 185, 129, 0.14), transparent 48%),
+                  radial-gradient(circle at 10% 90%, rgba(59, 130, 246, 0.12), transparent 46%),
+                  linear-gradient(170deg, #131828 0%, #0c0f19 100%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 12px 34px rgba(0, 0, 0, 0.36);
+    }
+    .compass-3col {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 9px;
+      margin-top: 12px;
+    }
+    .radar-2col {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
     @media (max-width: 720px) {
       .auto-struct-grid { grid-template-columns: 1fr; gap: 8px; }
+      .compass-3col { grid-template-columns: 1fr; gap: 8px; }
+      .radar-2col { grid-template-columns: 1fr; gap: 10px; }
       .seg-item { font-size: 11.5px; padding: 0 5px; }
     }
     .seg-item:hover { color: var(--text-secondary); }
@@ -1433,9 +1493,9 @@
       </div>
 
       <nav class="desktop-nav" aria-label="Ana Menü">
-        <button class="nav-btn active" data-tab="kesfet" onclick="switchTab('kesfet')">Keşfet</button>
-        <button class="nav-btn" data-tab="sepet" onclick="switchTab('sepet')">Faiz vs Sepet</button>
-        <button class="nav-btn" data-tab="varliklar" onclick="switchTab('varliklar')">Araçları Tanı <span class="nav-badge" id="navAssetCount">69</span></button>
+        <button class="nav-btn active" data-tab="kesfet" onclick="switchTab('kesfet')">Pusula</button>
+        <button class="nav-btn" data-tab="sepet" onclick="switchTab('sepet')">Planla</button>
+        <button class="nav-btn" data-tab="varliklar" onclick="switchTab('varliklar')">Araçlar <span class="nav-badge" id="navAssetCount">69</span></button>
         <button class="nav-btn" data-tab="bist" onclick="switchTab('bist')">Şirketler <span class="nav-badge" id="navBistCount">619</span></button>
         <button class="nav-btn" data-tab="portfoy" onclick="switchTab('portfoy')">Kasam <span class="nav-badge" id="navPortCount">0</span></button>
       </nav>
@@ -1454,57 +1514,51 @@
 
   <!-- ANA İÇERİK -->
   <main class="app-main">
-    <!-- ==================== SEKME 1: KEŞFET (HİKAYELER + CANLI ERİME KANITI + REHBER) ==================== -->
+    <!-- ==================== SEKME 1: PUSULA (AKILLI SERMAYE DÖNGÜSÜ + SÜRÜDEN ÖNCE GÖR + 30SN HİKAYELER) ==================== -->
     <section id="tab-kesfet" class="tab-panel active">
-      <!-- 30 SANİYELİK GÜNLÜK PİYASA VE PARANI KORUMA HİKAYELERİ -->
       <div class="sec-bar" style="margin-bottom:6px;">
-        <h2 class="sec-title">30 Saniyede Bugün Ne Oldu?</h2>
-        <span class="dim" style="font-size:11.5px;">Dokun ve izle</span>
+        <h2 class="sec-title">30 Saniyede Özeti İzle</h2>
+        <span class="dim" style="font-size:11.5px;">Dokun ve öğren</span>
       </div>
       <div id="storyRailBox" class="story-rail"></div>
 
-      <!-- ENFLASYON KARŞISINDA PARANIN ERİMESİ VE DOĞRU SEPETİN KORUMASI (CANLI GRAFİK) -->
-      <div id="erosionHeroBox" class="erosion-hero"></div>
+      <!-- KALIPSIZ EKONOMİST PUSULASI: 2 MİLYON TL BUGÜN NASIL KONUMLANIR? -->
+      <div id="smartCompassBox" class="compass-hero"></div>
 
-      <!-- CANLI PİYASA NABZI -->
+      <!-- İLK ONLAR GELİR, İLK ONLAR ÇIKAR: SÜRÜDEN ÖNCE GÖR RADARI -->
       <div class="sec-bar">
-        <h2 class="sec-title">Güncel Piyasa Nabzı</h2>
+        <h2 class="sec-title">Sürüden Önce Gör: Ucuzlayanlar &amp; Isınanlar</h2>
+        <button class="link-btn" onclick="bistActiveFilter='smart_entry';switchTab('bist')">Tüm Fırsatlar →</button>
+      </div>
+      <div id="smartRadarBox" class="radar-2col"></div>
+
+      <!-- 6 TEMEL PİYASA FİYATI -->
+      <div class="sec-bar">
+        <h2 class="sec-title">Güncel Piyasa Fiyatları</h2>
         <button class="link-btn" onclick="switchTab('varliklar')">69 Aracın Tümü →</button>
       </div>
       <div id="piyasaPulseGrid" class="pulse-grid"></div>
 
-      <!-- SADECE FAİZ BİLENLER İÇİN 3 ADIMDA YENİ YAKLAŞIM -->
-      <div class="sec-bar">
-        <h2 class="sec-title">Faiz Harici Nasıl Başarılı Olunur?</h2>
-        <button class="link-btn" onclick="switchTab('sepet')">Simülatörü Aç →</button>
-      </div>
-      <div id="guidedStepsBox" class="step-grid"></div>
-
-      <!-- DÖNEMİN ENFLASYONU YENEN VE ERİYEN ARAÇLARI -->
-      <div class="surface surface-pad">
-        <div class="sec-bar" style="flex-wrap:wrap;">
-          <h2 class="sec-title">Alım Gücünü Büyütenler &amp; Eritenler</h2>
-          <div class="seg-bar inline" id="kesfetPeriodBar"></div>
-        </div>
-        <div class="seg-bar mob-only" style="margin-bottom:10px;" id="piyasaLeaderToggle">
-          <button class="seg-item active" data-lt="win" onclick="setPiyasaLeaderMode('win')">Enflasyonu Yenenler</button>
-          <button class="seg-item" data-lt="lose" onclick="setPiyasaLeaderMode('lose')">Alım Gücü Eriyenler</button>
-        </div>
-        <div id="piyasaLeadersBox"></div>
-        <div id="piyasaBreadthFoot" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border-hairline);display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--text-secondary);"></div>
-      </div>
+      <!-- 5 YILLIK ENFLASYON ERİMESİ VS AKILLI SEPET KANITI -->
+      <div id="erosionHeroBox" class="erosion-hero"></div>
     </section>
 
-    <!-- ==================== SEKME 2: FAİZ VS SEPET & OTOMATİK VADE/KUPON MOTORU ==================== -->
+    <!-- ==================== SEKME 2: PLANLA (ÖZGÜRLÜK YOLU + SEPET VS FAİZ + NE YATACAK?) ==================== -->
     <section id="tab-sepet" class="tab-panel">
       <div class="seg-bar" style="margin-bottom:12px;" id="toolsSubNav">
-        <button class="seg-item active" data-tool="duel" onclick="setToolSubTab('duel')">Faiz vs Sepet</button>
-        <button class="seg-item" data-tool="coupon" onclick="setToolSubTab('coupon')">Oto Kupon &amp; Vade</button>
-        <button class="seg-item" data-tool="compare" onclick="setToolSubTab('compare')">Araç Kıyasla</button>
+        <button class="seg-item active" data-tool="freedom" onclick="setToolSubTab('freedom')">Özgürlük Yolu</button>
+        <button class="seg-item" data-tool="duel" onclick="setToolSubTab('duel')">Sepet vs Faiz</button>
+        <button class="seg-item" data-tool="coupon" onclick="setToolSubTab('coupon')">Ne Yatacak?</button>
+        <button class="seg-item" data-tool="compare" onclick="setToolSubTab('compare')">Yarıştır</button>
+      </div>
+
+      <!-- MOD 0: FARE KAPANINDAN ÇIKIŞ & ZAMAN ÖZGÜRLÜĞÜ PLANLAYICISI -->
+      <div id="toolFreedomPane">
+        <div class="surface surface-pad" id="freedomEngineBox"></div>
       </div>
 
       <!-- MOD 1: TEK TUŞLA "PARAMI FAİZDE TUTSAYDIM NE OLURDU, BU SEPETTE TUTTUM NE OLDU" -->
-      <div id="toolDuelPane">
+      <div id="toolDuelPane" style="display:none;">
         <div class="surface surface-pad" style="margin-bottom:12px;">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
             <div>
@@ -1620,16 +1674,16 @@
               <p class="dim" style="font-size:12px;">Vade sonunda faizden daha kârlı çıkmak için gereken başabaş seviyeleri</p>
             </div>
             <div class="chip-rail">
-              <button class="chip" onclick="setCalcQuickPrin(250000)">250 Bin ₺</button>
               <button class="chip" onclick="setCalcQuickPrin(500000)">500 Bin ₺</button>
               <button class="chip" onclick="setCalcQuickPrin(1000000)">1 Milyon ₺</button>
+              <button class="chip" onclick="setCalcQuickPrin(2000000)">2 Milyon ₺</button>
             </div>
           </div>
 
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:12px;">
             <div>
               <label style="display:block;font-size:11.5px;color:var(--text-secondary);margin-bottom:4px;">Anapara (₺)</label>
-              <input type="number" id="calcPrinInp" class="inp mono" value="1000000" step="50000" min="1000" oninput="scheduleCalcRender()" />
+              <input type="number" id="calcPrinInp" class="inp mono" value="2000000" step="50000" min="1000" oninput="scheduleCalcRender()" />
             </div>
             <div>
               <label style="display:block;font-size:11.5px;color:var(--text-secondary);margin-bottom:4px;">Bekleme Süresi (Gün)</label>
@@ -1677,7 +1731,7 @@
           </div>
           <button class="btn-secondary" id="assetSettingsBtn" onclick="openAssetSettingsSheet()">
             <svg class="ico" viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="8" cy="6" r="2" fill="#0f1119"/><circle cx="16" cy="12" r="2" fill="#0f1119"/><circle cx="10" cy="18" r="2" fill="#0f1119"/></svg>
-            <span id="assetSettingsSummary" class="num-tab">Net · 1M ₺</span>
+            <span id="assetSettingsSummary" class="num-tab">Net · 2M ₺</span>
           </button>
         </div>
 
@@ -1750,11 +1804,11 @@
   <nav class="mobile-tabbar" aria-label="Alt Menü">
     <button class="mob-tab active" data-tab="kesfet" onclick="switchTab('kesfet')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
-      <span>Keşfet</span>
+      <span>Pusula</span>
     </button>
     <button class="mob-tab" data-tab="sepet" onclick="switchTab('sepet')">
       <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-7"/></svg>
-      <span>Faiz vs Sepet</span>
+      <span>Planla</span>
     </button>
     <button class="mob-tab" data-tab="varliklar" onclick="switchTab('varliklar')">
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
@@ -1796,21 +1850,26 @@
     let activeTab = 'kesfet';
     let piyasaLeaderMode = 'win';
     let pfSubTab = 'holdings';
-    let toolSubTab = 'duel';
+    let toolSubTab = 'freedom';
 
-    let activeStageIdx = 4;       // Varsayılan 1 Yıl (faiz yanılsamasını ve reel farkı en net gösteren ufuk)
-    let heroErosionStageIdx = 6;  // Keşfet Enflasyon Erimesi grafiği için varsayılan 5 Yıl (6A, 1Y, 3Y, 5Y tek tıkla seçilebilir)
-    let heroErosionAmount = 500000;
+    let compassAmount = 2000000;  // Varsayılan 2 Milyon ₺ akıllı sermaye referansı
+    let freedomStartTL = 2000000;
+    let freedomMonthlyAddTL = 30000;
+    let freedomTargetMonthlyTL = 60000;
+
+    let activeStageIdx = 4;       // Varsayılan 1 Yıl
+    let heroErosionStageIdx = 6;  // 5 Yıllık tam döngü kanıtı
+    let heroErosionAmount = 2000000;
 
     // Faiz vs Sepet Tek Tuş Karşılaştırma Motoru Durumu
-    let duelAmount = 500000;
+    let duelAmount = 2000000;
     let duelStageIdx = 6;         // 0:1H, 1:1A, 2:3A, 3:6A, 4:1Y, 5:3Y, 6:5Y
-    let duelPresetKey = 'balanced';
+    let duelPresetKey = 'adaptive';
     let duelCustomOpen = false;
-    let customMix = { cash: 20, gold: 35, global: 25, bist: 20 };
+    let customMix = { cash: 35, gold: 25, global: 20, bist: 20 };
 
     let pfBenchStageIdx = 4;
-    let currentPrincipal = 1000000;
+    let currentPrincipal = 2000000;
     let currentTaxMode = 'net';   // 'net' | 'gross'
     let currentUsdMode = 'tl';    // 'tl' | 'page'
     let currentAssetChip = 'all';
@@ -1844,19 +1903,19 @@
     const STAGE_DAYS = [7, 32, 92, 182, 365, 1095, 1825];
 
     const BASKET_PRESETS = {
-      cautious: {
-        label: 'Temkinli İlk Adım',
-        desc: 'Faizden yeni çıkanlar için düşük dalgalanmalı geçiş sepeti',
-        weights: { cash: 40, gold: 35, global: 15, bist: 10 }
+      adaptive: {
+        label: 'Kalıpsız Döngü Planı',
+        desc: 'Tek bir kalıba sıkışmadan: vergisiz nakit cephane + indirimde üretim + altın kalkanı',
+        weights: { cash: 35, gold: 25, global: 20, bist: 20 }
       },
       balanced: {
-        label: 'Dengeli Koruma Sepeti',
+        label: 'Dengeli Koruma',
         desc: 'Hem enflasyon kalkanı hem dünya ve Türkiye şirket büyümesi',
         weights: { cash: 20, gold: 35, global: 25, bist: 20 }
       },
       growth: {
-        label: 'Üretim & Büyüme Sepeti',
-        desc: 'Uzun vadede şirket ortaklığı ve teknoloji ağırlıklı birikim',
+        label: 'Üretim & Büyüme',
+        desc: 'Uzun vadede şirket ortaklığı ve küresel büyüme ağırlıklı birikim',
         weights: { cash: 10, gold: 25, global: 40, bist: 25 }
       },
       shield: {
@@ -2922,8 +2981,8 @@
       if (!Number.isFinite(n)) return '—';
       const abs = Math.abs(n);
       const sign = n < 0 ? '-' : '';
-      if (abs >= 1e9) return sign + fmtNum(abs / 1e9, 2) + ' Milyar ₺';
-      if (abs >= 1e6) return sign + fmtNum(abs / 1e6, 2) + ' Milyon ₺';
+      if (abs >= 1e9) return sign + fmtNum(abs / 1e9, Math.abs(abs % 1e9) < 1e7 ? 0 : 2) + ' Milyar ₺';
+      if (abs >= 1e6) return sign + fmtNum(abs / 1e6, Math.abs(abs % 1e6) < 1e4 ? 0 : 2) + ' Milyon ₺';
       if (abs >= 1e4) return sign + fmtNum(abs / 1e3, 0) + ' Bin ₺';
       return fmtTL(n, 0);
     }
@@ -2954,7 +3013,7 @@
         return fmtNum(n, 0);
       }
       if (n >= 1000000) return fmtNum(n / 1e6, 2) + ' Mn ₺';
-      const dec = n >= 1000 ? 0 : n < 10 ? 3 : 2;
+      const dec = n >= 1000 ? 0 : 2;
       return fmtNum(n, dec) + ' ₺';
     }
 
@@ -2964,7 +3023,7 @@
     window.__AETHER_CONN_MODE__ = 'INIT';
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=6.2', { updateViaCache: 'none' }).then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=7.0', { updateViaCache: 'none' }).then((reg) => {
           reg.update().catch(() => {});
         }).catch(() => {});
       });
@@ -2999,22 +3058,56 @@
       return null;
     }
 
+    const CLIENT_PARTIAL_3Y_IDS = new Set([
+      'bist-temettu-25', 'halka-arz-altny', 'halka-arz-rgyas', 'fon-degisken-isglk', 'gayrimenkul-gyo-fonu-optgy'
+    ]);
+    const CLIENT_PARTIAL_5Y_IDS = new Set([
+      'altin-sertifikasi', 'bist-temettu-25', 'halka-arz-altny', 'halka-arz-tabgd', 'halka-arz-rgyas',
+      'fon-yerli-bist30-apx30', 'fon-tematik-surdurulebilirlik-zsr25', 'fon-degisken-isglk',
+      'gayrimenkul-gyo-fonu-optgy', 'reel-enerji-astor', 'reel-enerji-cwene', 'reel-enerji-smrtg', 'reel-yazilim-miatk'
+    ]);
+    const CLIENT_USD_ETF_DIV_YIELD = {
+      'eurobond-emb': 4.8,
+      'abd-sp500-spy': 1.3,
+      'dunya-borsalari-vt': 1.9,
+      'abd-nasdaq-qqq': 0.6,
+      'fon-tematik-yari-iletken-soxx': 0.7
+    };
+
+    function getTurkishDepositStopajPct(days) {
+      const d = Number(days) || 32;
+      if (d <= 182) return 17.5; // 6 aya kadar (dahil)
+      if (d <= 365) return 15.0; // 1 yıla kadar (dahil)
+      return 10.0;               // 1 yıldan uzun vadeli
+    }
+
     function rebuildFastIndex(data) {
       instById = new Map();
       metricsMemo.clear();
       dataRevision++;
       if (!data || !Array.isArray(data.instruments)) return;
+
+      // Önbellekte eski 2024 enflasyon paydası kalmışsa resmi TÜİK 2022-2026 serisiyle anında onar
+      const cpiYoyLive = Number(data.macro?.cpiYoy) || 29.77;
+      if (!data.inflationBenchmarks) data.inflationBenchmarks = {};
+      data.inflationBenchmarks.perf1Y = cpiYoyLive;
+      data.inflationBenchmarks.perf3Y = +(((1 + 0.4438) * (1 + 0.3089) * (1 + cpiYoyLive / 100) - 1) * 100).toFixed(2);
+      data.inflationBenchmarks.perf5Y = +(((1 + 0.6427) * (1 + 0.6477) * (1 + 0.4438) * (1 + 0.3089) * (1 + cpiYoyLive / 100) - 1) * 100).toFixed(2);
+
       const usdChg = Number(data.instruments.find(x => x.id === 'doviz-usd')?.change1D) || 0;
       const WITHHOLDING_175_IDS = new Set(['eurobond-usdtr', 'altin-fonu-zgold', 'altin-fonu-gldtr', 'gumus-fonu-gmstr', 'fon-degisken-isglk']);
       const ZERO_TAX_BOND_IDS = new Set(['dibs-tahvil', 'kira-sertifikasi-sukuk']);
 
       for (const inst of data.instruments) {
-        // Önceki localStorage önbelleklerindeki eski vergi, bileşik mod ve birim kayıtlarını anında onar
         if (WITHHOLDING_175_IDS.has(inst.id)) inst.taxRatePct = 17.5;
         if (ZERO_TAX_BOND_IDS.has(inst.id)) inst.taxRatePct = 0;
+        if (CLIENT_PARTIAL_3Y_IDS.has(inst.id)) inst.isPartial3Y = true;
+        if (CLIENT_PARTIAL_5Y_IDS.has(inst.id)) inst.isPartial5Y = true;
+
         if (inst.id === 'dibs-tahvil') {
           inst.compoundingMode = 'annual_compounded';
           inst.unitLabel = 'Yıllık Bileşik Faiz %';
+          inst.change1D = +((Math.pow(1 + (Number(inst.currentPrice) || 0) / 100, 1 / 365) - 1) * 100).toFixed(2);
         } else if (inst.id === 'kira-sertifikasi-sukuk') {
           inst.compoundingMode = 'bond_coupon';
           inst.unitLabel = 'Yıllık Basit Kira %';
@@ -3023,8 +3116,6 @@
         }
         if (inst.id === 'fon-degisken-isglk') {
           inst.categoryId = 2;
-          inst.isPartial3Y = true;
-          inst.isPartial5Y = true;
         }
         if (/^(AMEX|NASDAQ|OTC|NYSE):/i.test(String(inst.symbol || ''))) {
           inst.taxRegime = 'declaration';
@@ -3032,7 +3123,7 @@
         if (!isValidNum(inst.change1D)) {
           inst.change1D = inst.isRateInstrument
             ? +((Number(inst.currentPrice) || 0) / 365).toFixed(2)
-            : +((Number(inst.perf1W) || 0) / 5).toFixed(2);
+            : 0;
         }
         if (inst.isUsdAsset && !isValidNum(inst.tlChange1D)) {
           inst.tlChange1D = +((((1 + (inst.change1D || 0) / 100) * (1 + usdChg / 100)) - 1) * 100).toFixed(2);
@@ -3150,7 +3241,7 @@
                 symbols: { tickers: globalTickers },
                 columns: [
                   'name','close','change',
-                  'Perf.W','Perf.1M','Perf.3M','Perf.6M','Perf.Y','Perf.3Y','Perf.5Y',
+                  'Perf.W','Perf.1M','Perf.3M','Perf.6M','Perf.Y','Perf.3Y','Perf.5Y','Perf.All',
                   'ChaikinMoneyFlow','RSI','relative_volume_10d_calc','average_volume_10d_calc','average_volume_30d_calc'
                 ]
               })
@@ -3189,12 +3280,12 @@
               const gJson = await gRes.json();
               for (const row of (gJson.data || [])) {
                 const d = row.d || [];
-                const v10 = d[13] || 0;
-                const v30 = d[14] || 0;
+                const v10 = d[14] || 0;
+                const v30 = d[15] || 0;
                 rawGlobal[row.s] = {
                   name: d[0], close: d[1], change1D: d[2],
-                  perf1W: d[3], perf1M: d[4], perf3M: d[5], perf6M: d[6], perf1Y: d[7], perf3Y: d[8], perf5Y: d[9],
-                  cmf20: d[10], rsi: d[11], relVol: d[12],
+                  perf1W: d[3], perf1M: d[4], perf3M: d[5], perf6M: d[6], perf1Y: d[7], perf3Y: d[8], perf5Y: d[9], perfAll: d[10],
+                  cmf20: d[11], rsi: d[12], relVol: d[13],
                   volRatio: v30 > 0 ? +(v10 / v30).toFixed(2) : 1.0
                 };
               }
@@ -3244,28 +3335,41 @@
             'DOVIZ:CHF': 'FX_IDC:CHFTRY'
           };
 
+          const stageYearsMap = { perf1W: 0, perf1M: 0, perf3M: 0.25, perf6M: 0.5, perf1Y: 1, perf3Y: 3, perf5Y: 5 };
           for (const inst of marketData.instruments) {
             const tvKey = symToTvMap[inst.symbol] || inst.symbol;
             const g = rawGlobal[tvKey];
             if (g && isValidNum(g.close)) {
               if (inst.isRateInstrument) {
                 inst.currentPrice = +g.close.toFixed(2);
-                inst.change1D = +(inst.currentPrice / 365).toFixed(2);
+                inst.change1D = inst.id === 'dibs-tahvil'
+                  ? +((Math.pow(1 + inst.currentPrice / 100, 1 / 365) - 1) * 100).toFixed(2)
+                  : +(inst.currentPrice / 365).toFixed(2);
               } else {
                 inst.currentPrice = +g.close.toFixed(inst.currentPrice < 10 ? 4 : 2);
                 if (isValidNum(g.change1D)) {
                   inst.change1D = +g.change1D.toFixed(2);
                   if (inst.isUsdAsset) inst.tlChange1D = compoundPct(g.change1D, usdChg1D);
                 }
+                if (!inst.fundamentals) inst.fundamentals = {};
+                if (isValidNum(g.rsi)) inst.fundamentals.rsi = +g.rsi.toFixed(1);
+                if (isValidNum(g.cmf20)) inst.fundamentals.cmf = +g.cmf20.toFixed(3);
+                inst.isPartial3Y = CLIENT_PARTIAL_3Y_IDS.has(inst.id) || Boolean(g.perf3Y == null || (g.perfAll != null && Math.abs(g.perf3Y - g.perfAll) < 1.5));
+                inst.isPartial5Y = CLIENT_PARTIAL_5Y_IDS.has(inst.id) || Boolean(g.perf5Y == null || (g.perfAll != null && Math.abs(g.perf5Y - g.perfAll) < 1.5));
               }
+              const divAnn = CLIENT_USD_ETF_DIV_YIELD[inst.id] || 0;
               for (const k of STAGE_KEYS) {
                 if (isValidNum(g[k]) && !inst.isRateInstrument) {
                   if (inst.isUsdAsset) {
                     if (!inst.pagePerf) inst.pagePerf = {};
                     if (!inst.tlPerf) inst.tlPerf = {};
-                    inst.pagePerf[k] = +g[k].toFixed(2);
+                    const yrs = stageYearsMap[k] || 0;
+                    const adjUsd = divAnn > 0 && yrs > 0
+                      ? +((((1 + g[k] / 100) * Math.pow(1 + divAnn / 100, yrs)) - 1) * 100).toFixed(2)
+                      : +g[k].toFixed(2);
+                    inst.pagePerf[k] = adjUsd;
                     const fxP = usdTryRow?.[k] ?? marketData.usdTryPerf?.[k] ?? 0;
-                    inst.tlPerf[k] = compoundPct(g[k], fxP);
+                    inst.tlPerf[k] = compoundPct(adjUsd, fxP);
                   } else {
                     inst[k] = +g[k].toFixed(2);
                   }
@@ -3273,7 +3377,7 @@
               }
               updatedAssetsCount++;
             } else if (['gram-altin-spot', 'ceyrek-altin', 'cumhuriyet-altini', 'bilezik-22-ayar'].includes(inst.id) && liveGramGold > 1000) {
-              const mult = inst.id === 'ceyrek-altin' ? 1.635 : inst.id === 'cumhuriyet-altini' ? 6.66 : inst.id === 'bilezik-22-ayar' ? 0.916 : 1.0;
+              const mult = inst.id === 'ceyrek-altin' ? 1.651 : inst.id === 'cumhuriyet-altini' ? 6.755 : inst.id === 'bilezik-22-ayar' ? 0.946 : 1.0;
               inst.currentPrice = +(liveGramGold * mult).toFixed(2);
               inst.change1D = gramGoldChg1D;
               if (goldOnsRow && usdTryRow) {
@@ -3463,16 +3567,20 @@
       return 'rollover32';
     }
 
-    // Tam matematiksel sabit getiri hesaplayıcı (Sunucu calcFixedIncomePeriods ile %100 özdeş)
+    // Tam matematiksel sabit getiri hesaplayıcı (Sunucu calcFixedIncomePeriods ile %100 özdeş — 2021-2026 gerçek TCMB/stopaj serisi)
     function computeFixedIncomeReturnPct(annualRatePct, days, mode = 'rollover32', taxRatePct = 17.5, applyTax = true) {
       const r = (Number(annualRatePct) || 0) / 100;
       const tau = applyTax ? Math.max(0, (Number(taxRatePct) || 0) / 100) : 0;
       const spreadRatio = (Number(annualRatePct) || 36.0) / 36.0;
-      const rY3_1 = 0.28 * spreadRatio;
-      const rY3_2 = 0.47 * spreadRatio;
+      const rY3_1 = 0.465 * spreadRatio;
+      const rY3_2 = 0.435 * spreadRatio;
       const rY3_3 = r;
-      const rY5_1 = 0.175 * spreadRatio;
-      const rY5_2 = 0.145 * spreadRatio;
+      const rY5_1 = 0.16 * spreadRatio;
+      const rY5_2 = 0.24 * spreadRatio;
+      const tau22 = tau > 0 ? Math.min(tau, 0.05) : 0;
+      const tau23 = tau > 0 ? Math.min(tau, 0.05) : 0;
+      const tau24 = tau > 0 ? Math.min(tau, 0.075) : 0;
+      const tau25 = tau > 0 ? Math.min(tau, 0.15) : 0;
 
       if (mode === 'annual_compounded') {
         const yrFactor = (rComp, taxFrac) => {
@@ -3485,12 +3593,12 @@
           return +((factorDaysComp(r, days, tau) - 1) * 100).toFixed(2);
         }
         const c1 = (yrFactor(r, tau) - 1) * 100;
-        const c3 = (yrFactor(rY3_1, tau) * yrFactor(rY3_2, tau) * yrFactor(rY3_3, tau) - 1) * 100;
+        const c3 = (yrFactor(rY3_1, tau24) * yrFactor(rY3_2, tau25) * yrFactor(rY3_3, tau) - 1) * 100;
         if (days <= 1095) {
           const t = (days - 365) / (1095 - 365);
           return +(c1 + (c3 - c1) * t).toFixed(2);
         }
-        const c5 = (yrFactor(rY5_1, tau) * yrFactor(rY5_2, tau) * yrFactor(rY3_1, tau) * yrFactor(rY3_2, tau) * yrFactor(rY3_3, tau) - 1) * 100;
+        const c5 = (yrFactor(rY5_1, tau22) * yrFactor(rY5_2, tau23) * yrFactor(rY3_1, tau24) * yrFactor(rY3_2, tau25) * yrFactor(rY3_3, tau) - 1) * 100;
         const t = Math.min(1, (days - 1095) / (1825 - 1095));
         return +(c3 + (c5 - c3) * t).toFixed(2);
       }
@@ -3525,12 +3633,12 @@
         return +((factorDays(r, days, tau) - 1) * 100).toFixed(2);
       }
       const c1 = (factorDays(r, 365, tau) - 1) * 100;
-      const c3 = (factorDays(rY3_1, 365, tau) * factorDays(rY3_2, 365, tau) * factorDays(rY3_3, 365, tau) - 1) * 100;
+      const c3 = (factorDays(rY3_1, 365, tau24) * factorDays(rY3_2, 365, tau25) * factorDays(rY3_3, 365, tau) - 1) * 100;
       if (days <= 1095) {
         const t = (days - 365) / (1095 - 365);
         return +(c1 + (c3 - c1) * t).toFixed(2);
       }
-      const c5 = (factorDays(rY5_1, 365, tau) * factorDays(rY5_2, 365, tau) * factorDays(rY3_1, 365, tau) * factorDays(rY3_2, 365, tau) * factorDays(rY3_3, 365, tau) - 1) * 100;
+      const c5 = (factorDays(rY5_1, 365, tau22) * factorDays(rY5_2, 365, tau23) * factorDays(rY3_1, 365, tau24) * factorDays(rY3_2, 365, tau25) * factorDays(rY3_3, 365, tau) - 1) * 100;
       const t = Math.min(1, (days - 1095) / (1825 - 1095));
       return +(c3 + (c5 - c3) * t).toFixed(2);
     }
@@ -3887,16 +3995,14 @@
       const usdD1 = instById.get('doviz-usd')?.change1D ?? 0;
       const goldD1 = instById.get('gram-altin-spot')?.change1D ?? 0;
       const bistD1 = instById.get('bist-100')?.change1D ?? 0;
-      const spyInst = instById.get('abd-sp500-spy');
-      const spyTl1Y = spyInst ? computeAssetStageMetrics(spyInst, 4).tlNetPct : 29;
 
       const grossRate = customDepositRate || m.tcmbUpperRate || 39;
       const netRate1Y = computeFixedIncomeReturnPct(grossRate, 365, 'rollover32', 17.5, true);
       const grossRate1Y = computeFixedIncomeReturnPct(grossRate, 365, 'rollover32', 17.5, false);
       const cpiY = Number(m.cpiYoy) || 29.77;
 
-      // 1 Milyon TL üzerinde 1 yıllık faiz yanılsaması hesabı
-      const exPrin = 1000000;
+      // 2 Milyon TL üzerinde 1 yıllık faiz yanılsaması hesabı
+      const exPrin = 2000000;
       const exGrossGain = exPrin * (grossRate1Y / 100);
       const exNetGain = exPrin * (netRate1Y / 100);
       const exTax = Math.max(0, exGrossGain - exNetGain);
@@ -3904,23 +4010,23 @@
       const exRealPocket = (exPrin + exNetGain) - (exPrin + exInfRepair);
 
       // 5 Yıllık 100 Market Poşeti testi (tam enflasyon döngüsü)
-      const sim5Y = evaluateBasketVsDeposit(500000, 6, 'balanced');
-      const bagsCash = Math.max(1, Math.round((sim5Y.cashRealEndTL / 500000) * 100));
-      const bagsDep = Math.max(1, Math.round((sim5Y.depRealEndTL / 500000) * 100));
-      const bagsBasket = Math.max(1, Math.round((sim5Y.basketRealEndTL / 500000) * 100));
+      const sim5Y = evaluateBasketVsDeposit(2000000, 6, 'adaptive');
+      const bagsCash = Math.max(1, Math.round((sim5Y.cashRealEndTL / 2000000) * 100));
+      const bagsDep = Math.max(1, Math.round((sim5Y.depRealEndTL / 2000000) * 100));
+      const bagsBasket = Math.max(1, Math.round((sim5Y.basketRealEndTL / 2000000) * 100));
 
       return [
         {
           id: 'today_pulse',
           tag: '30 sn',
           title: 'Bugün Piyasada',
-          sub: `Altın ${fmtNum(gold, 0)} ₺ · Dolar ${fmtNum(usd, 2)} ₺`,
+          sub: `Altın ${fmtNum(gold, 0)} ₺ · $${fmtNum(usd, 2)}`,
           iconSvg: `<svg class="ico" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>`,
           slides: [
             {
               kicker: 'GÜNÜN ÖZETİ · 1/3',
               headline: 'Bugün cebini etkileyen 3 rakam ne yaptı?',
-              body: 'Uzun haber bültenlerine gerek yok. Bugün döviz, altın ve Türkiye borsasında tablo şöyle:',
+              body: 'Karmaşık bültenlere gerek yok. Döviz, altın ve Türkiye borsasında anlık tablo:',
               visualHtml: `
                 <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
                   <div class="stat-box" style="display:flex;justify-content:space-between;align-items:center;">
@@ -3941,48 +4047,48 @@
             {
               kicker: 'GÜNÜN ÖZETİ · 2/3',
               headline: 'Enflasyon barajı şu an nerede?',
-              body: `Yıllık resmi hayat pahalılığı (TÜFE) %${fmtNum(cpiY, 1)}. Yani paran bir yılda en az %${fmtNum(cpiY, 1)} büyümezse, hesabındaki rakam artsa bile markette daha az ürün alabiliyorsun.`,
+              body: `Yıllık resmi hayat pahalılığı (TÜFE) %${fmtNum(cpiY, 1)}. Yani paran bir yılda en az %${fmtNum(cpiY, 1)} büyümezse, ekrandaki TL artsa bile alım gücün küçülür.`,
               visualHtml: `
                 <div class="stat-box" style="text-align:center;padding:16px;margin-top:12px;">
                   <div class="dim" style="font-size:12px;">Paranın Erime Sınırı (Yıllık Baraj)</div>
                   <div class="num-tab warn" style="font-size:34px;font-weight:800;margin:6px 0;">%${fmtNum(cpiY, 1)}</div>
-                  <div class="muted" style="font-size:12px;">Bu oranın altındaki her getiri gerçekte alım gücü kaybıdır.</div>
+                  <div class="muted" style="font-size:12px;">Bu barajın altındaki her getiri gerçekte erimedir.</div>
                 </div>
               `
             },
             {
               kicker: 'GÜNÜN ÖZETİ · 3/3',
-              headline: 'Tek bir araca bel bağlama',
-              body: 'Bazı aylar faiz öne geçer, bazı aylar altın veya dünya şirketleri sıçrar. Kazananlar "neresi yükselecek" diye tahmin oynayanlar değil, doğru sepet kuranlardır.',
-              ctaLabel: 'Faiz vs Sepet Farkını Gör →',
-              ctaFn: `closeStoryPlayer();switchTab('sepet');`
+              headline: 'Kendine sabit kalıp biçme',
+              body: 'Ne körü körüne faizde uyu, ne de tüm paranla tek bir hisseye dal. Akıllı sermaye, döngü neredeyse orada su gibi konumlanır.',
+              ctaLabel: '2M ₺ Döngü Pusulasını Gör →',
+              ctaFn: `closeStoryPlayer();switchTab('kesfet');`
             }
           ]
         },
         {
           id: 'interest_illusion',
           tag: 'Kritik',
-          title: 'Faiz Yanılsaması',
-          sub: 'Gelen faiz kâr değildir!',
+          title: '2M ₺ Faiz Tuzağı',
+          sub: 'Faizi harcarsan erirsin!',
           iconSvg: `<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/></svg>`,
           slides: [
             {
               kicker: 'FAİZ YANILSAMASI · 1/3',
-              headline: 'Hesaba yatan faizi harcarsan ne olur?',
-              body: 'Pek çok kişi 1.000.000 ₺’sini bankaya koyup her ay gelen faizi "maaş gibi kâr" sanarak harcar. Oysa o paranın neredeyse tamamı ana paranın enflasyon tamiridir!',
+              headline: '2.000.000 ₺’nin faizini maaş gibi harcarsan ne olur?',
+              body: 'Pek çok kişi 2 Milyon ₺’yi bankaya koyup gelen aylık faizi "bedava maaş" sanarak harcar. Oysa o paranın neredeyse tamamı anaparanın enflasyon tamiridir!',
               visualHtml: `
                 <div class="stat-box" style="margin-top:12px;">
-                  <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">1 Milyon ₺'nin 1 Yıllık Faiz Dağılımı:</div>
+                  <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;">2 Milyon ₺'nin 1 Yıllık Mevduat Dağılımı:</div>
                   <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px;">
                     <span class="neg">1. Vergiye Kesilen (%17,5):</span>
                     <strong class="num-tab neg">-${fmtTL(exTax, 0)}</strong>
                   </div>
                   <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px;">
-                    <span class="warn">2. Enflasyon Tamiri (Anapara Koruması):</span>
+                    <span class="warn">2. Enflasyon Tamiri (Dokunulmaz):</span>
                     <strong class="num-tab warn">${fmtTL(exInfRepair, 0)}</strong>
                   </div>
                   <div style="display:flex;justify-content:space-between;font-size:13px;padding-top:6px;border-top:1px solid var(--border-hairline);">
-                    <span>Gerçekten Cebine Kalan Net Fark:</span>
+                    <span>Gerçekten Harcanabilir Net Fazla:</span>
                     <strong class="num-tab ${pctCls(exRealPocket)}">${exRealPocket >= 0 ? '+' : ''}${fmtTL(exRealPocket, 0)}</strong>
                   </div>
                 </div>
@@ -3990,16 +4096,16 @@
             },
             {
               kicker: 'FAİZ YANILSAMASI · 2/3',
-              headline: 'Gizli vergi tuzağı: Enflasyonun da vergisini ödüyorsun!',
-              body: 'Devlet %17,5 stopajı sadece reel kazancından değil, enflasyon telafisinden de keser. Altın sertifikasında (S1), fiziki altında ve yerli hisse fonlarında ise bu vergi %0’dır.',
+              headline: 'Neden boş yere %17,5 vergi ödeyesin?',
+              body: 'Standart vadeli mevduatta devlet brüt kazancından %17,5 stopaj keser. Oysa Hazine Kira Sertifikası (Sukuk), DİBS, Darphane Altın (S1) ve Yerli Hisse Fonlarında bu vergi %0’dır.',
               visualHtml: `
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
                   <div class="stat-box" style="text-align:center;">
-                    <div class="dim" style="font-size:11px;">Vadeli Mevduat Vergisi</div>
+                    <div class="dim" style="font-size:11px;">32G Vadeli Mevduat Vergisi</div>
                     <div class="num-tab neg" style="font-size:24px;font-weight:800;margin-top:4px;">%17,5</div>
                   </div>
                   <div class="stat-box" style="text-align:center;">
-                    <div class="dim" style="font-size:11px;">Altın &amp; Hisse Yoğun Fon</div>
+                    <div class="dim" style="font-size:11px;">Sukuk · S1 · Yerli Hisse Fonu</div>
                     <div class="num-tab pos" style="font-size:24px;font-weight:800;margin-top:4px;">%0,0</div>
                   </div>
                 </div>
@@ -4007,102 +4113,74 @@
             },
             {
               kicker: 'FAİZ YANILSAMASI · 3/3',
-              headline: 'Çözüm faizi tamamen sıfırlamak değil, rolünü bilmek',
-              body: 'Faiz ve Günlük Para Fonu sadece "acil durum ve fırsat nakdi" içindir. Serveti asıl büyütenler ise altın, dünya şirketleri ve üreten Türk şirketleridir.',
-              ctaLabel: 'Kendi Paranda Hesapla →',
-              ctaFn: `closeStoryPlayer();switchTab('sepet');`
+              headline: 'Nakit cephane vergisiz tutulur, fırsat gelince vurulur',
+              body: 'Nakit kısmını %0 vergili kira/tahvil veya günlük fonda beklet; kalabalık korkup ucuzlattığında sağlam üretim varlıklarına kademeli geç.',
+              ctaLabel: 'Vergisiz Getiriyi Hesapla →',
+              ctaFn: `closeStoryPlayer();switchTab('sepet');setToolSubTab('coupon');`
             }
           ]
         },
         {
-          id: 'market_bag_test',
-          tag: 'Hayat',
-          title: '100 Market Poşeti',
-          sub: `5 yılda ${bagsCash} poşete erime`,
-          iconSvg: `<svg class="ico" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`,
+          id: 'smart_cycle',
+          tag: 'Strateji',
+          title: 'İlk Gir, İlk Çık',
+          sub: 'Sürü gibi davranma',
+          iconSvg: `<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>`,
           slides: [
             {
-              kicker: 'MARKET POŞETİ TESTİ · 1/2',
-              headline: '5 yıl önce 100 market poşeti dolduran paran bugün kaç poşet dolduruyor?',
-              body: 'Rakamları boşver; mutfağa giren poşet sayısına bakalım:',
+              kicker: 'AKILLI SERMAYE · 1/2',
+              headline: 'Kalabalık neden hep tepede alır, dipte satar?',
+              body: 'Çoğunluk bir varlığı haberlerde rekor kırarken duyar ve coşkuyla en pahalıdan alır. Faiz yüksekken ise borsadaki en kârlı fabrikaların bile yüzüne bakmaz.',
+              visualHtml: `
+                <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px;font-size:12.5px;">
+                  <div class="stat-box"><strong class="neg">Kalabalığın Yaptığı:</strong> Faiz yüksekken sadece mevduatta uyur; borsa 2 katına çıkınca tepeden girer.</div>
+                  <div class="stat-box" style="border-color:rgba(16,185,129,0.35);"><strong class="pos">Akıllı Paranın Yaptığı:</strong> Herkes faizdeyken %25-%35 indirimdeki kârlı şirketleri sessizce toplar; herkes konuşurken kârını alır.</div>
+                </div>
+              `
+            },
+            {
+              kicker: 'AKILLI SERMAYE · 2/2',
+              headline: 'Tüyo değil, soğukkanlı veri radarı',
+              body: 'Kasası nakit dolu, kâr üreten ama zirvesinden %20+ ucuzlamış şirketleri ve aşırı ısınan varlıkları senin için canlı tarıyoruz.',
+              ctaLabel: 'Ucuzlayan Sağlamları Aç →',
+              ctaFn: `closeStoryPlayer();bistActiveFilter='smart_entry';switchTab('bist');`
+            }
+          ]
+        },
+        {
+          id: 'time_freedom',
+          tag: 'Özgürlük',
+          title: 'Zaman Özgürlüğü',
+          sub: `100 poşet → ${bagsBasket} poşet`,
+          iconSvg: `<svg class="ico" viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>`,
+          slides: [
+            {
+              kicker: 'FARE KAPANINDAN ÇIKIŞ · 1/2',
+              headline: 'Amaç kısa yoldan hayal peşinde koşmak değil, zamanını geri almaktır',
+              body: '5 yıl önce 100 market poşeti dolduran paranın bugün gerçekte kaç poşet doldurduğuna bak:',
               visualHtml: `
                 <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
                   <div class="stat-box" style="display:flex;justify-content:space-between;align-items:center;">
-                    <span>Vadesiz / Nakitte Bekleyen</span>
+                    <span>Vadesiz Nakitte Bekleyen</span>
                     <strong class="num-tab neg">100 → ${bagsCash} Poşet</strong>
                   </div>
                   <div class="stat-box" style="display:flex;justify-content:space-between;align-items:center;">
                     <span>Sadece Banka Faizinde Kalan</span>
-                    <strong class="num-tab ${bagsDep >= 100 ? 'pos' : 'warn'}">100 → ${bagsDep} Poşet</strong>
+                    <strong class="num-tab warn">100 → ${bagsDep} Poşet</strong>
                   </div>
                   <div class="stat-box" style="display:flex;justify-content:space-between;align-items:center;border-color:rgba(16,185,129,0.4);">
-                    <span>Dengeli Sepette Duran</span>
+                    <span>Kalıpsız Döngü Sepeti</span>
                     <strong class="num-tab pos">100 → ${bagsBasket} Poşet</strong>
                   </div>
                 </div>
               `
             },
             {
-              kicker: 'MARKET POŞETİ TESTİ · 2/2',
-              headline: 'Neden dengeli sepet poşet sayısını artırdı?',
-              body: 'Çünkü sepetteki Altın ve Dünya Şirketleri kur sıçramalarını yakaladı; Türk şirketleri sattıkları ürünlere zam yaptıkça kârlarını büyüttü; günlük fon ise düşüşlerde nakit kalkanı oldu.',
-              ctaLabel: '5 Yıllık Grafiği Aç →',
-              ctaFn: `closeStoryPlayer();duelStageIdx=6;switchTab('sepet');`
-            }
-          ]
-        },
-        {
-          id: 'own_business',
-          tag: 'Mantık',
-          title: 'Şirket Ortağı Ol',
-          sub: 'Kasa çalışsın, sen kazan',
-          iconSvg: `<svg class="ico" viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>`,
-          slides: [
-            {
-              kicker: 'ÜRETİME ORTAKLIK · 1/2',
-              headline: 'Borsa kumar değildir; mahalledeki en işlek markete ortak olmaktır',
-              body: 'Kıraathanede tüyo ile al-sat yapmak kumardır. Ama kasası nakit dolu, her gün milyonlarca insana ürün satan sağlam bir şirkete veya ABD S&P 500 fonuna ortak olmak gerçek ticarettir.',
-              visualHtml: `
-                <div class="stat-box" style="margin-top:12px;line-height:1.55;font-size:12.5px;">
-                  <div>• Market kasasındaki ürün zamlandığında <strong>şirketin cirosu da artar.</strong></div>
-                  <div style="margin-top:6px;">• Apple ve Microsoft dünyada dolarla büyüdüğünde <strong>senin payın da dolarla büyür (` + fmtPct(spyTl1Y, 1) + ` / 1Y TL).</strong></div>
-                </div>
-              `
-            },
-            {
-              kicker: 'ÜRETİME ORTAKLIK · 2/2',
-              headline: 'İyi şirketi 5 saniyede nasıl anlarsın?',
-              body: 'Uygulamadaki "Şirketler" sekmesinde sıkıcı muhasebe tablolarını kaldırdık: Şirket kendini kaç yılda amorti ediyor ve kasasında borcundan fazla nakit var mı, tek bakışta görebilirsin.',
-              ctaLabel: 'Nakit Zengini Şirketleri Gör →',
-              ctaFn: `closeStoryPlayer();bistActiveFilter='net_cash';switchTab('bist');`
-            }
-          ]
-        },
-        {
-          id: 'three_buckets',
-          tag: 'Rehber',
-          title: '3 Kova Kuralı',
-          sub: 'Korkmadan sepet kur',
-          iconSvg: `<svg class="ico" viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>`,
-          slides: [
-            {
-              kicker: '3 KOVA KURALI · 1/2',
-              headline: 'Faizden çıkarken tüm paranla tek bir şeye girme!',
-              body: 'Başarılı yatırımcılar parayı 3 ayrı kovaya böler; böylece borsa düştüğünde paniklemez, kur fırladığında geride kalmaz:',
-              visualHtml: `
-                <div style="display:flex;flex-direction:column;gap:7px;margin-top:10px;font-size:12px;">
-                  <div class="stat-box"><strong style="color:#60a5fa;">1. Huzur Kovası (%20-%40):</strong> Günlük Para Fonu — Acil ihtiyaç ve düşüşlerde alım fırsatı için.</div>
-                  <div class="stat-box"><strong style="color:#fbbf24;">2. Kalkan Kovası (%30-%35):</strong> Altın &amp; Döviz Tahvili — Kur ve enflasyon şoklarına karşı sigorta.</div>
-                  <div class="stat-box"><strong style="color:#34d399;">3. Büyüme Kovası (%30-%45):</strong> Dünya Şirketleri (S&amp;P 500) + Kârlı Türk Şirketleri.</div>
-                </div>
-              `
-            },
-            {
-              kicker: '3 KOVA KURALI · 2/2',
-              headline: 'Şimdi tek tuşla kendi kasana uygula',
-              body: 'Hazır şablonlardan birini seçip oranlarla oynayabilir, ikna olduğun sepeti tek tuşla Kasam ekranına kaydedebilirsin.',
-              ctaLabel: 'Dengeli Sepeti Dene →',
-              ctaFn: `closeStoryPlayer();duelPresetKey='balanced';switchTab('sepet');`
+              kicker: 'FARE KAPANINDAN ÇIKIŞ · 2/2',
+              headline: 'Dünyayı gezmek için kaç yılın kaldı?',
+              body: 'Sermayenin enflasyon üstü gerçek üretimi aylık yaşam bütçeni karşıladığı gün kimseye mecbur değilsin. Gerçekçi matematiğini hemen gör.',
+              ctaLabel: 'Özgürlük Süremi Hesapla →',
+              ctaFn: `closeStoryPlayer();switchTab('sepet');setToolSubTab('freedom');`
             }
           ]
         }
@@ -4345,27 +4423,327 @@
     }
 
     /* =========================================================================
-       SEKME 1: KEŞFET (HİKAYELER + CANLI ENFLASYON ERİMESİ GRAFİĞİ + REHBER)
+       SEKME 1: PUSULA (KALIPSIZ 2M ₺ DÖNGÜ MOTORU + SÜRÜDEN ÖNCE GÖR RADARI)
        ========================================================================= */
-    function setPiyasaLeaderMode(mode) {
-      piyasaLeaderMode = mode;
-      document.querySelectorAll('#piyasaLeaderToggle .seg-item').forEach(b => {
-        b.classList.toggle('active', b.dataset.lt === mode);
+    function getSmartBistCandidates() {
+      const lookup = marketData?.kitchenIntelSummary?.openHorizon?.bistStockLookup || {};
+      const all = Object.values(lookup).filter(x => x && x.ticker && x.close > 0);
+      const undervalued = all.filter(st => {
+        if (st.entityKind === 'fin_other') return false;
+        const dd = Number(st.drawdown52WPct) || 0;
+        if (dd > -18) return false;
+        if (isValidNum(st.pb) && st.pb < 0) return false;
+        if (isValidNum(st.netDebtToEbitda) && st.netDebtToEbitda > 3.8) return false;
+        if (isValidNum(st.netIncomeMillionTL) && st.netIncomeMillionTL < 0) return false;
+        const goodProfit = (isValidNum(st.roe) && st.roe >= 12) || (isValidNum(st.pe) && st.pe >= 2.2 && st.pe <= 14);
+        const goodAssetDisc = (st.entityKind === 'holding' || st.entityKind === 'gyo') && isValidNum(st.pb) && st.pb > 0.15 && st.pb <= 0.85;
+        return goodProfit || goodAssetDisc;
+      }).sort((a, b) => {
+        const scoreA = (Math.min(45, Math.abs(a.drawdown52WPct || 0)) * 1.1) + (a.isNetCash ? 12 : 0) + Math.min(25, (a.marketCapBillionTL || 0) / 8);
+        const scoreB = (Math.min(45, Math.abs(b.drawdown52WPct || 0)) * 1.1) + (b.isNetCash ? 12 : 0) + Math.min(25, (b.marketCapBillionTL || 0) / 8);
+        return scoreB - scoreA;
       });
-      renderKesfetView();
+      return undervalued;
+    }
+
+    function computeAdaptiveCyclePlan(amountTL) {
+      const m = marketData?.macro || {};
+      const cpiNow = Number(m.cpiYoy) || 29.77;
+      const sukukInst = instById.get('kira-sertifikasi-sukuk');
+      const sukukRate = Number(sukukInst?.currentPrice) || ((Number(m.tcmbPolicyRate) || 36) + 0.5);
+      const sukukCompPct = computeFixedIncomeReturnPct(sukukRate, 365, 'bond_coupon', 0, true);
+      const realBondPct = +((((1 + sukukCompPct / 100) / (1 + cpiNow / 100)) - 1) * 100).toFixed(1);
+
+      const smartList = getSmartBistCandidates();
+      let cashPct = 35, prodPct = 40, goldPct = 25;
+      let regimeTag = 'VERGİSİZ REEL GETİRİ + SEÇİCİ İNDİRİM EVRESİ';
+      let summaryText = `Bugün %0 vergili kira/tahvil enflasyonun +%${fmtNum(Math.max(0, realBondPct), 1)} üzerinde gerçek kazanç üretirken, kalabalık faizde beklediği için ${smartList.length} sağlam şirket zirvesinden indirimde. Sabit bir kalıba sıkışma: cephaneni vergisiz büyüt, ucuzlayan üreticileri kademeli topla.`;
+
+      if (realBondPct < 1.5) {
+        cashPct = 15; prodPct = 50; goldPct = 35;
+        regimeTag = 'DÜŞÜK REEL FAİZ EVRESİ · ÜRETİM & KALKAN AĞIRLIKLI';
+        summaryText = 'TL getirisi enflasyon barajına yaklaştığında nakitte fazla beklemek erime yaratır. Ağırlık üreten şirketlere ve altın kalkanına kaydırılır.';
+      } else if (smartList.length < 15) {
+        cashPct = 40; prodPct = 30; goldPct = 30;
+        regimeTag = 'KORUMA & NAKİT CEPHANE BİRİKTİRME EVRESİ';
+        summaryText = 'Şirket çarpanları genel olarak pahalılaştığında kalabalığın peşinden koşulmaz; vergisiz nakit cephane ve altın kalkanı güçlendirilir.';
+      }
+
+      const cashTL = Math.round(amountTL * (cashPct / 100));
+      const prodTL = Math.round(amountTL * (prodPct / 100));
+      const goldTL = Math.max(0, amountTL - cashTL - prodTL);
+
+      const depGross = customDepositRate || Number(m.tcmbUpperRate) || 39.0;
+      const depGross1Y = computeFixedIncomeReturnPct(depGross, 365, 'rollover32', 17.5, false);
+      const depNet1Y = computeFixedIncomeReturnPct(depGross, 365, 'rollover32', 17.5, true);
+      const fullDepTaxTL = amountTL * ((depGross1Y - depNet1Y) / 100);
+      // Planın %85'i %0 vergili araçlarda (Sukuk + S1 + Yerli Hisse Fonu / Şirket), yalnız %15'i günlük PPF'de
+      const planTaxSavedTL = Math.round(fullDepTaxTL * 0.82);
+
+      return {
+        amountTL, cpiNow, sukukCompPct, realBondPct,
+        smartCount: smartList.length,
+        regimeTag, summaryText,
+        cashPct, prodPct, goldPct,
+        cashTL, prodTL, goldTL,
+        planTaxSavedTL
+      };
+    }
+
+    function renderSmartCompassCard() {
+      const box = document.getElementById('smartCompassBox');
+      if (!box || !marketData) return;
+
+      const plan = computeAdaptiveCyclePlan(compassAmount);
+      const amounts = [
+        { v: 500000, l: '500 Bin ₺' },
+        { v: 1000000, l: '1 Milyon ₺' },
+        { v: 2000000, l: '2 Milyon ₺' },
+        { v: 5000000, l: '5 Milyon ₺' }
+      ];
+
+      box.innerHTML = `
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+          <div>
+            <div style="display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:var(--pos-bright);background:var(--pos-soft);padding:2.5px 9px;border-radius:99px;margin-bottom:6px;letter-spacing:0.03em;">
+              ${escapeHtml(plan.regimeTag)}
+            </div>
+            <h2 style="font-size:19px;font-weight:800;letter-spacing:-0.025em;color:#fff;line-height:1.22;">
+              ${fmtCompactTL(compassAmount)} Bugün Nasıl Konumlanır?
+            </h2>
+          </div>
+          <div class="chip-rail">
+            ${amounts.map(a => `
+              <button class="chip ${Math.abs(compassAmount - a.v) < 5 ? 'active' : ''}" style="height:29px;font-size:11.5px;padding:0 10px;" onclick="compassAmount=${a.v};heroErosionAmount=${a.v};renderSmartCompassCard();renderErosionHeroCard();">${a.l}</button>
+            `).join('')}
+          </div>
+        </div>
+
+        <p class="muted" style="font-size:12.5px;line-height:1.5;margin-bottom:4px;">
+          ${escapeHtml(plan.summaryText)}
+        </p>
+
+        <div class="compass-3col">
+          <div class="stat-box" style="border-color:rgba(59,130,246,0.32);background:rgba(15,20,34,0.85);cursor:pointer;" onclick="openAssetDetailDrawer('kira-sertifikasi-sukuk')">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+              <span style="font-size:11.5px;font-weight:700;color:#60a5fa;">1. Vergisiz Cephane</span>
+              <span class="chg-pill info">%${plan.cashPct}</span>
+            </div>
+            <div class="num-tab" style="font-size:19px;font-weight:800;color:#fff;">${fmtTL(plan.cashTL, 0)}</div>
+            <div class="dim" style="font-size:11.5px;margin-top:4px;line-height:1.4;">
+              <strong style="color:#e2e8f0;">Hazine Sukuk (%0 Vergi) + Günlük Fon</strong> — Düşüşlerde alım yapmak için hazır, enflasyon üstü büyüyen nakit güç.
+            </div>
+          </div>
+
+          <div class="stat-box" style="border-color:rgba(16,185,129,0.34);background:rgba(16,185,129,0.06);cursor:pointer;" onclick="bistActiveFilter='smart_entry';switchTab('bist')">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+              <span style="font-size:11.5px;font-weight:700;color:#34d399;">2. İndirimde Üretim</span>
+              <span class="chg-pill pos">%${plan.prodPct}</span>
+            </div>
+            <div class="num-tab" style="font-size:19px;font-weight:800;color:#fff;">${fmtTL(plan.prodTL, 0)}</div>
+            <div class="dim" style="font-size:11.5px;margin-top:4px;line-height:1.4;">
+              <strong style="color:#e2e8f0;">Ucuzlayan Türk Şirketleri + ABD 500 Dev</strong> — Herkes faizdeyken ucuza toplanan gerçek dükkan ve dolar büyümesi.
+            </div>
+          </div>
+
+          <div class="stat-box" style="border-color:rgba(245,158,11,0.32);background:rgba(15,20,34,0.85);cursor:pointer;" onclick="openAssetDetailDrawer('altin-sertifikasi')">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+              <span style="font-size:11.5px;font-weight:700;color:#fbbf24;">3. Kur &amp; Kriz Kalkanı</span>
+              <span class="chg-pill warn">%${plan.goldPct}</span>
+            </div>
+            <div class="num-tab" style="font-size:19px;font-weight:800;color:#fff;">${fmtTL(plan.goldTL, 0)}</div>
+            <div class="dim" style="font-size:11.5px;margin-top:4px;line-height:1.4;">
+              <strong style="color:#e2e8f0;">Darphane Altın S1 / Gram Altın (%0 Vergi)</strong> — Kur sıçramasına ve küresel şoklara karşı kesintisiz sigorta.
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;padding-top:11px;border-top:1px solid var(--border-hairline);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <div class="num-tab muted" style="font-size:12px;">
+            Sadece vergili banka mevduatında kalmaya kıyasla yılda yaklaşık <strong class="pos">+${fmtTL(plan.planTaxSavedTL, 0)}</strong> stopaj vergisi cebinde kalır.
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn-secondary" onclick="freedomStartTL=${compassAmount};switchTab('sepet');setToolSubTab('freedom');">Özgürlük Sürem →</button>
+            <button class="btn-emerald" onclick="applyAdaptivePlanToKasam()">Bu Planı Kasama Kur</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function applyAdaptivePlanToKasam() {
+      const plan = computeAdaptiveCyclePlan(compassAmount);
+      const usdTry = Number(marketData?.macro?.usdTry) || 50.0;
+      const items = [];
+
+      const pushInst = (id, targetTL) => {
+        if (targetTL < 500) return;
+        const inst = instById.get(id);
+        if (!inst) return;
+        const meta = getAssetMeta(inst);
+        if (inst.isRateInstrument) {
+          items.push({
+            uid: 'pf_' + Math.random().toString(36).slice(2, 9),
+            kind: 'inst', id: inst.id, name: meta.title,
+            isRate: true, isUsd: false, qty: Math.round(targetTL),
+            unitCost: Number(inst.currentPrice) || 36.5,
+            daysElapsed: 0,
+            maturityDays: id === 'kira-sertifikasi-sukuk' ? 365 : 32,
+            rateStruct: id === 'kira-sertifikasi-sukuk' ? 'fixed_coupon' : 'daily_ppf'
+          });
+        } else {
+          const p = Number(inst.currentPrice) || 1;
+          const pTL = inst.isUsdAsset ? p * usdTry : p;
+          const qty = +(targetTL / pTL).toFixed(inst.isUsdAsset || p > 500 ? 4 : 2);
+          items.push({
+            uid: 'pf_' + Math.random().toString(36).slice(2, 9),
+            kind: 'inst', id: inst.id, name: meta.title,
+            isRate: false, isUsd: Boolean(inst.isUsdAsset),
+            qty, unitCost: p, entryUsdTry: usdTry
+          });
+        }
+      };
+
+      pushInst('kira-sertifikasi-sukuk', plan.cashTL * 0.60);
+      pushInst('para-piyasasi-fonu', plan.cashTL * 0.40);
+      pushInst('altin-sertifikasi', plan.goldTL);
+      pushInst('abd-sp500-spy', plan.prodTL * 0.50);
+      pushInst('fon-yerli-hisse-zpbdl', plan.prodTL * 0.50);
+
+      if (items.length > 0) {
+        userPortfolio = items;
+        isPortfolioSample = false;
+        persistPortfolio();
+        switchTab('portfoy');
+        showToast(`${fmtCompactTL(compassAmount)} Kalıpsız Döngü Planı Kasam ekranına kuruldu`);
+      }
+    }
+
+    function renderSmartRadarCard() {
+      const box = document.getElementById('smartRadarBox');
+      if (!box || !marketData) return;
+
+      const discountStocks = getSmartBistCandidates().slice(0, 4);
+      const lookup = marketData.kitchenIntelSummary?.openHorizon?.bistStockLookup || {};
+      const hotCandidates = [];
+
+      for (const inst of marketData.instruments) {
+        if (inst.isRateInstrument || inst.id.startsWith('doviz-') || String(inst.unitLabel || '').includes('Puan')) continue;
+        const rsi = Number(inst.fundamentals?.rsi) || 50;
+        const m3 = computeAssetStageMetrics(inst, 2).tlNetPct;
+        if (m3 >= 16 && (rsi >= 64 || m3 >= 22)) {
+          const meta = getAssetMeta(inst);
+          hotCandidates.push({
+            clickFn: `openAssetDetailDrawer('${inst.id}')`,
+            code: meta.code,
+            tone: meta.tone,
+            title: meta.title,
+            sub: `Son 3 ayda ${fmtPct(m3, 1)} yükseldi · Tepeden kovalama`,
+            priceTxt: fmtAssetPrice(inst.currentPrice, inst.unitLabel, inst.isUsdAsset, false),
+            pillTxt: `3A ${fmtPct(m3, 0)}`,
+            heatScore: rsi + Math.max(0, m3) * 0.75
+          });
+        }
+      }
+
+      for (const st of Object.values(lookup)) {
+        if (!st || (st.marketCapBillionTL || 0) < 12) continue;
+        const rsi = Number(st.rsi) || 50;
+        const m3 = Number(st.perf3M) || 0;
+        const m1 = Number(st.perf1M) || 0;
+        if (m3 >= 24 || (m1 >= 18 && rsi >= 66)) {
+          const runLbl = m3 >= 24 ? `Son 3 ayda ${fmtPct(m3, 0)} prim yaptı` : `Son 1 ayda ${fmtPct(m1, 0)} sıçradı`;
+          const pillLbl = m3 >= 24 ? `3A ${fmtPct(m3, 0)}` : `1A ${fmtPct(m1, 0)}`;
+          hotCandidates.push({
+            clickFn: `openBistDetailDrawer('${escapeHtml(st.ticker)}')`,
+            code: st.ticker.slice(0, 5),
+            tone: 'slate',
+            title: formatBistCompanyName(st.name, st.ticker),
+            sub: `${runLbl} · Tepeden kovalama`,
+            priceTxt: fmtNum(st.close, 2) + ' ₺',
+            pillTxt: pillLbl,
+            heatScore: rsi + Math.max(m1, m3) * 0.75
+          });
+        }
+      }
+      hotCandidates.sort((a, b) => b.heatScore - a.heatScore);
+      const topHot = hotCandidates.slice(0, 4);
+
+      box.innerHTML = `
+        <div class="surface" style="background:var(--bg-input);box-shadow:none;">
+          <div style="padding:10px 13px;border-bottom:1px solid var(--border-hairline);display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <span style="font-size:12.5px;font-weight:700;color:#fff;display:inline-flex;align-items:center;gap:7px;">
+              <i style="width:8px;height:8px;border-radius:50%;background:#34d399;display:inline-block;"></i>
+              Sürü Bakmazken Ucuzlayan Sağlamlar
+            </span>
+            <span class="dim" style="font-size:11px;">İlk Girilen Bölge</span>
+          </div>
+          ${discountStocks.map(st => {
+            const cleanName = formatBistCompanyName(st.name, st.ticker);
+            const why = st.isNetCash
+              ? `Kasası nakit dolu · Zirveden %${Math.abs(Math.round(st.drawdown52WPct))} indirimli`
+              : isValidNum(st.pe) && st.pe >= 2.2 && st.pe <= 14
+                ? `${fmtNum(st.pe, 1)} yılda amorti · Zirveden %${Math.abs(Math.round(st.drawdown52WPct))} aşağıda`
+                : `Özvarlığına göre indirimli · %${Math.abs(Math.round(st.drawdown52WPct))} geri çekildi`;
+            return `
+              <div class="list-row" style="grid-template-columns:minmax(0,1fr) auto;padding:9px 12px;gap:8px;" onclick="openBistDetailDrawer('${escapeHtml(st.ticker)}')">
+                <div class="row-main">
+                  <div class="avatar tone-slate" style="width:42px;height:34px;font-family:var(--font-mono);font-size:10px;">${escapeHtml(st.ticker)}</div>
+                  <div class="row-titles">
+                    <div class="row-name" style="font-size:13px;">${escapeHtml(cleanName)}</div>
+                    <div class="row-sub num-tab">${escapeHtml(why)}</div>
+                  </div>
+                </div>
+                <div class="r-right num-tab">
+                  <div style="font-size:12.5px;font-weight:700;color:#fff;">${fmtNum(st.close, 2)} ₺</div>
+                  <span class="chg-pill pos" style="font-size:10.5px;">%${Math.abs(Math.round(st.drawdown52WPct))} İndirim</span>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <div class="surface" style="background:var(--bg-input);box-shadow:none;">
+          <div style="padding:10px 13px;border-bottom:1px solid var(--border-hairline);display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <span style="font-size:12.5px;font-weight:700;color:#fff;display:inline-flex;align-items:center;gap:7px;">
+              <i style="width:8px;height:8px;border-radius:50%;background:#f59e0b;display:inline-block;"></i>
+              Kalabalığın Koştuğu / Isınanlar
+            </span>
+            <span class="dim" style="font-size:11px;">Tepeden Kovalama</span>
+          </div>
+          ${topHot.length ? topHot.map(h => `
+            <div class="list-row" style="grid-template-columns:minmax(0,1fr) auto;padding:9px 12px;gap:8px;" onclick="${h.clickFn}">
+              <div class="row-main">
+                <div class="avatar tone-${h.tone}" style="width:38px;height:34px;font-size:10px;">${escapeHtml(h.code)}</div>
+                <div class="row-titles">
+                  <div class="row-name" style="font-size:13px;">${escapeHtml(h.title)}</div>
+                  <div class="row-sub num-tab">${escapeHtml(h.sub)}</div>
+                </div>
+              </div>
+              <div class="r-right num-tab">
+                <div style="font-size:12.5px;font-weight:700;color:#fff;">${h.priceTxt}</div>
+                <span class="chg-pill warn" style="font-size:10.5px;">${escapeHtml(h.pillTxt)}</span>
+              </div>
+            </div>
+          `).join('') : `
+            <div style="padding:20px 14px;font-size:12px;color:var(--text-muted);text-align:center;">
+              Şu an aşırı ısınma bölgesinde varlık görünmüyor; piyasa dengeli seyrediyor.
+            </div>
+          `}
+        </div>
+      `;
     }
 
     function renderErosionHeroCard() {
       const box = document.getElementById('erosionHeroBox');
       if (!box || !marketData) return;
 
-      const sim = evaluateBasketVsDeposit(heroErosionAmount, heroErosionStageIdx, 'balanced');
+      const sim = evaluateBasketVsDeposit(heroErosionAmount, heroErosionStageIdx, 'adaptive');
       const { labels } = sim.axis;
       const allReal = [...sim.cashReal, ...sim.depReal, ...sim.basketReal, heroErosionAmount];
       const minV = Math.min(...allReal) * 0.92;
       const maxV = Math.max(...allReal) * 1.06;
 
-      const W = 680, H = 190, padL = 52, padR = 16, padT = 14, padB = 26;
+      const W = 680, H = 185, padL = 54, padR = 16, padT = 14, padB = 26;
       const pW = W - padL - padR;
       const pH = H - padT - padB;
       const toX = i => padL + (i / Math.max(1, labels.length - 1)) * pW;
@@ -4378,7 +4756,6 @@
       const basketArea = `${basketPath} L ${toX(labels.length - 1).toFixed(1)} ${(H - padB).toFixed(1)} L ${padL} ${(H - padB).toFixed(1)} Z`;
       const baseLineY = toY(heroErosionAmount);
 
-      // Market poşeti karşılığı (Başlangıç = 100 Market Poşeti)
       const cashBags = Math.max(1, Math.round((sim.cashRealEndTL / heroErosionAmount) * 100));
       const depBags = Math.max(1, Math.round((sim.depRealEndTL / heroErosionAmount) * 100));
       const basketBags = Math.max(1, Math.round((sim.basketRealEndTL / heroErosionAmount) * 100));
@@ -4387,10 +4764,10 @@
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
           <div>
             <div style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--pos-bright);background:var(--pos-soft);padding:2px 8px;border-radius:99px;margin-bottom:5px;">
-              CANLI ALIM GÜCÜ KANITI
+              GERÇEK VERİ KANITI (2021–2026)
             </div>
-            <h2 style="font-size:17.5px;font-weight:800;letter-spacing:-0.025em;color:#fff;line-height:1.25;">
-              Enflasyon Karşısında Paran: Erime mi, Koruma mı?
+            <h2 style="font-size:17px;font-weight:800;letter-spacing:-0.025em;color:#fff;line-height:1.25;">
+              100 Market Poşeti Testi: Sadece Faizde Kalan Ne Yaşadı?
             </h2>
             <p class="muted" style="font-size:12px;margin-top:2px;">
               Enflasyon düşüldükten sonra <strong>${fmtCompactTL(heroErosionAmount)}</strong> paranın bugünkü gerçek satın alma gücü:
@@ -4398,7 +4775,7 @@
           </div>
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
             <div class="seg-bar inline">
-              ${[3, 4, 5, 6].map(idx => `
+              ${[4, 5, 6].map(idx => `
                 <button class="seg-item ${heroErosionStageIdx === idx ? 'active' : ''}" onclick="heroErosionStageIdx=${idx};renderErosionHeroCard();">${STAGE_SHORT[idx]}</button>
               `).join('')}
             </div>
@@ -4407,9 +4784,9 @@
 
         <div style="background:rgba(7,8,13,0.62);border:1px solid var(--border-hairline);border-radius:14px;padding:10px 12px;">
           <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;margin-bottom:6px;">
-            <span style="color:#34d399;font-weight:700;">● Doğru Sepet (${fmtPct(sim.basketRealPct, 1)})</span>
-            <span style="color:#60a5fa;font-weight:600;">● Sadece Faiz (${fmtPct(sim.depRealPct, 1)})</span>
-            <span style="color:#f87171;font-weight:600;">- - Nakitte Bekleyen (${fmtPct(sim.cashRealPct, 1)})</span>
+            <span style="color:#34d399;font-weight:700;">● Döngü Sepeti (${fmtPct(sim.basketRealPct, 1)})</span>
+            <span style="color:#60a5fa;font-weight:600;">● Sadece Mevduat (${fmtPct(sim.depRealPct, 1)})</span>
+            <span style="color:#f87171;font-weight:600;">- - Vadesiz Nakit (${fmtPct(sim.cashRealPct, 1)})</span>
           </div>
           <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;">
             <defs>
@@ -4421,8 +4798,9 @@
             ${[0, 1, 2, 3].map(g => {
               const y = padT + (g / 3) * pH;
               const v = maxV - (g / 3) * (maxV - minV);
+              const axisLbl = v >= 1e6 ? fmtNum(v / 1e6, 1) + 'M ₺' : fmtNum(v / 1e3, 0) + 'B ₺';
               return `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-                      <text x="${padL - 6}" y="${y + 3.5}" text-anchor="end" fill="#64748b" font-size="10" font-family="Inter, -apple-system, sans-serif">${fmtNum(v / 1000, 0)}B ₺</text>`;
+                      <text x="${padL - 6}" y="${y + 3.5}" text-anchor="end" fill="#64748b" font-size="10" font-family="Inter, -apple-system, sans-serif">${axisLbl}</text>`;
             }).join('')}
             <line x1="${padL}" y1="${baseLineY.toFixed(1)}" x2="${W - padR}" y2="${baseLineY.toFixed(1)}" stroke="rgba(255,255,255,0.22)" stroke-dasharray="3,3" stroke-width="1"/>
             ${labels.map((lbl, i) => `<text x="${toX(i)}" y="${H - 6}" text-anchor="middle" fill="#64748b" font-size="10">${lbl}</text>`).join('')}
@@ -4436,27 +4814,19 @@
         <div class="erosion-3col">
           <div class="erosion-tile">
             <div style="font-size:11px;color:#f87171;font-weight:700;">Vadesiz Nakitte Kalan</div>
-            <div class="num-tab" style="font-size:16px;font-weight:800;color:#fff;margin-top:2px;">${fmtTL(sim.cashRealEndTL, 0)} <span class="neg" style="font-size:11.5px;">(${fmtPct(sim.cashRealPct, 0)})</span></div>
-            <div class="dim num-tab" style="font-size:11px;margin-top:2px;">100 market poşeti → <strong>${cashBags} poşete</strong> eridi</div>
+            <div class="num-tab" style="font-size:15.5px;font-weight:800;color:#fff;margin-top:2px;">${fmtCompactTL(sim.cashRealEndTL)} <span class="neg" style="font-size:11.5px;">(${fmtPct(sim.cashRealPct, 0)})</span></div>
+            <div class="dim num-tab" style="font-size:11px;margin-top:2px;">100 poşet → <strong>${cashBags} poşete</strong> eridi</div>
           </div>
           <div class="erosion-tile">
             <div style="font-size:11px;color:#60a5fa;font-weight:700;">Sadece Banka Faizinde</div>
-            <div class="num-tab" style="font-size:16px;font-weight:800;color:#fff;margin-top:2px;">${fmtTL(sim.depRealEndTL, 0)} <span class="${pctCls(sim.depRealPct)}" style="font-size:11.5px;">(${fmtPct(sim.depRealPct, 0)})</span></div>
-            <div class="dim num-tab" style="font-size:11px;margin-top:2px;">100 market poşeti → <strong>${depBags} poşet</strong> oldu</div>
+            <div class="num-tab" style="font-size:15.5px;font-weight:800;color:#fff;margin-top:2px;">${fmtCompactTL(sim.depRealEndTL)} <span class="${pctCls(sim.depRealPct)}" style="font-size:11.5px;">(${fmtPct(sim.depRealPct, 0)})</span></div>
+            <div class="dim num-tab" style="font-size:11px;margin-top:2px;">100 poşet → <strong>${depBags} poşet</strong> oldu</div>
           </div>
           <div class="erosion-tile" style="border-color:rgba(16,185,129,0.35);background:rgba(16,185,129,0.07);">
-            <div style="font-size:11px;color:#34d399;font-weight:700;">Dengeli Sepette Korunan</div>
-            <div class="num-tab" style="font-size:16px;font-weight:800;color:#fff;margin-top:2px;">${fmtTL(sim.basketRealEndTL, 0)} <span class="${pctCls(sim.basketRealPct)}" style="font-size:11.5px;">(${fmtPct(sim.basketRealPct, 0)})</span></div>
-            <div class="dim num-tab" style="font-size:11px;margin-top:2px;">100 market poşeti → <strong class="pos">${basketBags} poşete</strong> çıktı</div>
+            <div style="font-size:11px;color:#34d399;font-weight:700;">Kalıpsız Döngü Sepeti</div>
+            <div class="num-tab" style="font-size:15.5px;font-weight:800;color:#fff;margin-top:2px;">${fmtCompactTL(sim.basketRealEndTL)} <span class="${pctCls(sim.basketRealPct)}" style="font-size:11.5px;">(${fmtPct(sim.basketRealPct, 0)})</span></div>
+            <div class="dim num-tab" style="font-size:11px;margin-top:2px;">100 poşet → <strong class="pos">${basketBags} poşete</strong> çıktı</div>
           </div>
-        </div>
-
-        <div style="margin-top:11px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-          <span class="muted" style="font-size:12px;">Faizde kalsaydın ne olurdu, kendi tutarınla tek tuşla dene:</span>
-          <button class="btn-emerald" onclick="duelStageIdx=${heroErosionStageIdx};switchTab('sepet');">
-            <span>Faiz vs Sepet Karşılaştır</span>
-            <svg class="ico" style="width:15px;height:15px;" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-          </button>
         </div>
       `;
     }
@@ -4464,6 +4834,8 @@
     function renderKesfetView() {
       if (!marketData) return;
       renderStoryRail();
+      renderSmartCompassCard();
+      renderSmartRadarCard();
       renderErosionHeroCard();
 
       const m = marketData.macro || {};
@@ -4483,135 +4855,35 @@
         { title: 'Bitcoin', price: fmtNum((m.btcTry || 0) / 1e6, 2) + ' Mn ₺', d1: btcInst?.change1D ?? 0, inst: btcInst, id: 'kripto-btc' }
       ];
 
-      document.getElementById('piyasaPulseGrid').innerHTML = pulseItems.map(c => `
-        <div class="pulse-card" onclick="openAssetDetailDrawer('${c.id}')">
-          <div class="pc-head">
-            <span class="pc-title">${c.title}</span>
-            <span class="chg-pill ${pctCls(c.d1)}">${fmtPct(c.d1, 2)}</span>
-          </div>
-          <div class="pc-body">
-            <div class="pc-price">${c.price}</div>
-            ${buildAssetSparklineSvg(c.inst, 50, 20, c.d1)}
-          </div>
-        </div>
-      `).join('');
-
-      // 3 Adımda Faiz Harici Başarı Kartları
-      document.getElementById('guidedStepsBox').innerHTML = `
-        <div class="step-card" onclick="duelPresetKey='cautious';switchTab('sepet');">
-          <div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-              <span class="chg-pill info">1. Adım · Güvenli Geçiş</span>
-              <span class="dim" style="font-size:11px;">Düşük Dalgalanma</span>
+      const pGrid = document.getElementById('piyasaPulseGrid');
+      if (pGrid) {
+        pGrid.innerHTML = pulseItems.map(c => `
+          <div class="pulse-card" onclick="openAssetDetailDrawer('${c.id}')">
+            <div class="pc-head">
+              <span class="pc-title">${c.title}</span>
+              <span class="chg-pill ${pctCls(c.d1)}">${fmtPct(c.d1, 2)}</span>
             </div>
-            <div style="font-size:14.5px;font-weight:700;color:#fff;margin-bottom:4px;">Vade Bozulmadan İlk Sepetini Kur</div>
-            <p class="muted" style="font-size:12px;line-height:1.45;">
-              Paranın tamamını borsaya sokmak zorunda değilsin. <strong>Günlük Fon + Altın + Dünya Şirketleri</strong> karışımıyla hem istediğin gün nakde dön hem kur şokuna kalkan kur.
-            </p>
-          </div>
-          <span class="link-btn" style="padding:0;">Temkinli Sepeti Test Et →</span>
-        </div>
-
-        <div class="step-card" onclick="currentAssetChip='zero_tax';switchTab('varliklar');">
-          <div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-              <span class="chg-pill pos">2. Adım · %0 Vergi Avantajı</span>
-              <span class="dim" style="font-size:11px;">Stopajsız Büyüme</span>
+            <div class="pc-body">
+              <div class="pc-price">${c.price}</div>
+              ${buildAssetSparklineSvg(c.inst, 50, 20, c.d1)}
             </div>
-            <div style="font-size:14.5px;font-weight:700;color:#fff;margin-bottom:4px;">%17,5 Vergi Ödemeden Biriktir</div>
-            <p class="muted" style="font-size:12px;line-height:1.45;">
-              Vadeli mevduatta her ay kârının %17,5’i vergiye gider. Oysa <strong>Altın, Darphane S1 ve Yerli Şirket Fonlarında</strong> stopaj %0’dır; paran kesintisiz büyür.
-            </p>
           </div>
-          <span class="link-btn" style="padding:0;">Vergisiz Araçları Gör →</span>
-        </div>
-
-        <div class="step-card" onclick="bistActiveFilter='value_profit';switchTab('bist');">
-          <div>
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-              <span class="chg-pill warn">3. Adım · Gerçek Ortaklık</span>
-              <span class="dim" style="font-size:11px;">Kâr Üretenler</span>
-            </div>
-            <div style="font-size:14.5px;font-weight:700;color:#fff;margin-bottom:4px;">Tüyo Değil, Kârlı Dükkan Seç</div>
-            <p class="muted" style="font-size:12px;line-height:1.45;">
-              Fiyatı şişmiş dedikodu hisselerinden uzak dur. Kendini kısa sürede amorti eden ve kasası nakit dolu sağlam şirketlere ortak olmayı öğren.
-            </p>
-          </div>
-          <span class="link-btn" style="padding:0;">Sağlam Şirketleri İncele →</span>
-        </div>
-      `;
-
-      // Dönemin Enflasyonu Yenenleri / Eriyenleri
-      const pIndices = [1, 2, 4, 5];
-      const sIdx = pIndices.includes(activeStageIdx) ? activeStageIdx : 4;
-      const stageRows = marketData.instruments.map(inst => computeAssetStageMetrics(inst, sIdx));
-      const infPct = getStageInflationPct(sIdx);
-      const beatInfCount = stageRows.filter(r => r.realPct > 0).length;
-
-      const sortedDesc = [...stageRows].sort((a, b) => b.realPct - a.realPct);
-      const top5 = sortedDesc.slice(0, 5);
-      const bot5 = [...sortedDesc].reverse().slice(0, 5);
-
-      const renderLeaderList = (items, titleHtml) => `
-        <div class="surface" style="background:var(--bg-input);box-shadow:none;">
-          <div style="padding:9px 12px;border-bottom:1px solid var(--border-hairline);display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:600;color:var(--text-secondary);">
-            <span>${titleHtml}</span>
-            <span>${STAGE_SHORT[sIdx]} Gerçek Alım Gücü</span>
-          </div>
-          ${items.map(r => {
-            const meta = getAssetMeta(r.inst);
-            return `
-              <div class="list-row" style="grid-template-columns:minmax(0,1fr) 50px auto;padding:9px 12px;gap:8px;" onclick="openAssetDetailDrawer('${r.inst.id}')">
-                <div class="row-main">
-                  <div class="avatar tone-${meta.tone}" style="width:34px;height:34px;font-size:10.5px;">${escapeHtml(meta.code)}</div>
-                  <div class="row-titles">
-                    <div class="row-name" style="font-size:13px;">${escapeHtml(meta.title)}</div>
-                    <div class="row-sub num-tab">${escapeHtml(meta.brief)}</div>
-                  </div>
-                </div>
-                <div class="mob-spark-col">${buildAssetSparklineSvg(r.inst, 50, 20, r.tlNetPct)}</div>
-                <div class="r-right">
-                  <span class="chg-pill ${pctCls(r.realPct)}">${fmtPct(r.realPct, 1)}</span>
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      `;
-
-      if (window.innerWidth < 920) {
-        const chosen = piyasaLeaderMode === 'win' ? top5 : bot5;
-        const lbl = piyasaLeaderMode === 'win' ? 'Enflasyonu En Çok Yenenler' : 'Enflasyona Karşı Eriyenler';
-        document.getElementById('piyasaLeadersBox').innerHTML = renderLeaderList(chosen, lbl);
-      } else {
-        document.getElementById('piyasaLeadersBox').innerHTML = `
-          <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;">
-            ${renderLeaderList(top5, 'Enflasyonu En Çok Yenen 5 Araç')}
-            ${renderLeaderList(bot5, 'Enflasyona Karşı En Çok Eriyen 5 Araç')}
-          </div>
-        `;
+        `).join('');
       }
-
-      document.getElementById('piyasaBreadthFoot').innerHTML = `
-        <span>Son <strong>${STAGE_LABELS[sIdx]}</strong> içinde 69 aracın <strong class="pos">${beatInfCount}</strong> tanesi enflasyonu (${fmtPct(infPct, 1)}) yenerek alım gücünü büyüttü.</span>
-        <button class="link-btn" onclick="switchTab('varliklar')">69 Aracı Aç →</button>
-      `;
     }
 
     /* =========================================================================
-       OTOMATİK KUPON, DEĞİŞKEN FAİZ (TLREF), TÜFE ENDEKSLİ, SUKUK & VADE GÜNÜ MOTORU
-       Farklı gün sayılarını, sabit/değişken/TÜFE yapılarını ve basit vs bileşik farkını
-       kullanıcıya tek bir el hesabı bırakmadan otomatik hesaplar.
+       OTOMATİK KUPON, SUKUK, ENFLASYON KORUMALI TAHVİL & VADE GÜNÜ MOTORU
        ========================================================================= */
-    let autoCalcAmount = 500000;
-    let autoCalcDays = 364;
+    let autoCalcAmount = 2000000;
+    let autoCalcDays = 365;
     let autoCalcReinvest = true;
     let autoCalcRegime = 'curve'; // 'curve' | 'disinflation' | 'shock'
-    let autoCalcSelectedKey = 'fixed_dibs';
+    let autoCalcSelectedKey = 'sukuk_lease';
 
     let drawerAutoState = {
       instId: '',
-      days: 364,
+      days: 365,
       struct: 'fixed_coupon',
       reinvest: true
     };
@@ -5016,51 +5288,15 @@
       const policy = Number(m.tcmbPolicyRate) || 36.0;
       const upper = Number(m.tcmbUpperRate) || customDepositRate || 39.0;
       const tr02y = Number(m.tr02y) || 36.27;
+      const singleStopaj = getTurkishDepositStopajPct(totalDays);
 
       return [
         {
-          key: 'fixed_dibs',
-          badge: '%0 Vergi · Sabit',
-          badgeCls: 'pos',
-          title: 'Sabit Kuponlu Devlet Tahvili (DİBS)',
-          sub: '182 günde bir sabit kupon · 2Y gösterge oranıyla',
-          res: computeSingleStructureCashflow({
-            structure: 'fixed_coupon',
-            principalTL,
-            totalDays,
-            couponDays: 182,
-            baseRatePct: tr02y,
-            rateIsCompounded: true,
-            taxRatePct: 0,
-            reinvest,
-            regime,
-            isParticipation: false
-          })
-        },
-        {
-          key: 'floating_frn',
-          badge: '%0 Vergi · TLREF',
-          badgeCls: 'info',
-          title: 'Değişken Faizli Tahvil (TLREF)',
-          sub: '91 günde bir piyasa oranına göre otomatik güncellenen kupon',
-          res: computeSingleStructureCashflow({
-            structure: 'floating_tlref',
-            principalTL,
-            totalDays,
-            couponDays: 91,
-            baseRatePct: policy + 0.5,
-            taxRatePct: 0,
-            reinvest,
-            regime,
-            isParticipation: false
-          })
-        },
-        {
           key: 'sukuk_lease',
-          badge: 'Faizsiz · %0 Vergi',
+          badge: '%0 Vergi · Faizsiz',
           badgeCls: 'pos',
           title: 'Hazine Kira Sertifikası (Sukuk)',
-          sub: '182 günde bir kamu varlık kira ödemesi (katılım esaslı)',
+          sub: '6 ayda bir kamu varlık kira ödemesi · Vergi kesintisi %0',
           res: computeSingleStructureCashflow({
             structure: 'fixed_coupon',
             principalTL,
@@ -5075,11 +5311,30 @@
           })
         },
         {
-          key: 'cpi_linked',
-          badge: 'TÜFE + %3 · %0 Vergi',
+          key: 'fixed_dibs',
+          badge: '%0 Vergi · Sabit',
           badgeCls: 'pos',
-          title: 'TÜFE Endeksli Tahvil / Sukuk',
-          sub: 'Gerçekleşen TÜFE enflasyonu + %3,0 yıllık reel getiri marjı',
+          title: 'Sabit Kuponlu Devlet Tahvili',
+          sub: '6 ayda bir kesin kupon · Faizler düşerse ek değer kazanır',
+          res: computeSingleStructureCashflow({
+            structure: 'fixed_coupon',
+            principalTL,
+            totalDays,
+            couponDays: 182,
+            baseRatePct: tr02y,
+            rateIsCompounded: true,
+            taxRatePct: 0,
+            reinvest,
+            regime,
+            isParticipation: false
+          })
+        },
+        {
+          key: 'cpi_linked',
+          badge: 'Enflasyon + %3 · %0 Vergi',
+          badgeCls: 'pos',
+          title: 'Enflasyon Korumalı Tahvil / Sukuk',
+          sub: 'Enflasyon kaç çıkarsa çıksın anapara korunur + %3 reel getiri',
           res: computeSingleStructureCashflow({
             structure: 'cpi_linked',
             principalTL,
@@ -5093,28 +5348,45 @@
           })
         },
         {
-          key: 'zero_discount',
-          badge: 'Kuponsuz · %0 Vergi',
-          badgeCls: 'muted',
-          title: 'İskontolu Bono / Kuponsuz Sukuk',
-          sub: 'Ara ödeme yok; seçilen vade gününde tek toplu ödeme',
+          key: 'daily_ppf',
+          badge: 'İstediğin Gün Boz',
+          badgeCls: 'info',
+          title: 'Günlük Para Piyasası Fonu (PPF)',
+          sub: 'Her gün bileşik büyür; vade yanmaz, satınca -%17,5 vergi kesilir',
           res: computeSingleStructureCashflow({
-            structure: 'zero_coupon',
+            structure: 'daily_ppf',
             principalTL,
             totalDays,
-            compYieldPct: tr02y,
-            taxRatePct: 0,
-            reinvest,
+            baseRatePct: upper,
+            taxRatePct: 17.5,
+            reinvest: true,
+            regime,
+            isParticipation: false
+          })
+        },
+        {
+          key: 'bank_single',
+          badge: `Tek Vade -%${fmtNum(singleStopaj, 1)}`,
+          badgeCls: 'warn',
+          title: `Tek Vade Banka Mevduatı (${totalDays}G)`,
+          sub: `${totalDays <= 182 ? '6 aya kadar %17,5' : totalDays <= 365 ? '6-12 ay arası %15,0' : '1 yıldan uzun %10,0'} stopaj · Erken bozarsan yanar`,
+          res: computeSingleStructureCashflow({
+            structure: 'single_term',
+            principalTL,
+            totalDays,
+            baseRatePct: upper,
+            taxRatePct: singleStopaj,
+            reinvest: false,
             regime,
             isParticipation: false
           })
         },
         {
           key: 'bank_rollover',
-          badge: 'Stopaj -%17,5',
+          badge: 'Her Ay -%17,5 Vergi',
           badgeCls: 'warn',
           title: '32G Yenilemeli Banka Mevduatı',
-          sub: 'Her 32 günde bir %17,5 stopaj kesilerek dönen mevduat',
+          sub: 'Her 32 günde bir %17,5 stopaj kesilerek dönen klasik mevduat',
           res: computeSingleStructureCashflow({
             structure: 'rollover_deposit',
             principalTL,
@@ -5164,34 +5436,36 @@
       if (!box || !marketData) return;
 
       const amounts = [
-        { v: 100000, l: '100 Bin ₺' },
-        { v: 250000, l: '250 Bin ₺' },
         { v: 500000, l: '500 Bin ₺' },
         { v: 1000000, l: '1 Milyon ₺' },
-        { v: 2500000, l: '2,5 Milyon ₺' }
+        { v: 2000000, l: '2 Milyon ₺' },
+        { v: 5000000, l: '5 Milyon ₺' }
       ];
       const dayPresets = [
-        { d: 32, l: '32 Gün' },
-        { d: 46, l: '46 Gün' },
-        { d: 91, l: '91 Gün (3A)' },
-        { d: 182, l: '182 Gün (6A)' },
-        { d: 273, l: '273 Gün (9A)' },
-        { d: 364, l: '364 Gün (1Y)' },
-        { d: 546, l: '546 Gün (1,5Y)' },
-        { d: 728, l: '728 Gün (2Y)' }
+        { d: 32, l: '32G' },
+        { d: 91, l: '91G (3A)' },
+        { d: 182, l: '182G (6A)' },
+        { d: 365, l: '365G (1Y)' },
+        { d: 730, l: '730G (2Y)' }
       ];
 
       box.innerHTML = `
-        <div style="margin-bottom:12px;">
-          <h2 class="sec-title">Otomatik Kupon, Değişken Oran &amp; Vade Hesaplayıcı</h2>
-          <p class="dim" style="font-size:12px;margin-top:2px;">
-            Sabit kuponlu, değişken faizli (TLREF), TÜFE endeksli, faizsiz Sukuk ve farklı vade günlerinde hesaba ne yatacağını tek ekranda otomatik hesaplar.
-          </p>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+          <div>
+            <h2 class="sec-title">Vade Sonunda Cebime Net Ne Yatacak?</h2>
+            <p class="dim" style="font-size:12px;margin-top:2px;">
+              Paranı ve gününü seç; vergisiz kira/tahvil ile vergili banka mevduatı arasındaki net farkı tek bakışta gör.
+            </p>
+          </div>
+          <div class="seg-bar inline">
+            <button class="seg-item ${!autoCalcReinvest ? 'active' : ''}" onclick="autoCalcReinvest=false;renderAutoCouponPane();">Ödemeyi Harca</button>
+            <button class="seg-item ${autoCalcReinvest ? 'active' : ''}" onclick="autoCalcReinvest=true;renderAutoCouponPane();">Geri Yatır (Bileşik)</button>
+          </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-bottom:10px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px;margin-bottom:12px;">
           <div>
-            <label style="display:block;font-size:11.5px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">1. Yatırılan Tutar (₺)</label>
+            <label style="display:block;font-size:11.5px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">1. Paran Ne Kadar? (₺)</label>
             <input type="number" id="autoCalcPrinInp" class="inp mono" min="1000" step="50000" value="${Math.round(autoCalcAmount)}" oninput="onAutoCouponCustomInput()" />
             <div class="chip-rail" style="margin-top:6px;">
               ${amounts.map(a => `<button class="chip ${Math.abs(autoCalcAmount - a.v) < 5 ? 'active' : ''}" style="height:28px;font-size:11.5px;padding:0 10px;" onclick="setAutoCouponQuickAmount(${a.v})">${a.l}</button>`).join('')}
@@ -5199,29 +5473,10 @@
           </div>
 
           <div>
-            <label style="display:block;font-size:11.5px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">2. Tam Vade Günü (İstediğin Günü Yaz veya Seç)</label>
+            <label style="display:block;font-size:11.5px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">2. Kaç Gün Bağlayacaksın?</label>
             <input type="number" id="autoCalcDaysInp" class="inp mono" min="1" max="3650" value="${autoCalcDays}" oninput="onAutoCouponCustomInput()" />
             <div class="chip-rail" style="margin-top:6px;">
               ${dayPresets.map(p => `<button class="chip ${autoCalcDays === p.d ? 'active' : ''}" style="height:28px;font-size:11.5px;padding:0 10px;" onclick="setAutoCouponQuickDays(${p.d})">${p.l}</button>`).join('')}
-            </div>
-          </div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:14px;">
-          <div>
-            <div style="font-size:11.5px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">3. Ara Kupon / Kira Ödemesi Tercihi</div>
-            <div class="seg-bar">
-              <button class="seg-item ${!autoCalcReinvest ? 'active' : ''}" onclick="autoCalcReinvest=false;renderAutoCouponPane();">Nakit Çek (Basit)</button>
-              <button class="seg-item ${autoCalcReinvest ? 'active' : ''}" onclick="autoCalcReinvest=true;renderAutoCouponPane();">Yeniden Yatır (Bileşik)</button>
-            </div>
-          </div>
-
-          <div>
-            <div style="font-size:11.5px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">4. Değişken Faiz &amp; Gelecek Enflasyon Senaryosu</div>
-            <div class="seg-bar">
-              <button class="seg-item ${autoCalcRegime === 'disinflation' ? 'active' : ''}" onclick="autoCalcRegime='disinflation';renderAutoCouponPane();">Düşüş (-8p)</button>
-              <button class="seg-item ${autoCalcRegime === 'curve' ? 'active' : ''}" onclick="autoCalcRegime='curve';renderAutoCouponPane();">Baz Eğri (Oto)</button>
-              <button class="seg-item ${autoCalcRegime === 'shock' ? 'active' : ''}" onclick="autoCalcRegime='shock';renderAutoCouponPane();">Yükseliş (+8p)</button>
             </div>
           </div>
         </div>
@@ -5246,19 +5501,15 @@
         <div class="verdict-banner" style="margin-bottom:12px;">
           <div style="min-width:0;flex:1;">
             <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--pos-bright);">
-              ${autoCalcDays} GÜN SONUNDA EN YÜKSEK NET ELE GEÇEN (${autoCalcReinvest ? 'BİLEŞİK' : 'BASİT NAKİT'})
+              ${autoCalcDays} GÜN SONUNDA EN YÜKSEK NET ELE GEÇEN
             </div>
             <div class="num-tab" style="font-size:20px;font-weight:800;color:#fff;margin-top:2px;">
               ${escapeHtml(bestItem.title)}: ${fmtTL(bestItem.res.chosenEndTL, 0)} <span class="pos" style="font-size:14px;">(+${fmtTL(bestItem.res.chosenGainTL, 0)})</span>
             </div>
             <div class="muted num-tab" style="font-size:12px;margin-top:3px;">
-              %17,5 stopajlı banka vadelisine kıyasla <strong>${advOverBankTL >= 0 ? '+' : ''}${fmtTL(advOverBankTL, 0)}</strong> net fark · Beklenen enflasyon (%${fmtNum(bestItem.res.expInfAnn, 1)}) sonrası alım gücü: <strong class="${pctCls(bestItem.res.realChosenPct)}">${fmtPct(bestItem.res.realChosenPct, 1)}</strong>
+              32G vergili banka mevduatına göre <strong>${advOverBankTL >= 0 ? '+' : ''}${fmtTL(advOverBankTL, 0)}</strong> net avantaj · Enflasyon (%${fmtNum(bestItem.res.expInfAnn, 1)}) düşüldükten sonra gerçek alım gücü: <strong class="${pctCls(bestItem.res.realChosenPct)}">${fmtPct(bestItem.res.realChosenPct, 1)}</strong>
             </div>
           </div>
-        </div>
-
-        <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:8px;">
-          Ödeme takvimini ve erken çıkış hassasiyetini görmek istediğin araca dokun:
         </div>
 
         <div class="auto-struct-grid">
@@ -5271,75 +5522,69 @@
                   <span style="font-size:13px;font-weight:700;color:#fff;line-height:1.25;min-width:0;">${escapeHtml(it.title)}</span>
                   <span class="chg-pill ${it.badgeCls}" style="font-size:10px;padding:1.5px 6px;flex-shrink:0;">${escapeHtml(it.badge)}</span>
                 </div>
-                <div class="dim" style="font-size:11px;margin-bottom:7px;">${escapeHtml(it.sub)}</div>
+                <div class="dim" style="font-size:11px;margin-bottom:8px;">${escapeHtml(it.sub)}</div>
 
-                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px;">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
                   <div>
-                    <div class="dim" style="font-size:10.5px;">Vade Sonu Toplam (${autoCalcDays}G)</div>
+                    <div class="dim" style="font-size:10.5px;">Cebindeki Toplam (${autoCalcDays}G)</div>
                     <div class="num-tab" style="font-size:19px;font-weight:800;color:#fff;">${fmtTL(r.chosenEndTL, 0)}</div>
                   </div>
                   <div style="text-align:right;">
-                    <div class="num-tab pos" style="font-size:13.5px;font-weight:700;">+${fmtTL(r.chosenGainTL, 0)} (${fmtPct(r.chosenNetPct, 1)})</div>
-                    <div class="num-tab dim" style="font-size:11px;">Reel Alım Gücü: <strong class="${pctCls(r.realChosenPct)}">${fmtPct(r.realChosenPct, 1)}</strong></div>
+                    <div class="num-tab pos" style="font-size:13px;font-weight:700;">+${fmtTL(r.chosenGainTL, 0)}</div>
+                    <div class="num-tab dim" style="font-size:11px;">Alım Gücü: <strong class="${pctCls(r.realChosenPct)}">${fmtPct(r.realChosenPct, 1)}</strong></div>
                   </div>
-                </div>
-
-                <div class="num-tab" style="padding-top:6px;border-top:1px solid var(--border-hairline);display:flex;justify-content:space-between;gap:6px;font-size:11px;color:var(--text-secondary);">
-                  <span>Basit: <strong>${fmtPct(r.simpleNetPct, 1)}</strong> (+${fmtCompactTL(r.simpleTotalNetGain)})</span>
-                  <span>Bileşik: <strong class="pos">${fmtPct(r.compoundNetPct, 1)}</strong></span>
                 </div>
               </div>
             `;
           }).join('')}
         </div>
 
-        <!-- SEÇİLİ ARACIN ADIM ADIM OTOMATİK ÖDEME TAKVİMİ VE DÜRASYON ÖZETİ -->
-        <div class="surface" style="background:var(--bg-input);box-shadow:none;padding:12px 13px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
-            <div>
-              <div style="font-size:13px;font-weight:700;color:#fff;">${escapeHtml(selectedItem.title)} — Otomatik Ödeme Takvimi</div>
+        <details class="clean-fold">
+          <summary>${escapeHtml(selectedItem.title)} — Gün Gün Ödeme Takvimini ve Senaryoları Aç</summary>
+          <div style="padding:12px 13px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
               <div class="dim num-tab" style="font-size:11.5px;">${escapeHtml(selectedItem.res.headlineRateLabel)}</div>
+              <div class="seg-bar inline">
+                <button class="seg-item ${autoCalcRegime === 'disinflation' ? 'active' : ''}" onclick="autoCalcRegime='disinflation';renderAutoCouponResultsOnly();">Enflasyon Düşerse</button>
+                <button class="seg-item ${autoCalcRegime === 'curve' ? 'active' : ''}" onclick="autoCalcRegime='curve';renderAutoCouponResultsOnly();">Mevcut Beklenti</button>
+                <button class="seg-item ${autoCalcRegime === 'shock' ? 'active' : ''}" onclick="autoCalcRegime='shock';renderAutoCouponResultsOnly();">Enflasyon Çıkarsa</button>
+              </div>
             </div>
-            ${selectedItem.res.reinvestExtraTL > 50 ? `
-              <span class="chg-pill pos" style="font-size:11px;">Yeniden Yatırım Farkı: +${fmtTL(selectedItem.res.reinvestExtraTL, 0)}</span>
-            ` : ''}
-          </div>
-
-          <p class="muted" style="font-size:12px;line-height:1.45;margin-bottom:10px;">
-            ${escapeHtml(selectedItem.res.mechanismNote)}
-          </p>
-
-          <div style="border:1px solid var(--border-hairline);border-radius:11px;overflow:hidden;background:rgba(9,11,18,0.55);">
-            <div class="auto-sched-row" style="background:rgba(255,255,255,0.03);font-size:11px;font-weight:700;color:var(--text-muted);">
-              <div>Vade Günü</div>
-              <div>Ödeme Detayı &amp; Oran</div>
-              <div class="r-right">Net Nakit Akışı</div>
+            <p class="muted" style="font-size:12px;line-height:1.45;margin-bottom:10px;">
+              ${escapeHtml(selectedItem.res.mechanismNote)}
+            </p>
+            <div style="border:1px solid var(--border-hairline);border-radius:11px;overflow:hidden;background:rgba(9,11,18,0.55);">
+              <div class="auto-sched-row" style="background:rgba(255,255,255,0.03);font-size:11px;font-weight:700;color:var(--text-muted);">
+                <div>Gün</div>
+                <div>Ödeme Açıklaması</div>
+                <div class="r-right">Net Yatan</div>
+              </div>
+              ${selectedItem.res.schedule.map(s => {
+                const cashVal = autoCalcReinvest && s.netCashCompTL != null ? s.netCashCompTL : s.netCashSimpleTL;
+                return `
+                  ${s.omittedMiddle ? `
+                    <div class="auto-sched-row dim" style="font-size:11px;text-align:center;">
+                      <div>…</div>
+                      <div>Aradaki ${s.omittedMiddle} vade dönüşü otomatik hesaplandı</div>
+                      <div class="r-right">—</div>
+                    </div>
+                  ` : ''}
+                  <div class="auto-sched-row num-tab">
+                    <div style="font-weight:700;color:#fff;">${s.day}. Gün</div>
+                    <div style="min-width:0;">
+                      <div style="color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(s.label)}</div>
+                      <div class="dim" style="font-size:10.5px;">Yıllık %${fmtNum(s.rateUsedPct, 1)}</div>
+                    </div>
+                    <div class="r-right">
+                      <div class="pos" style="font-weight:700;">+${fmtTL(cashVal, 0)}</div>
+                      ${s.principalReturnedTL > 0 ? `<div class="dim" style="font-size:10.5px;">+${fmtCompactTL(s.principalReturnedTL)} Anapara</div>` : ''}
+                    </div>
+                  </div>
+                `;
+              }).join('')}
             </div>
-            ${selectedItem.res.schedule.map(s => {
-              const cashVal = autoCalcReinvest && s.netCashCompTL != null ? s.netCashCompTL : s.netCashSimpleTL;
-              return `
-                ${s.omittedMiddle ? `
-                  <div class="auto-sched-row dim" style="font-size:11px;text-align:center;">
-                    <div>…</div>
-                    <div>Aradaki ${s.omittedMiddle} vade dönüşü otomatik hesaplandı</div>
-                    <div class="r-right">—</div>
-                  </div>
-                ` : ''}
-                <div class="auto-sched-row num-tab">
-                  <div style="font-weight:700;color:#fff;">${s.day}. Gün</div>
-                  <div style="min-width:0;">
-                    <div style="color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(s.label)}</div>
-                    <div class="dim" style="font-size:10.5px;">Yıllık Baz %${fmtNum(s.rateUsedPct, 1)}${s.isLocked ? ' · Oran Sabit/Kesin' : ' · Eğri Tahmini'}</div>
-                  </div>
-                  <div class="r-right">
-                    <div class="pos" style="font-weight:700;">+${fmtTL(cashVal, 0)}</div>
-                    ${s.principalReturnedTL > 0 ? `<div class="dim" style="font-size:10.5px;">+${fmtCompactTL(s.principalReturnedTL)} Anapara</div>` : ''}
-                  </div>
-                </div>
-              `;
-            }).join('')}
           </div>
-        </div>
+        </details>
       `;
     }
 
@@ -5348,28 +5593,28 @@
       const id = inst?.id || '';
       if (id === 'dibs-tahvil') {
         return {
-          days: 728,
+          days: 365,
           struct: 'fixed_coupon',
           modes: [
-            { k: 'fixed_coupon', l: 'Sabit Kuponlu (2Y)' },
-            { k: 'floating_tlref', l: 'Değişken (TLREF)' },
-            { k: 'cpi_linked', l: 'TÜFE Endeksli' },
+            { k: 'fixed_coupon', l: 'Sabit Kuponlu' },
+            { k: 'floating_tlref', l: 'Değişken Oranlı' },
+            { k: 'cpi_linked', l: 'Enflasyon Korumalı' },
             { k: 'zero_coupon', l: 'İskontolu Bono' }
           ],
-          dayChips: [91, 182, 364, 546, 728]
+          dayChips: [91, 182, 365, 548, 730]
         };
       }
       if (id === 'kira-sertifikasi-sukuk') {
         return {
-          days: 364,
+          days: 365,
           struct: 'fixed_coupon',
           modes: [
             { k: 'fixed_coupon', l: 'Sabit Kira (Sukuk)' },
             { k: 'floating_tlref', l: 'Değişken Kira' },
-            { k: 'cpi_linked', l: 'TÜFE Endeksli Kira' },
+            { k: 'cpi_linked', l: 'Enflasyon Korumalı' },
             { k: 'zero_coupon', l: 'Kuponsuz Sukuk' }
           ],
-          dayChips: [91, 182, 273, 364, 728]
+          dayChips: [91, 182, 273, 365, 730]
         };
       }
       if (id === 'katilim-hesabi') {
@@ -5380,7 +5625,7 @@
             { k: 'rollover_deposit', l: '32G Yenilemeli Katılım' },
             { k: 'single_term', l: 'Tek Vade Katılım' }
           ],
-          dayChips: [32, 46, 91, 181, 365]
+          dayChips: [32, 91, 182, 365, 400]
         };
       }
       if (id === 'para-piyasasi-fonu' || id === 'bes-emeklilik') {
@@ -5388,7 +5633,7 @@
           days: id === 'bes-emeklilik' ? 365 : 91,
           struct: 'daily_ppf',
           modes: [{ k: 'daily_ppf', l: 'Günlük Bileşik (Vergi Ertelemeli)' }],
-          dayChips: [32, 91, 182, 365, 728]
+          dayChips: [32, 91, 182, 365, 730]
         };
       }
       return {
@@ -5398,7 +5643,7 @@
           { k: 'rollover_deposit', l: '32G Yenilemeli Vadeli' },
           { k: 'single_term', l: 'Tek Vade Bağlama' }
         ],
-        dayChips: [32, 46, 92, 181, 365]
+        dayChips: [32, 91, 182, 365, 400]
       };
     }
 
@@ -5415,9 +5660,10 @@
       const cfg = getDefaultDrawerAutoConfig(inst);
       const isPart = PARTICIPATION_ASSET_IDS.has(inst.id);
       const rawRate = inst.isCustomizableRate ? customDepositRate : (Number(inst.currentPrice) || 36.0);
-      const taxPct = Number(inst.taxRatePct) || 0;
       const D = Math.max(1, Math.min(3650, Math.round(Number(drawerAutoState.days) || cfg.days)));
       const struct = drawerAutoState.struct || cfg.struct;
+      const baseTaxPct = Number(inst.taxRatePct) || 0;
+      const taxPct = (struct === 'single_term' && baseTaxPct > 0) ? getTurkishDepositStopajPct(D) : baseTaxPct;
 
       const res = computeSingleStructureCashflow({
         structure: struct,
@@ -5441,12 +5687,12 @@
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
           <div>
             <div style="font-size:11px;font-weight:700;color:var(--pos-bright);text-transform:uppercase;letter-spacing:0.04em;">
-              Otomatik Vade &amp; ${payWord} Hesaplayıcı (${fmtCompactTL(currentPrincipal)})
+              ${fmtCompactTL(currentPrincipal)} İçin Vade Hesaplayıcı
             </div>
-            <div class="dim" style="font-size:11.5px;">Yapıyı ve günü seç; ele geçecek net tutarı sistem otomatik hesaplasın</div>
+            <div class="dim" style="font-size:11.5px;">Günü seç; vade sonu net tutarı anında gör</div>
           </div>
           <button class="link-btn" style="padding:2px 0;font-size:11.5px;" onclick="closeSheet();autoCalcDays=${D};autoCalcAmount=${currentPrincipal};switchTab('sepet');setToolSubTab('coupon');">
-            6 Yapıyı Yan Yana Gör →
+            Tüm Araçlarla Kıyasla →
           </button>
         </div>
 
@@ -5485,28 +5731,257 @@
         ` : ''}
 
         <div class="num-tab" style="font-size:11.5px;color:var(--text-secondary);line-height:1.45;">
-          ${res.schedule.length > 0 && res.schedule.length <= 5
-            ? `<div style="margin-bottom:4px;"><strong style="color:#fff;">Ödeme Akışı:</strong> ${res.schedule.map(s => `${s.day}. Gün <span class="pos">+${fmtCompactTL(s.netCashSimpleTL)}</span>`).join(' · ')} + Vade Sonu Anapara</div>`
-            : ''
-          }
-          <div>${escapeHtml(res.mechanismNote)}</div>
+          ${escapeHtml(res.mechanismNote)}
         </div>
       `;
     }
 
     /* =========================================================================
-       SEKME 2: FAİZ VS SEPET TEK TUŞ KARŞILAŞTIRMA & GÜNLÜK HAYAT MOTORU
+       SEKME 2: PLANLA (ÖZGÜRLÜK YOLU + SEPET VS FAİZ + NE YATACAK? + YARIŞTIR)
        ========================================================================= */
     function setToolSubTab(mode) {
       toolSubTab = mode;
       document.querySelectorAll('#toolsSubNav .seg-item').forEach(b => {
         b.classList.toggle('active', b.dataset.tool === mode);
       });
+      const frPane = document.getElementById('toolFreedomPane');
+      if (frPane) frPane.style.display = mode === 'freedom' ? 'block' : 'none';
       document.getElementById('toolDuelPane').style.display = mode === 'duel' ? 'block' : 'none';
       const cpPane = document.getElementById('toolCouponPane');
       if (cpPane) cpPane.style.display = mode === 'coupon' ? 'block' : 'none';
       document.getElementById('toolComparePane').style.display = mode === 'compare' ? 'block' : 'none';
       renderToolsView();
+    }
+
+    function simulateFreedomTimeline(startTL, monthlyAddTL, targetMonthlySpendTL) {
+      const safeSwrAnn = 0.05; // Enflasyon üstü %5,0/yıl güvenli çekim (anaparayı eritmeden)
+      const targetRealCapTL = Math.round((targetMonthlySpendTL * 12) / safeSwrAnn);
+      const rSmartAnn = 0.085; // Kalıpsız döngü sepeti gerçekçi enflasyon üstü reel bileşik (%8,5/yıl)
+      const rBankAnn = 0.012;  // Sadece vergili mevduat uzun dönem ortalama reel getiri (%1,2/yıl)
+
+      const rSmartM = Math.pow(1 + rSmartAnn, 1 / 12) - 1;
+      const rBankM = Math.pow(1 + rBankAnn, 1 / 12) - 1;
+
+      let balSmart = startTL;
+      let balBank = startTL;
+      let smartMonths = startTL >= targetRealCapTL ? 0 : null;
+      let bankMonths = startTL >= targetRealCapTL ? 0 : null;
+
+      const yearlyRows = [{
+        yr: 0,
+        lbl: 'Bugün',
+        smartCap: startTL,
+        bankCap: startTL,
+        monthlyFreeIncome: Math.round((startTL * safeSwrAnn) / 12)
+      }];
+
+      const maxMonths = 480; // 40 yıl tavan
+      for (let m = 1; m <= maxMonths; m++) {
+        balSmart = balSmart * (1 + rSmartM) + monthlyAddTL;
+        balBank = balBank * (1 + rBankM) + monthlyAddTL;
+        if (smartMonths === null && balSmart >= targetRealCapTL) smartMonths = m;
+        if (bankMonths === null && balBank >= targetRealCapTL) bankMonths = m;
+
+        if (m % 12 === 0) {
+          const yr = m / 12;
+          if ([1, 3, 5, 8, 10, 12, 15].includes(yr)) {
+            yearlyRows.push({
+              yr,
+              lbl: `${yr}. Yıl`,
+              smartCap: Math.round(balSmart),
+              bankCap: Math.round(balBank),
+              monthlyFreeIncome: Math.round((balSmart * safeSwrAnn) / 12)
+            });
+          }
+        }
+      }
+
+      const smartYrs = smartMonths === null ? null : +(smartMonths / 12).toFixed(1);
+      const bankYrs = bankMonths === null ? null : +(bankMonths / 12).toFixed(1);
+      const progressPct = Math.min(100, (startTL / Math.max(1, targetRealCapTL)) * 100);
+      const todayFreeMonthsPerYr = (startTL * rSmartAnn) / Math.max(1, targetMonthlySpendTL);
+
+      return {
+        targetRealCapTL,
+        safeSwrAnn,
+        rSmartAnn,
+        rBankAnn,
+        smartMonths,
+        bankMonths,
+        smartYrs,
+        bankYrs,
+        progressPct,
+        todayFreeMonthsPerYr,
+        yearlyRows
+      };
+    }
+
+    function renderFreedomEnginePane() {
+      const box = document.getElementById('freedomEngineBox');
+      if (!box || !marketData) return;
+
+      const usdTry = Number(marketData.macro?.usdTry) || 50.0;
+      const pfTotal = Math.round(userPortfolio.map(resolveHoldingLiveState).reduce((s, r) => s + r.valueTL, 0));
+      const sim = simulateFreedomTimeline(freedomStartTL, freedomMonthlyAddTL, freedomTargetMonthlyTL);
+
+      const startChips = [
+        { v: 500000, l: '500 Bin ₺' },
+        { v: 1000000, l: '1 Milyon ₺' },
+        { v: 2000000, l: '2 Milyon ₺' },
+        { v: 5000000, l: '5 Milyon ₺' }
+      ];
+      const addChips = [
+        { v: 0, l: '0 ₺ (Eklemem)' },
+        { v: 15000, l: '15 Bin ₺/ay' },
+        { v: 30000, l: '30 Bin ₺/ay' },
+        { v: 50000, l: '50 Bin ₺/ay' },
+        { v: 100000, l: '100 Bin ₺/ay' }
+      ];
+      const spendChips = [
+        { v: 40000, l: '40 Bin ₺ (Sade Gezgin)' },
+        { v: 60000, l: '60 Bin ₺ (Rahat Özgürlük)' },
+        { v: 90000, l: '90 Bin ₺ (Geniş Konfor)' },
+        { v: 120000, l: '120 Bin ₺' }
+      ];
+
+      const curYear = new Date().getFullYear();
+      const freeYearLabel = sim.smartYrs === 0
+        ? 'Şu An Hazır'
+        : sim.smartYrs != null
+          ? `${fmtNum(sim.smartYrs, 1)} Yıl (${curYear + Math.round(sim.smartYrs)})`
+          : '40+ Yıl (Aylık eklemeyi artır)';
+      const bankYearLabel = sim.bankYrs === 0
+        ? 'Hazır'
+        : sim.bankYrs != null
+          ? `${fmtNum(sim.bankYrs, 1)} Yıl`
+          : '40+ Yıl';
+      const savedYears = (sim.smartYrs != null && sim.bankYrs != null)
+        ? Math.max(0, +(sim.bankYrs - sim.smartYrs).toFixed(1))
+        : (sim.smartYrs != null ? +(40 - sim.smartYrs).toFixed(1) : 0);
+
+      box.innerHTML = `
+        <div style="margin-bottom:12px;">
+          <div style="display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:var(--pos-bright);background:var(--pos-soft);padding:2px 9px;border-radius:99px;margin-bottom:5px;">
+            GERÇEKÇİ ZAMAN ÖZGÜRLÜĞÜ MOTORU · ENFLASYONDAN ARINDIRILMIŞ
+          </div>
+          <h2 class="sec-title" style="font-size:18px;">Fare Kapanından Kaç Yılda Çıkarsın?</h2>
+          <p class="dim" style="font-size:12px;margin-top:2px;">
+            Hayal satmadan, tamamen <strong>bugünün gerçek alım gücüyle</strong> anaparanı hiç eritmeden dünyayı gezeceğin özgürlük matematiği.
+          </p>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;">
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px;">
+              <span style="font-size:11.5px;font-weight:600;color:var(--text-secondary);">1. Bugünkü Başlangıç Sermayen</span>
+              <strong class="num-tab" style="font-size:12.5px;color:#fff;white-space:nowrap;">${fmtTL(freedomStartTL, 0)} (≈ ${fmtUSD(freedomStartTL / usdTry, 0)})</strong>
+            </div>
+            <div class="chip-rail">
+              ${startChips.map(c => `<button class="chip ${Math.abs(freedomStartTL - c.v) < 10 ? 'active' : ''}" onclick="freedomStartTL=${c.v};renderFreedomEnginePane();">${c.l}</button>`).join('')}
+              ${pfTotal > 1000 && !pfPrivacyHidden ? `<button class="chip ${Math.abs(freedomStartTL - pfTotal) < 10 ? 'active' : ''}" onclick="freedomStartTL=${pfTotal};renderFreedomEnginePane();">Kasam (${fmtCompactTL(pfTotal)})</button>` : ''}
+            </div>
+          </div>
+
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px;">
+              <span style="font-size:11.5px;font-weight:600;color:var(--text-secondary);">2. Aylık Ekleyebileceğin (Bugünün Parasıyla)</span>
+              <strong class="num-tab" style="font-size:12.5px;color:#fff;white-space:nowrap;">${fmtTL(freedomMonthlyAddTL, 0)} / ay</strong>
+            </div>
+            <div class="chip-rail">
+              ${addChips.map(c => `<button class="chip ${Math.abs(freedomMonthlyAddTL - c.v) < 10 ? 'active' : ''}" onclick="freedomMonthlyAddTL=${c.v};renderFreedomEnginePane();">${c.l}</button>`).join('')}
+            </div>
+          </div>
+
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px;">
+              <span style="font-size:11.5px;font-weight:600;color:var(--text-secondary);">3. Aylık Özgür Yaşam / Gezi Bütçen</span>
+              <strong class="num-tab" style="font-size:12.5px;color:var(--pos-bright);white-space:nowrap;">${fmtTL(freedomTargetMonthlyTL, 0)} / ay (≈ ${fmtUSD(freedomTargetMonthlyTL / usdTry, 0)})</strong>
+            </div>
+            <div class="chip-rail">
+              ${spendChips.map(c => `<button class="chip ${Math.abs(freedomTargetMonthlyTL - c.v) < 10 ? 'active' : ''}" onclick="freedomTargetMonthlyTL=${c.v};renderFreedomEnginePane();">${c.l}</button>`).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div class="verdict-banner" style="margin-bottom:12px;">
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--pos-bright);">
+              KALIPSIZ DÖNGÜ STRATEJİSİYLE ÖZGÜRLÜK SÜREN
+            </div>
+            <div class="num-tab" style="font-size:23px;font-weight:800;color:#fff;margin-top:2px;">
+              ${freeYearLabel}
+            </div>
+            <div class="muted num-tab" style="font-size:12px;margin-top:3px;">
+              Sadece vergili banka mevduatında bekleyen sürü yolunda: <strong>${bankYearLabel}</strong>${savedYears > 0.4 ? ` · Akıllı döngüyle <strong class="pos">+${fmtNum(savedYears, 1)} yıl ömür</strong> kazanırsın.` : ''}
+            </div>
+            <div style="margin-top:9px;">
+              <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;">
+                <span class="dim">Bugünkü Sermayenin Özgürlük Tamamlama Oranı</span>
+                <strong class="num-tab pos">%${fmtNum(sim.progressPct, 1)}</strong>
+              </div>
+              <div class="bench-track">
+                <div class="bench-fill" style="width:${Math.max(3, sim.progressPct).toFixed(1)}%;background:#34d399;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="compass-3col" style="margin-top:0;margin-bottom:12px;">
+          <div class="stat-box">
+            <div class="dim" style="font-size:11px;">Bugün Kazandığın Özgür Zaman</div>
+            <div class="num-tab pos" style="font-size:19px;font-weight:800;margin-top:2px;">
+              Yılda ${fmtNum(Math.min(12, sim.todayFreeMonthsPerYr), 1)} Ay
+            </div>
+            <div class="dim" style="font-size:11px;margin-top:3px;line-height:1.4;">
+              Bugünkü ${fmtCompactTL(freedomStartTL)} sermayenin enflasyon üstü üretimi şimdiden yılın ${fmtNum(Math.min(12, sim.todayFreeMonthsPerYr), 1)} ayını finanse ediyor.
+            </div>
+          </div>
+
+          <div class="stat-box">
+            <div class="dim" style="font-size:11px;">Gereken Özgürlük Kasası</div>
+            <div class="num-tab" style="font-size:19px;font-weight:800;color:#fff;margin-top:2px;">
+              ${fmtCompactTL(sim.targetRealCapTL)}
+            </div>
+            <div class="dim num-tab" style="font-size:11px;margin-top:3px;line-height:1.4;">
+              Bugünün alım gücüyle ≈ ${fmtUSD(sim.targetRealCapTL / usdTry, 0)}. Anaparaya dokunmadan ayda net ${fmtTL(freedomTargetMonthlyTL, 0)} üretir.
+            </div>
+          </div>
+
+          <div class="stat-box">
+            <div class="dim" style="font-size:11px;">Nasıl Ulaşılıyor?</div>
+            <div class="num-tab" style="font-size:17px;font-weight:800;color:var(--accent-bright);margin-top:2px;">
+              +%8,5 / Yıl Reel
+            </div>
+            <div class="dim" style="font-size:11px;margin-top:3px;line-height:1.4;">
+              %0 vergili Sukuk/tahvil cephanesi + indirimde toplanan sağlam Türk ve dünya şirketleri döngüsüyle.
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size:12px;color:var(--text-secondary);background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.26);border-radius:12px;padding:10px 12px;line-height:1.48;margin-bottom:12px;">
+          <strong style="color:#fbbf24;">Gerçekçilik Notu (Hayal Satmayan Matematik):</strong> "2 Milyon ₺’yi bankaya koyup ayda 53.000 ₺ faiz yiyerek dünyayı gezerim" hesabı en tehlikeli yanılgıdır; %30 enflasyonda faizi harcarsan 4 yıl sonra anaparan yarıdan fazla erir ve maaşlı işe geri dönersin. Buradaki hesap ise anaparanı enflasyona karşı %100 koruduktan sonra kalan <strong>gerçek alım gücünü</strong> ölçer.
+        </div>
+
+        <details class="clean-fold" style="margin-bottom:0;">
+          <summary>Yıl Yıl Özgürlük Yol Haritası Tablosunu Aç (Bugünün Alım Gücüyle)</summary>
+          <div style="padding:10px 12px;">
+            <div class="num-tab" style="display:grid;grid-template-columns:0.8fr 1.2fr 1.1fr 1.1fr;gap:6px;padding:6px 4px;border-bottom:1px solid var(--border-hairline);font-size:11px;font-weight:700;color:var(--text-muted);">
+              <div>Dönem</div>
+              <div class="r-right">Kalıpsız Döngü</div>
+              <div class="r-right">Sadece Mevduat</div>
+              <div class="r-right">Aylık Özgür Gelir</div>
+            </div>
+            ${sim.yearlyRows.map(r => `
+              <div class="num-tab" style="display:grid;grid-template-columns:0.8fr 1.2fr 1.1fr 1.1fr;gap:6px;padding:8px 4px;border-bottom:1px solid var(--border-hairline);font-size:12px;align-items:center;">
+                <div style="font-weight:700;color:#fff;">${r.lbl}</div>
+                <div class="r-right pos" style="font-weight:700;">${fmtCompactTL(r.smartCap)}</div>
+                <div class="r-right muted">${fmtCompactTL(r.bankCap)}</div>
+                <div class="r-right" style="color:${r.monthlyFreeIncome >= freedomTargetMonthlyTL ? '#34d399' : '#e2e8f0'};font-weight:600;">${fmtTL(r.monthlyFreeIncome, 0)}/ay</div>
+              </div>
+            `).join('')}
+          </div>
+        </details>
+      `;
     }
 
     function toggleCustomMixer() {
@@ -5570,11 +6045,10 @@
       if (amtRail) {
         const pfTotal = userPortfolio.map(resolveHoldingLiveState).reduce((s, r) => s + r.valueTL, 0);
         const amounts = [
-          { val: 100000, lbl: '100 Bin ₺' },
-          { val: 250000, lbl: '250 Bin ₺' },
           { val: 500000, lbl: '500 Bin ₺' },
           { val: 1000000, lbl: '1 Milyon ₺' },
-          { val: 2500000, lbl: '2,5 Milyon ₺' }
+          { val: 2000000, lbl: '2 Milyon ₺' },
+          { val: 5000000, lbl: '5 Milyon ₺' }
         ];
         let html = amounts.map(a =>
           `<button class="chip ${Math.abs(duelAmount - a.val) < 1 ? 'active' : ''}" onclick="duelAmount=${a.val};renderDuelControlsOnly();renderDuelDynamicResults();">${a.lbl}</button>`
@@ -5818,7 +6292,9 @@
 
     function renderToolsView() {
       if (!marketData) return;
-      if (toolSubTab === 'duel') {
+      if (toolSubTab === 'freedom') {
+        renderFreedomEnginePane();
+      } else if (toolSubTab === 'duel') {
         renderDuelControlsOnly();
         renderDuelDynamicResults();
       } else if (toolSubTab === 'coupon') {
@@ -5845,7 +6321,7 @@
       const box = document.getElementById('calcOutputBox');
       if (!box || !marketData) return;
 
-      const prin = Math.max(0, parseFloat(document.getElementById('calcPrinInp')?.value || '1000000') || 0);
+      const prin = Math.max(0, parseFloat(document.getElementById('calcPrinInp')?.value || '2000000') || 0);
       const days = Math.max(1, parseFloat(document.getElementById('calcDaysInp')?.value || '32') || 32);
       const annualGross = Math.max(0, parseFloat(document.getElementById('calcRateInp')?.value || '39') || 0);
       const stopajPct = Math.max(0, parseFloat(document.getElementById('calcTaxSel')?.value || '17.5') || 0);
@@ -6216,7 +6692,7 @@
         <div style="margin-bottom:14px;">
           <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">Örnek Başlangıç Parası (₺)</div>
           <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:8px;">
-            ${[100000, 500000, 1000000, 2500000].map(v => `
+            ${[500000, 1000000, 2000000, 5000000].map(v => `
               <button class="btn-secondary ${currentPrincipal === v ? 'has-active' : ''}" onclick="currentPrincipal=${v};invalidateMetricsMemo();renderVarliklarView();openAssetSettingsSheet();">
                 ${v >= 1e6 ? (v / 1e6) + 'M ₺' : (v / 1e3) + 'B ₺'}
               </button>
@@ -6268,6 +6744,7 @@
        ========================================================================= */
     const BIST_CHIPS = [
       { key: 'all', label: 'Tümü', desc: '' },
+      { key: 'smart_entry', label: 'Ucuzlayan Sağlamlar', desc: 'Kârlı olup zirvesinden en az %18 indirimde olan sağlam şirketler' },
       { key: 'value_profit', label: 'Hızlı Amorti & Kârlı', desc: 'Gerçek kârıyla 12 yıldan kısa amorti edenler' },
       { key: 'div_payers', label: 'Kâr Payı (Temettü) Verenler', desc: 'Ortaklarına düzenli nakit kâr payı dağıtanlar' },
       { key: 'net_cash', label: 'Kasası Nakit Dolu', desc: 'Kasasındaki nakdi tüm borcundan fazla olan sanayi/hizmet şirketleri' },
@@ -6424,7 +6901,10 @@
         );
       }
 
-      if (bistActiveFilter === 'value_profit') {
+      if (bistActiveFilter === 'smart_entry') {
+        const smartTickers = new Set(getSmartBistCandidates().map(x => x.ticker));
+        list = list.filter(st => smartTickers.has(st.ticker));
+      } else if (bistActiveFilter === 'value_profit') {
         list = list.filter(st => st.entityKind !== 'gyo' && isValidNum(st.pe) && st.pe >= 2.2 && st.pe <= 12 && isValidNum(st.roe) && st.roe >= 15 && (!isValidNum(st.pb) || st.pb > 0));
       } else if (bistActiveFilter === 'div_payers') {
         list = list.filter(st => isValidNum(st.dividendYield) && st.dividendYield >= 1.5);
@@ -6662,61 +7142,71 @@
       const usdTry = Number(marketData.macro?.usdTry) || 50.0;
       const lookup = marketData.kitchenIntelSummary?.openHorizon?.bistStockLookup || {};
 
-      const makeInstItem = (id, targetTL) => {
+      const makeInstItem = (id, costTargetTL, costFactor = 0.94, daysAccrued = 32) => {
         const inst = instById.get(id);
         if (!inst) return null;
         const meta = getAssetMeta(inst);
         if (inst.isRateInstrument) {
-          const rate = inst.isCustomizableRate ? customDepositRate : (Number(inst.currentPrice) || 39);
+          const rate = inst.isCustomizableRate ? customDepositRate : (Number(inst.currentPrice) || 36.5);
           return {
             uid: 'pf_' + Math.random().toString(36).slice(2, 9),
             kind: 'inst', id: inst.id, name: meta.title,
-            isRate: true, isUsd: false, qty: targetTL, unitCost: rate, daysElapsed: 0
+            isRate: true, isUsd: false, qty: costTargetTL, unitCost: rate,
+            daysElapsed: daysAccrued,
+            maturityDays: id === 'kira-sertifikasi-sukuk' ? 365 : id === 'dibs-tahvil' ? 730 : 32,
+            rateStruct: (id === 'kira-sertifikasi-sukuk' || id === 'dibs-tahvil') ? 'fixed_coupon' : 'daily_ppf'
           };
         }
         const p = Number(inst.currentPrice) || 1;
-        const pTL = inst.isUsdAsset ? p * usdTry : p;
-        const qty = +(targetTL / pTL).toFixed(inst.isUsdAsset || p > 500 ? 4 : 2);
+        const entryUnit = +(p * costFactor).toFixed(p < 10 ? 4 : 2);
+        const entryFx = inst.isUsdAsset ? +(usdTry * 0.97).toFixed(4) : usdTry;
+        const unitCostTL = inst.isUsdAsset ? entryUnit * entryFx : entryUnit;
+        const qty = +(costTargetTL / Math.max(0.0001, unitCostTL)).toFixed(inst.isUsdAsset || p > 500 ? 4 : 2);
         return {
           uid: 'pf_' + Math.random().toString(36).slice(2, 9),
           kind: 'inst', id: inst.id, name: meta.title,
           isRate: false, isUsd: Boolean(inst.isUsdAsset),
-          qty, unitCost: p, entryUsdTry: usdTry
+          qty, unitCost: entryUnit, entryUsdTry: entryFx
         };
       };
 
-      const makeBistItem = (ticker, targetTL) => {
+      const makeBistItem = (ticker, costTargetTL, costFactor = 0.93) => {
         const st = lookup[ticker];
         if (!st || !st.close) return null;
-        const lots = Math.max(1, Math.round(targetTL / st.close));
+        const entryCost = +(st.close * costFactor).toFixed(2);
+        const lots = Math.max(1, Math.round(costTargetTL / Math.max(0.01, entryCost)));
         return {
           uid: 'pf_' + Math.random().toString(36).slice(2, 9),
           kind: 'bist', id: ticker,
           name: `${ticker} · ${formatBistCompanyName(st.name, ticker)}`,
-          isRate: false, isUsd: false, qty: lots, unitCost: st.close
+          isRate: false, isUsd: false, qty: lots, unitCost: entryCost
         };
       };
 
       if (presetType === 'defensive') {
         return [
-          makeInstItem('para-piyasasi-fonu', 400000),
-          makeInstItem('gram-altin-spot', 350000),
-          makeInstItem('abd-sp500-spy', 150000),
-          makeInstItem('eurobond-usdtr', 100000)
+          makeInstItem('kira-sertifikasi-sukuk', 500000, 1.0, 40),
+          makeInstItem('para-piyasasi-fonu', 300000, 1.0, 28),
+          makeInstItem('gram-altin-spot', 700000, 0.94),
+          makeInstItem('abd-sp500-spy', 300000, 0.95),
+          makeInstItem('eurobond-usdtr', 200000, 0.96)
         ].filter(Boolean);
       }
 
+      // 2.000.000 ₺ Kalıpsız Döngü Örnek Portföyü (%0 Vergi Ağırlıklı + Gerçekçi Maliyetli)
       return [
-        makeInstItem('para-piyasasi-fonu', 200000),
-        makeInstItem('gram-altin-spot', 350000),
-        makeInstItem('abd-sp500-spy', 250000),
-        makeBistItem('THYAO', 200000) || makeInstItem('bist-30', 200000)
+        makeInstItem('kira-sertifikasi-sukuk', 450000, 1.0, 42),
+        makeInstItem('para-piyasasi-fonu', 250000, 1.0, 25),
+        makeInstItem('altin-sertifikasi', 500000, 0.93),
+        makeInstItem('abd-sp500-spy', 400000, 0.94),
+        makeBistItem('BIMAS', 400000, 0.92) || makeInstItem('fon-yerli-hisse-zpbdl', 400000, 0.93)
       ].filter(Boolean);
     }
 
     function persistPortfolio() {
       safeSetStorage(PF_STORAGE_KEY, JSON.stringify({
         isSample: isPortfolioSample,
+        v7Sample: true,
         privacy: pfPrivacyHidden,
         items: userPortfolio
       }));
@@ -6737,6 +7227,13 @@
         try {
           const parsed = JSON.parse(raw);
           if (parsed && Array.isArray(parsed.items)) {
+            if (parsed.isSample && !parsed.v7Sample) {
+              userPortfolio = buildPresetHoldings('balanced');
+              isPortfolioSample = true;
+              pfPrivacyHidden = Boolean(parsed.privacy);
+              persistPortfolio();
+              return;
+            }
             userPortfolio = parsed.items;
             isPortfolioSample = Boolean(parsed.isSample);
             pfPrivacyHidden = Boolean(parsed.privacy);
@@ -6755,7 +7252,7 @@
       isPortfolioSample = true;
       persistPortfolio();
       renderPortfoyView();
-      showToast(type === 'defensive' ? 'Temkinli geçiş sepeti yüklendi' : 'Dengeli sepet yüklendi');
+      showToast(type === 'defensive' ? '2M ₺ Temkinli Sepet yüklendi' : '2M ₺ Kalıpsız Döngü Sepeti yüklendi');
     }
 
     function clearUserPortfolio() {
@@ -6961,6 +7458,8 @@
       const interestWeightPct = totalValTL > 0
         ? (evaluated.filter(r => r.group === 'Nakit & Sabit Getiri' || r.group === 'Katılım & Kira').reduce((s, r) => s + r.valueTL, 0) / totalValTL) * 100
         : 0;
+      const zeroTaxValTL = evaluated.filter(r => r.h.kind === 'bist' || (r.inst && getAssetTaxBadge(r.inst).isZeroTax)).reduce((s, r) => s + r.valueTL, 0);
+      const zeroTaxWeightPct = totalValTL > 0 ? (zeroTaxValTL / totalValTL) * 100 : 0;
 
       const grpMap = {};
       for (const r of evaluated) grpMap[r.group] = (grpMap[r.group] || 0) + r.valueTL;
@@ -6979,7 +7478,7 @@
             <div class="wh-label-group">
               <span class="wh-label">Toplam Kasam</span>
               <button class="icon-btn" style="width:28px;height:28px;border-radius:7px;" onclick="togglePortfolioPrivacy()" aria-label="Tutarları Gizle/Göster">${eyeSvg}</button>
-              ${isPortfolioSample && evaluated.length > 0 ? `<span class="chg-pill info" style="cursor:pointer;" onclick="clearUserPortfolio()" title="Örnek sepeti temizle">Örnek Sepet · Sıfırla</span>` : ''}
+              ${isPortfolioSample && evaluated.length > 0 ? `<span class="chg-pill info" style="cursor:pointer;" onclick="clearUserPortfolio()" title="Örnek sepeti temizle">2M ₺ Örnek Sepet · Sıfırla</span>` : ''}
             </div>
             <button class="btn-primary" onclick="openPfAddSheet()">
               <svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
@@ -7012,10 +7511,21 @@
             </div>
           ` : ''}
 
+          ${evaluated.length > 0 ? `
+            <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-hairline);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px;">
+              <span class="num-tab muted">
+                %0 Vergili Araç Oranı: <strong class="pos">%${fmtNum(zeroTaxWeightPct, 0)}</strong> · Nakit Cephane: <strong>%${fmtNum(interestWeightPct, 0)}</strong>
+              </span>
+              <button class="link-btn" style="padding:0;" onclick="freedomStartTL=${Math.max(10000, Math.round(totalValTL))};switchTab('sepet');setToolSubTab('freedom');">
+                Bu Kasayla Özgürlük Sürem →
+              </button>
+            </div>
+          ` : ''}
+
           ${interestWeightPct >= 75 && evaluated.length > 0 ? `
-            <div style="margin-top:12px;padding:9px 12px;border-radius:11px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.28);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px;">
-              <span class="warn">Kasandaki paranın <strong>%${fmtNum(interestWeightPct, 0)}</strong> kadarı tek başına faiz/nakitte duruyor; kur veya enflasyon sıçramasına karşı sepetini test et.</span>
-              <button class="link-btn" onclick="duelPresetKey='balanced';switchTab('sepet');">Sepetle Kıyasla →</button>
+            <div style="margin-top:10px;padding:9px 12px;border-radius:11px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.28);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px;">
+              <span class="warn">Kasandaki paranın <strong>%${fmtNum(interestWeightPct, 0)}</strong> kadarı tek başına nakit/faizde duruyor; kur veya enflasyon sıçramasına karşı sepetini test et.</span>
+              <button class="link-btn" onclick="duelPresetKey='adaptive';switchTab('sepet');setToolSubTab('duel');">Sepetle Kıyasla →</button>
             </div>
           ` : ''}
         </div>
@@ -7107,8 +7617,8 @@
 
         footEl.innerHTML = `
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button class="btn-secondary" style="height:32px;font-size:12px;" onclick="loadPortfolioPreset('balanced')">Dengeli Örnek</button>
-            <button class="btn-secondary" style="height:32px;font-size:12px;" onclick="loadPortfolioPreset('defensive')">Temkinli Örnek</button>
+            <button class="btn-secondary" style="height:32px;font-size:12px;" onclick="loadPortfolioPreset('balanced')">2M ₺ Döngü Örneği</button>
+            <button class="btn-secondary" style="height:32px;font-size:12px;" onclick="loadPortfolioPreset('defensive')">2M ₺ Temkinli Örnek</button>
           </div>
           <button class="btn-danger" style="height:32px;font-size:12px;" onclick="clearUserPortfolio()">Kasamı Sıfırla</button>
         `;
@@ -7116,8 +7626,8 @@
 
       // Alt Sekme B: "Kasam Faizde Kalsaydı Ne Olurdu?"
       if (pfSubTab === 'analytics') {
-        const baseForSim = totalValTL > 0 ? totalValTL : 500000;
-        const mySim = evaluateBasketVsDeposit(baseForSim, pfBenchStageIdx, evaluated.length > 0 ? 'my_kasam' : 'balanced');
+        const baseForSim = totalValTL > 0 ? totalValTL : 2000000;
+        const mySim = evaluateBasketVsDeposit(baseForSim, pfBenchStageIdx, evaluated.length > 0 ? 'my_kasam' : 'adaptive');
         const diffTL = mySim.diffVsDepTL;
 
         const goldInst = instById.get('gram-altin-spot');
@@ -7145,7 +7655,7 @@
                 Enflasyon sonrası gerçek alım gücü değişimi: <strong class="${pctCls(mySim.basketRealPct)}">${fmtPct(mySim.basketRealPct, 1)}</strong>
               </div>
             </div>
-            <button class="btn-secondary" onclick="duelPresetKey='my_kasam';duelStageIdx=${pfBenchStageIdx};switchTab('sepet');">Detaylı Grafikte Gör →</button>
+            <button class="btn-secondary" onclick="duelPresetKey='my_kasam';duelStageIdx=${pfBenchStageIdx};switchTab('sepet');setToolSubTab('duel');">Detaylı Grafikte Gör →</button>
           </div>
 
           <div class="surface surface-pad">
@@ -7259,7 +7769,7 @@
         </div>
 
         ${(item.isRate || r.inst?.isRateInstrument) ? (() => {
-          const mDays = Math.max(1, Number(item.maturityDays) || (item.id === 'dibs-tahvil' ? 728 : item.id === 'kira-sertifikasi-sukuk' ? 364 : 32));
+          const mDays = Math.max(1, Number(item.maturityDays) || (item.id === 'dibs-tahvil' ? 730 : item.id === 'kira-sertifikasi-sukuk' ? 365 : 32));
           const rStruct = item.rateStruct || (item.id === 'dibs-tahvil' || item.id === 'kira-sertifikasi-sukuk' ? 'fixed_coupon' : item.id === 'para-piyasasi-fonu' || item.id === 'bes-emeklilik' ? 'daily_ppf' : 'rollover_deposit');
           const rVal = Number(item.unitCost) || Number(r.inst?.currentPrice) || 36;
           const isPart = PARTICIPATION_ASSET_IDS.has(item.id);
@@ -7354,7 +7864,7 @@
       const initCost = editItem ? editItem.unitCost : (ref ? (ref.isRate ? ref.price.toFixed(2) : (ref.price < 10 ? ref.price.toFixed(4) : ref.price.toFixed(2))) : '');
       const initDays = editItem?.daysElapsed || 0;
       const isPartRef = ref ? PARTICIPATION_ASSET_IDS.has(ref.id) : false;
-      const defaultMatDays = editItem?.maturityDays || (ref?.id === 'dibs-tahvil' ? 728 : ref?.id === 'kira-sertifikasi-sukuk' ? 364 : ref?.id === 'bes-emeklilik' ? 365 : 32);
+      const defaultMatDays = editItem?.maturityDays || (ref?.id === 'dibs-tahvil' ? 730 : ref?.id === 'kira-sertifikasi-sukuk' ? 365 : ref?.id === 'bes-emeklilik' ? 365 : 32);
       const defaultRateStruct = editItem?.rateStruct || (ref?.id === 'dibs-tahvil' || ref?.id === 'kira-sertifikasi-sukuk' ? 'fixed_coupon' : ref?.id === 'para-piyasasi-fonu' || ref?.id === 'bes-emeklilik' ? 'daily_ppf' : 'rollover_deposit');
 
       openSheetWithHtml(`
@@ -7784,8 +8294,6 @@
           <div class="stat-box" style="margin-bottom:12px;background:linear-gradient(165deg,#131929 0%,#0e111b 100%);" id="drawerAutoCalcMount">
             ${buildDrawerAutoCalcInnerHtml(inst)}
           </div>
-
-          ${forwardInflationHtml}
         ` : `
           <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px;">
             <div class="stat-box" style="padding:10px;">
@@ -7815,40 +8323,45 @@
           </div>
         `}
 
-        <!-- %100 EKRANA SIĞAN DÖNEM ÖZETİ (ORAN ARAÇLARINDA TARİHSEL SİMÜLASYON UYARISI İLE!) -->
-        <div class="surface" style="background:var(--bg-input);margin-bottom:12px;box-shadow:none;">
-          ${isRateInst ? `
-            <div style="padding:9px 12px;background:rgba(245,158,11,0.09);border-bottom:1px solid rgba(245,158,11,0.24);font-size:11.5px;line-height:1.45;">
-              <div style="font-weight:700;color:#fbbf24;margin-bottom:2px;">Geçmiş Dönem Simülasyonu (2021–2026 Tarihsel Oran &amp; Enflasyon)</div>
-              <div class="muted">Aşağıdaki 3 ve 5 yıllık satırlar, 2021–2023 düşük oran ve yüksek enflasyon döneminin geçmiş simülasyonudur; bugün bağlanan paranın gelecekteki getirisini göstermez.</div>
-            </div>
-          ` : ''}
-          <div style="display:grid;grid-template-columns:1.1fr 1fr 1fr 1.15fr;gap:6px;padding:8px 12px;border-bottom:1px solid var(--border-hairline);font-size:11px;font-weight:600;color:var(--text-muted);">
-            <div>${isRateInst ? 'Geçmiş Dönem' : 'Süre'}</div>
-            <div class="r-right">${isRateInst ? 'Bileşik Net' : 'Net Kazanç'}</div>
-            <div class="r-right">Alım Gücü</div>
-            <div class="r-right">${fmtCompactTL(currentPrincipal)} Ne Oldu?</div>
-          </div>
-          ${allStages.map(s => `
-            <div class="num-tab" style="display:grid;grid-template-columns:1.1fr 1fr 1fr 1.15fr;gap:6px;padding:8px 12px;border-bottom:1px solid var(--border-hairline);font-size:12px;align-items:center;">
-              <div style="font-weight:600;color:#fff;">${s.lbl}</div>
-              ${s.isPartial
-                ? `<div class="r-right dim" style="grid-column: span 3; font-size:11.5px;">İşlem geçmişi ${s.lbl.toLocaleLowerCase('tr-TR')}dan kısa</div>`
-                : `<div class="r-right ${pctCls(s.tlNetPct)}">${fmtPct(s.tlNetPct, 1)}</div>
-                   <div class="r-right"><span class="chg-pill ${pctCls(s.realPct)}" style="padding:1.5px 6px;font-size:11px;">${fmtPct(s.realPct, 1)}</span></div>
-                   <div class="r-right" style="font-weight:600;">${fmtCompactTL(s.finalValueTL)}</div>`
-              }
-            </div>
-          `).join('')}
-        </div>
-
-        <div class="stat-box" style="font-size:12px;color:var(--text-secondary);margin-bottom:14px;line-height:1.45;">
+        <div class="stat-box" style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;line-height:1.45;">
           <strong style="color:#fff;">Nasıl Alınır?</strong> ${escapeHtml(guide.howToBuy)}
         </div>
 
+        <details class="clean-fold">
+          <summary>Geçmiş Yılların Performansı (1H – 5Y)${isRateInst ? ' ve Enflasyon Senaryoları' : ''}</summary>
+          <div style="padding:10px 12px;">
+            ${forwardInflationHtml}
+            <div class="surface" style="background:rgba(9,11,18,0.55);box-shadow:none;">
+              ${isRateInst ? `
+                <div style="padding:9px 12px;background:rgba(245,158,11,0.09);border-bottom:1px solid rgba(245,158,11,0.24);font-size:11.5px;line-height:1.45;">
+                  <div style="font-weight:700;color:#fbbf24;margin-bottom:2px;">Geçmiş Dönem Simülasyonu (2021–2026 Tarihsel Oran &amp; Enflasyon)</div>
+                  <div class="muted">Aşağıdaki 3 ve 5 yıllık satırlar, 2021–2023 düşük oran ve yüksek enflasyon döneminin geçmiş simülasyonudur; bugün bağlanan paranın gelecekteki getirisini göstermez.</div>
+                </div>
+              ` : ''}
+              <div style="display:grid;grid-template-columns:1.1fr 1fr 1fr 1.15fr;gap:6px;padding:8px 12px;border-bottom:1px solid var(--border-hairline);font-size:11px;font-weight:600;color:var(--text-muted);">
+                <div>${isRateInst ? 'Geçmiş Dönem' : 'Süre'}</div>
+                <div class="r-right">${isRateInst ? 'Bileşik Net' : 'Net Kazanç'}</div>
+                <div class="r-right">Alım Gücü</div>
+                <div class="r-right">${fmtCompactTL(currentPrincipal)} Ne Oldu?</div>
+              </div>
+              ${allStages.map(s => `
+                <div class="num-tab" style="display:grid;grid-template-columns:1.1fr 1fr 1fr 1.15fr;gap:6px;padding:8px 12px;border-bottom:1px solid var(--border-hairline);font-size:12px;align-items:center;">
+                  <div style="font-weight:600;color:#fff;">${s.lbl}</div>
+                  ${s.isPartial
+                    ? `<div class="r-right dim" style="grid-column: span 3; font-size:11.5px;">İşlem geçmişi ${s.lbl.toLocaleLowerCase('tr-TR')}dan kısa</div>`
+                    : `<div class="r-right ${pctCls(s.tlNetPct)}">${fmtPct(s.tlNetPct, 1)}</div>
+                       <div class="r-right"><span class="chg-pill ${pctCls(s.realPct)}" style="padding:1.5px 6px;font-size:11px;">${fmtPct(s.realPct, 1)}</span></div>
+                       <div class="r-right" style="font-weight:600;">${fmtCompactTL(s.finalValueTL)}</div>`
+                  }
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </details>
+
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn-primary" style="flex:1;height:40px;" onclick="openPfAddSheet('inst','${inst.id}')">${INDEX_TO_INVESTABLE_FUND[inst.id] ? '+ Fon Karşılığını Kasama Ekle' : '+ Kasama Ekle'}</button>
-          <button class="btn-secondary" style="height:40px;" onclick="closeSheet();toggleCompareAsset('${inst.id}')">Kıyaslama Motorunda Gör</button>
+          <button class="btn-secondary" style="height:40px;" onclick="closeSheet();toggleCompareAsset('${inst.id}')">Yarıştır</button>
           ${inst.verifyUrl ? `<a href="${escapeHtml(inst.verifyUrl)}" target="_blank" rel="noopener noreferrer" class="btn-secondary" style="height:40px;text-decoration:none;">Canlı Kaynak ↗</a>` : ''}
         </div>
       `);

@@ -316,13 +316,21 @@ function calcFixedIncomePeriods(annualRatePct, mode = 'rollover32', taxRatePct =
   const r = (Number(annualRatePct) || 0) / 100;
   const tau = Math.max(0, (Number(taxRatePct) || 0) / 100);
   const spreadRatio = (Number(annualRatePct) || 36.0) / 36.0;
-  // Son 3 yıl (2023-2026): 2023 ort %28, 2024 ort %47, son yıl mevcut oran (Tarihsel dönem simülasyonu)
-  const rY3_1 = 0.28 * spreadRatio;
-  const rY3_2 = 0.47 * spreadRatio;
+  // Gerçek 2023-2026 TCMB / Mevduat Tarihsel Serisi:
+  // Yıl -3 (Kas 2023 - Kas 2024 sıkılaşma zirvesi): politika ort %47.5, stopaj ~%7.5
+  // Yıl -2 (Kas 2024 - Kas 2025): politika ort %43.5, stopaj ~%15.0
+  // Yıl -1 (Kas 2025 - Kas 2026): mevcut canlı oran ve mevcut stopaj
+  const rY3_1 = 0.465 * spreadRatio;
+  const rY3_2 = 0.435 * spreadRatio;
   const rY3_3 = r;
-  // Son 5 yıl (2021-2026): 2021 ort %17.5, 2022 ort %14.5 + son 3 yıl (Tarihsel dönem simülasyonu)
-  const rY5_1 = 0.175 * spreadRatio;
-  const rY5_2 = 0.145 * spreadRatio;
+  // Gerçek 2021-2023 Negatif Reel Faiz Dönemi (5 Yıllık Pencerenin İlk 2 Yılı):
+  // Yıl -5 (Kas 2021 - Kas 2022): ort %16, stopaj %5 | Yıl -4 (Kas 2022 - Kas 2023): ort %24, stopaj %5
+  const rY5_1 = 0.16 * spreadRatio;
+  const rY5_2 = 0.24 * spreadRatio;
+  const tau22 = tau > 0 ? Math.min(tau, 0.05) : 0;
+  const tau23 = tau > 0 ? Math.min(tau, 0.05) : 0;
+  const tau24 = tau > 0 ? Math.min(tau, 0.075) : 0;
+  const tau25 = tau > 0 ? Math.min(tau, 0.15) : 0;
 
   const daysMap = { perf1W: 7, perf1M: 32, perf3M: 92, perf6M: 182, perf1Y: 365 };
 
@@ -340,9 +348,9 @@ function calcFixedIncomePeriods(annualRatePct, mode = 'rollover32', taxRatePct =
       net[k] = +((factorDaysComp(r, d, tau) - 1) * 100).toFixed(2);
     }
     gross.perf3Y = +((yrFactor(rY3_1, 0) * yrFactor(rY3_2, 0) * yrFactor(rY3_3, 0) - 1) * 100).toFixed(2);
-    net.perf3Y = +((yrFactor(rY3_1, tau) * yrFactor(rY3_2, tau) * yrFactor(rY3_3, tau) - 1) * 100).toFixed(2);
+    net.perf3Y = +((yrFactor(rY3_1, tau24) * yrFactor(rY3_2, tau25) * yrFactor(rY3_3, tau) - 1) * 100).toFixed(2);
     gross.perf5Y = +((yrFactor(rY5_1, 0) * yrFactor(rY5_2, 0) * yrFactor(rY3_1, 0) * yrFactor(rY3_2, 0) * yrFactor(rY3_3, 0) - 1) * 100).toFixed(2);
-    net.perf5Y = +((yrFactor(rY5_1, tau) * yrFactor(rY5_2, tau) * yrFactor(rY3_1, tau) * yrFactor(rY3_2, tau) * yrFactor(rY3_3, tau) - 1) * 100).toFixed(2);
+    net.perf5Y = +((yrFactor(rY5_1, tau22) * yrFactor(rY5_2, tau23) * yrFactor(rY3_1, tau24) * yrFactor(rY3_2, tau25) * yrFactor(rY3_3, tau) - 1) * 100).toFixed(2);
     return { compoundingMode: mode, ...gross, netPerf: net };
   }
 
@@ -378,24 +386,56 @@ function calcFixedIncomePeriods(annualRatePct, mode = 'rollover32', taxRatePct =
     net[k] = +((factorForDays(r, d, tau) - 1) * 100).toFixed(2);
   }
   const yrG = (rAnn) => factorForDays(rAnn, 365, 0);
-  const yrN = (rAnn) => factorForDays(rAnn, 365, tau);
+  const yrN = (rAnn, tf) => factorForDays(rAnn, 365, tf);
 
   gross.perf3Y = +((yrG(rY3_1) * yrG(rY3_2) * yrG(rY3_3) - 1) * 100).toFixed(2);
-  net.perf3Y = +((yrN(rY3_1) * yrN(rY3_2) * yrN(rY3_3) - 1) * 100).toFixed(2);
+  net.perf3Y = +((yrN(rY3_1, tau24) * yrN(rY3_2, tau25) * yrN(rY3_3, tau) - 1) * 100).toFixed(2);
 
   gross.perf5Y = +((yrG(rY5_1) * yrG(rY5_2) * yrG(rY3_1) * yrG(rY3_2) * yrG(rY3_3) - 1) * 100).toFixed(2);
-  net.perf5Y = +((yrN(rY5_1) * yrN(rY5_2) * yrN(rY3_1) * yrN(rY3_2) * yrN(rY3_3) - 1) * 100).toFixed(2);
+  net.perf5Y = +((yrN(rY5_1, tau22) * yrN(rY5_2, tau23) * yrN(rY3_1, tau24) * yrN(rY3_2, tau25) * yrN(rY3_3, tau) - 1) * 100).toFixed(2);
 
   return { compoundingMode: mode, ...gross, netPerf: net };
 }
 
-// USD varlık sayfasındaki birebir değişimi ve USD/TRY kur farkıyla birleşik TL değişimini birlikte tutar
+const KNOWN_PARTIAL_3Y_IDS = new Set([
+  'bist-temettu-25', 'halka-arz-altny', 'halka-arz-rgyas', 'fon-degisken-isglk', 'gayrimenkul-gyo-fonu-optgy'
+]);
+const KNOWN_PARTIAL_5Y_IDS = new Set([
+  'altin-sertifikasi', 'bist-temettu-25', 'halka-arz-altny', 'halka-arz-tabgd', 'halka-arz-rgyas',
+  'fon-yerli-bist30-apx30', 'fon-tematik-surdurulebilirlik-zsr25', 'fon-degisken-isglk',
+  'gayrimenkul-gyo-fonu-optgy', 'reel-enerji-astor', 'reel-enerji-cwene', 'reel-enerji-smrtg', 'reel-yazilim-miatk'
+]);
+// Yurt dışı kupon/temettü ödeyen ETF'lerin fiyat serisine eklenen doğrulanmış yıllık nakit dağıtım getirileri
+const USD_ETF_ANNUAL_YIELD_PCT = {
+  'eurobond-emb': 4.8,
+  'abd-sp500-spy': 1.3,
+  'dunya-borsalari-vt': 1.9,
+  'abd-nasdaq-qqq': 0.6,
+  'fon-tematik-yari-iletken-soxx': 0.7
+};
+
+// USD varlık sayfasındaki birebir değişimi (ve varsa nakit kupon/temettü toplam getirisini) USD/TRY ile birleştirir
 function buildUsdAssetItem(baseMeta, tvPage, usdTryPage) {
   const p = tvPage || { currentPrice: 0, perf1W: 0, perf1M: 0, perf3M: 0, perf6M: 0, perf1Y: 0, perf3Y: 0, perf5Y: 0 };
-  const fx = usdTryPage || { currentPrice: 50.15, perf1W: 0, perf1M: 0, perf3M: 0, perf6M: 0, perf1Y: 0, perf3Y: 76.05, perf5Y: 417.72 };
+  const fx = usdTryPage || { currentPrice: 50.38, perf1W: 0, perf1M: 0, perf3M: 0, perf6M: 0, perf1Y: 0, perf3Y: 76.5, perf5Y: 401.3 };
   const combine = (u, f) => +(((1 + (u || 0) / 100) * (1 + (f || 0) / 100) - 1) * 100).toFixed(2);
-  const isPartial3Y = Boolean(p.perfAll != null && p.perf3Y != null && Math.abs(p.perf3Y - p.perfAll) < 0.05);
-  const isPartial5Y = Boolean(p.perfAll != null && p.perf5Y != null && Math.abs(p.perf5Y - p.perfAll) < 0.05);
+  const divAnn = USD_ETF_ANNUAL_YIELD_PCT[baseMeta.id] || 0;
+  const withYield = (rawPct, yrs) => {
+    const base = Number(rawPct) || 0;
+    if (!divAnn || yrs <= 0) return +base.toFixed(2);
+    return +((((1 + base / 100) * Math.pow(1 + divAnn / 100, yrs)) - 1) * 100).toFixed(2);
+  };
+
+  const u1W = +(p.perf1W || 0).toFixed(2);
+  const u1M = +(p.perf1M || 0).toFixed(2);
+  const u3M = withYield(p.perf3M, 0.25);
+  const u6M = withYield(p.perf6M, 0.5);
+  const u1Y = withYield(p.perf1Y, 1);
+  const u3Y = withYield(p.perf3Y, 3);
+  const u5Y = withYield(p.perf5Y, 5);
+
+  const isPartial3Y = KNOWN_PARTIAL_3Y_IDS.has(baseMeta.id) || Boolean(p.perf3Y == null || (p.perfAll != null && Math.abs(p.perf3Y - p.perfAll) < 1.5));
+  const isPartial5Y = KNOWN_PARTIAL_5Y_IDS.has(baseMeta.id) || Boolean(p.perf5Y == null || (p.perfAll != null && Math.abs(p.perf5Y - p.perfAll) < 1.5));
 
   const isForeignListed = /^(AMEX|NASDAQ|OTC|NYSE):/i.test(String(baseMeta.symbol || ''));
   const usdChg1D = typeof p.change1D === 'number' && Number.isFinite(p.change1D) ? +p.change1D.toFixed(2) : 0;
@@ -406,47 +446,45 @@ function buildUsdAssetItem(baseMeta, tvPage, usdTryPage) {
     taxRegime: baseMeta.taxRegime || (isForeignListed ? 'declaration' : null),
     isUsdAsset: true,
     currency: 'USD',
-    currentPrice: p.currentPrice, // Kaynak sayfasındaki BİREBİR USD fiyatı
+    currentPrice: p.currentPrice,
     currentPriceTL: +(p.currentPrice * fx.currentPrice).toFixed(2),
     change1D: usdChg1D,
     tlChange1D: combine(usdChg1D, fxChg1D),
     isPartial3Y: baseMeta.isPartial3Y ?? isPartial3Y,
     isPartial5Y: baseMeta.isPartial5Y ?? isPartial5Y,
     fundamentals: p.fundamentals || null,
-    // Kaynak sayfasındaki BİREBİR USD yüzdeleri (Teyit linkiyle %100 aynı)
     pagePerf: {
-      perf1W: +(p.perf1W || 0).toFixed(2),
-      perf1M: +(p.perf1M || 0).toFixed(2),
-      perf3M: +(p.perf3M || 0).toFixed(2),
-      perf6M: +(p.perf6M || 0).toFixed(2),
-      perf1Y: +(p.perf1Y || 0).toFixed(2),
-      perf3Y: +(p.perf3Y || 0).toFixed(2),
-      perf5Y: +(p.perf5Y || 0).toFixed(2)
+      perf1W: u1W,
+      perf1M: u1M,
+      perf3M: u3M,
+      perf6M: u6M,
+      perf1Y: u1Y,
+      perf3Y: u3Y,
+      perf5Y: u5Y
     },
-    // Kur farkı eklenmiş TL bazlı yüzdeler
     tlPerf: {
-      perf1W: combine(p.perf1W, fx.perf1W),
-      perf1M: combine(p.perf1M, fx.perf1M),
-      perf3M: combine(p.perf3M, fx.perf3M),
-      perf6M: combine(p.perf6M, fx.perf6M),
-      perf1Y: combine(p.perf1Y, fx.perf1Y),
-      perf3Y: combine(p.perf3Y, fx.perf3Y),
-      perf5Y: combine(p.perf5Y, fx.perf5Y)
+      perf1W: combine(u1W, fx.perf1W),
+      perf1M: combine(u1M, fx.perf1M),
+      perf3M: combine(u3M, fx.perf3M),
+      perf6M: combine(u6M, fx.perf6M),
+      perf1Y: combine(u1Y, fx.perf1Y),
+      perf3Y: combine(u3Y, fx.perf3Y),
+      perf5Y: combine(u5Y, fx.perf5Y)
     },
-    perf1W: +(p.perf1W || 0).toFixed(2),
-    perf1M: +(p.perf1M || 0).toFixed(2),
-    perf3M: +(p.perf3M || 0).toFixed(2),
-    perf6M: +(p.perf6M || 0).toFixed(2),
-    perf1Y: +(p.perf1Y || 0).toFixed(2),
-    perf3Y: +(p.perf3Y || 0).toFixed(2),
-    perf5Y: +(p.perf5Y || 0).toFixed(2)
+    perf1W: u1W,
+    perf1M: u1M,
+    perf3M: u3M,
+    perf6M: u6M,
+    perf1Y: u1Y,
+    perf3Y: u3Y,
+    perf5Y: u5Y
   };
 }
 
 function buildDirectItem(baseMeta, pageData) {
   const p = pageData || { currentPrice: 0, perf1W: 0, perf1M: 0, perf3M: 0, perf6M: 0, perf1Y: 0, perf3Y: 0, perf5Y: 0 };
-  const isPartial3Y = Boolean(p.perfAll != null && p.perf3Y != null && Math.abs(p.perf3Y - p.perfAll) < 0.05);
-  const isPartial5Y = Boolean(p.perfAll != null && p.perf5Y != null && Math.abs(p.perf5Y - p.perfAll) < 0.05);
+  const isPartial3Y = KNOWN_PARTIAL_3Y_IDS.has(baseMeta.id) || Boolean(p.perf3Y == null || (p.perfAll != null && Math.abs(p.perf3Y - p.perfAll) < 1.5));
+  const isPartial5Y = KNOWN_PARTIAL_5Y_IDS.has(baseMeta.id) || Boolean(p.perf5Y == null || (p.perfAll != null && Math.abs(p.perf5Y - p.perfAll) < 1.5));
   return {
     ...baseMeta,
     isUsdAsset: false,
@@ -481,92 +519,67 @@ async function buildFullDataset() {
     if (item) dv[item.key] = item;
   }
 
-  // Serbest Piyasa Döviz ve Kıymetli Madenler için TradingView Scanner Gerçek 3A/6A/3Y/5Y Spot Bileşik Verisi
-  const fxUsd3M = macroMap['FX_IDC:USDTRY']?.perf3M ?? 4.82;
-  const fxUsd6M = macroMap['FX_IDC:USDTRY']?.perf6M ?? 10.14;
-  const fxUsd3Y = macroMap['FX_IDC:USDTRY']?.perf3Y ?? 76.05;
-  const fxUsd5Y = macroMap['FX_IDC:USDTRY']?.perf5Y ?? 417.72;
-
-  const fxEur3M = macroMap['FX_IDC:EURTRY']?.perf3M ?? 5.12;
-  const fxEur6M = macroMap['FX_IDC:EURTRY']?.perf6M ?? 11.45;
-  const fxEur3Y = macroMap['FX_IDC:EURTRY']?.perf3Y ?? 83.28;
-  const fxEur5Y = macroMap['FX_IDC:EURTRY']?.perf5Y ?? 397.92;
-
-  const fxGbp3M = macroMap['FX_IDC:GBPTRY']?.perf3M ?? 5.40;
-  const fxGbp6M = macroMap['FX_IDC:GBPTRY']?.perf6M ?? 12.10;
-  const fxGbp3Y = macroMap['FX_IDC:GBPTRY']?.perf3Y ?? 91.16;
-  const fxGbp5Y = macroMap['FX_IDC:GBPTRY']?.perf5Y ?? 411.67;
-
-  const fxChf3M = macroMap['FX_IDC:CHFTRY']?.perf3M ?? 6.20;
-  const fxChf6M = macroMap['FX_IDC:CHFTRY']?.perf6M ?? 14.30;
-  const fxChf3Y = macroMap['FX_IDC:CHFTRY']?.perf3Y ?? 92.75;
-  const fxChf5Y = macroMap['FX_IDC:CHFTRY']?.perf5Y ?? 475.38;
-
-  const goldUsd3M = macroMap['TVC:GOLD']?.perf3M ?? 8.50;
-  const goldUsd6M = macroMap['TVC:GOLD']?.perf6M ?? 18.20;
-  const goldUsd3Y = macroMap['TVC:GOLD']?.perf3Y ?? 105.89;
-  const goldUsd5Y = macroMap['TVC:GOLD']?.perf5Y ?? 127.42;
-
-  const silverUsd3M = macroMap['TVC:SILVER']?.perf3M ?? 9.40;
-  const silverUsd6M = macroMap['TVC:SILVER']?.perf6M ?? 21.10;
-  const silverUsd3Y = macroMap['TVC:SILVER']?.perf3Y ?? 125.58;
-  const silverUsd5Y = macroMap['TVC:SILVER']?.perf5Y ?? 118.41;
-
-  const compPct = (a, b) => +(((1 + a / 100) * (1 + b / 100) - 1) * 100).toFixed(2);
-  const goldTry3M = compPct(goldUsd3M, fxUsd3M);
-  const goldTry6M = compPct(goldUsd6M, fxUsd6M);
-  const goldTry3Y = compPct(goldUsd3Y, fxUsd3Y);
-  const goldTry5Y = compPct(goldUsd5Y, fxUsd5Y);
-
-  const silverTry3M = compPct(silverUsd3M, fxUsd3M);
-  const silverTry6M = compPct(silverUsd6M, fxUsd6M);
-  const silverTry3Y = compPct(silverUsd3Y, fxUsd3Y);
-  const silverTry5Y = compPct(silverUsd5Y, fxUsd5Y);
-
-  if (dv['usd-try']) {
-    dv['usd-try'].perf3M = +fxUsd3M.toFixed(2);
-    dv['usd-try'].perf6M = +fxUsd6M.toFixed(2);
-    dv['usd-try'].perf3Y = +fxUsd3Y.toFixed(2);
-    dv['usd-try'].perf5Y = +fxUsd5Y.toFixed(2);
-    dv['usd-try'].fundamentals = { rsi: macroMap['FX_IDC:USDTRY']?.rsi ?? null };
-  }
-  if (dv['eur-try']) {
-    dv['eur-try'].perf3M = +fxEur3M.toFixed(2);
-    dv['eur-try'].perf6M = +fxEur6M.toFixed(2);
-    dv['eur-try'].perf3Y = +fxEur3Y.toFixed(2);
-    dv['eur-try'].perf5Y = +fxEur5Y.toFixed(2);
-    dv['eur-try'].fundamentals = { rsi: macroMap['FX_IDC:EURTRY']?.rsi ?? null };
-  }
-  if (dv['gbp-try']) {
-    dv['gbp-try'].perf3M = +fxGbp3M.toFixed(2);
-    dv['gbp-try'].perf6M = +fxGbp6M.toFixed(2);
-    dv['gbp-try'].perf3Y = +fxGbp3Y.toFixed(2);
-    dv['gbp-try'].perf5Y = +fxGbp5Y.toFixed(2);
-    dv['gbp-try'].fundamentals = { rsi: macroMap['FX_IDC:GBPTRY']?.rsi ?? null };
-  }
-  if (dv['chf-try']) {
-    dv['chf-try'].perf3M = +fxChf3M.toFixed(2);
-    dv['chf-try'].perf6M = +fxChf6M.toFixed(2);
-    dv['chf-try'].perf3Y = +fxChf3Y.toFixed(2);
-    dv['chf-try'].perf5Y = +fxChf5Y.toFixed(2);
-    dv['chf-try'].fundamentals = { rsi: macroMap['FX_IDC:CHFTRY']?.rsi ?? null };
-  }
-  ['gram-altin', 'ceyrek-altin', 'cumhuriyet-altini', 'bilezik-22'].forEach(k => {
-    if (dv[k]) {
-      dv[k].perf3M = goldTry3M;
-      dv[k].perf6M = goldTry6M;
-      dv[k].perf3Y = goldTry3Y;
-      dv[k].perf5Y = goldTry5Y;
-      dv[k].fundamentals = { rsi: macroMap['TVC:GOLD']?.rsi ?? null };
+  const compPct = (a, b) => +(((1 + (a || 0) / 100) * (1 + (b || 0) / 100) - 1) * 100).toFixed(2);
+  const syncFxFromScanner = (dvKey, scanSym, fallbackPrice) => {
+    const sc = macroMap[scanSym];
+    if (!dv[dvKey]) dv[dvKey] = { key: dvKey, currentPrice: sc?.close || fallbackPrice };
+    if ((!dv[dvKey].currentPrice || dv[dvKey].currentPrice <= 0) && sc?.close > 0) {
+      dv[dvKey].currentPrice = +Number(sc.close).toFixed(4);
     }
+    if (sc) {
+      dv[dvKey].change1D = sc.change != null ? +Number(sc.change).toFixed(2) : 0;
+      if (sc.perf1W != null) dv[dvKey].perf1W = +Number(sc.perf1W).toFixed(2);
+      if (sc.perf1M != null) dv[dvKey].perf1M = +Number(sc.perf1M).toFixed(2);
+      if (sc.perf3M != null) dv[dvKey].perf3M = +Number(sc.perf3M).toFixed(2);
+      if (sc.perf6M != null) dv[dvKey].perf6M = +Number(sc.perf6M).toFixed(2);
+      if (sc.perf1Y != null) dv[dvKey].perf1Y = +Number(sc.perf1Y).toFixed(2);
+      if (sc.perf3Y != null) dv[dvKey].perf3Y = +Number(sc.perf3Y).toFixed(2);
+      if (sc.perf5Y != null) dv[dvKey].perf5Y = +Number(sc.perf5Y).toFixed(2);
+      dv[dvKey].fundamentals = { rsi: sc.rsi ?? null };
+    }
+  };
+  syncFxFromScanner('usd-try', 'FX_IDC:USDTRY', 50.38);
+  syncFxFromScanner('eur-try', 'FX_IDC:EURTRY', 55.45);
+  syncFxFromScanner('gbp-try', 'FX_IDC:GBPTRY', 66.47);
+  syncFxFromScanner('chf-try', 'FX_IDC:CHFTRY', 59.97);
+
+  const fxSc = macroMap['FX_IDC:USDTRY'] || {};
+  const goldSc = macroMap['TVC:GOLD'] || {};
+  const silverSc = macroMap['TVC:SILVER'] || {};
+  const calcSpotGram = (onsRow, defVal) => (onsRow.close > 0 && fxSc.close > 0)
+    ? +((onsRow.close * fxSc.close) / 31.1034768).toFixed(2)
+    : defVal;
+  const spotGramAu = calcSpotGram(goldSc, 6248);
+  const spotGramAg = calcSpotGram(silverSc, 76.3);
+
+  const goldMults = { 'gram-altin': 1.0, 'ceyrek-altin': 1.651, 'cumhuriyet-altini': 6.755, 'bilezik-22': 0.946 };
+  ['gram-altin', 'ceyrek-altin', 'cumhuriyet-altini', 'bilezik-22'].forEach(k => {
+    if (!dv[k]) dv[k] = { key: k, currentPrice: +(spotGramAu * goldMults[k]).toFixed(2) };
+    if (!dv[k].currentPrice || dv[k].currentPrice <= 0) {
+      dv[k].currentPrice = +(spotGramAu * goldMults[k]).toFixed(2);
+    }
+    dv[k].change1D = compPct(goldSc.change, fxSc.change);
+    dv[k].perf1W = compPct(goldSc.perf1W, fxSc.perf1W);
+    dv[k].perf1M = compPct(goldSc.perf1M, fxSc.perf1M);
+    dv[k].perf3M = compPct(goldSc.perf3M, fxSc.perf3M);
+    dv[k].perf6M = compPct(goldSc.perf6M, fxSc.perf6M);
+    dv[k].perf1Y = compPct(goldSc.perf1Y, fxSc.perf1Y);
+    dv[k].perf3Y = compPct(goldSc.perf3Y, fxSc.perf3Y);
+    dv[k].perf5Y = compPct(goldSc.perf5Y, fxSc.perf5Y);
+    dv[k].fundamentals = { rsi: goldSc.rsi ?? null };
   });
-  if (dv['gumus-gram']) {
-    dv['gumus-gram'].perf3M = silverTry3M;
-    dv['gumus-gram'].perf6M = silverTry6M;
-    dv['gumus-gram'].perf3Y = silverTry3Y;
-    dv['gumus-gram'].perf5Y = silverTry5Y;
-    dv['gumus-gram'].fundamentals = { rsi: macroMap['TVC:SILVER']?.rsi ?? null };
-  }
+
+  if (!dv['gumus-gram']) dv['gumus-gram'] = { key: 'gumus-gram', currentPrice: spotGramAg };
+  if (!dv['gumus-gram'].currentPrice || dv['gumus-gram'].currentPrice <= 0) dv['gumus-gram'].currentPrice = spotGramAg;
+  dv['gumus-gram'].change1D = compPct(silverSc.change, fxSc.change);
+  dv['gumus-gram'].perf1W = compPct(silverSc.perf1W, fxSc.perf1W);
+  dv['gumus-gram'].perf1M = compPct(silverSc.perf1M, fxSc.perf1M);
+  dv['gumus-gram'].perf3M = compPct(silverSc.perf3M, fxSc.perf3M);
+  dv['gumus-gram'].perf6M = compPct(silverSc.perf6M, fxSc.perf6M);
+  dv['gumus-gram'].perf1Y = compPct(silverSc.perf1Y, fxSc.perf1Y);
+  dv['gumus-gram'].perf3Y = compPct(silverSc.perf3Y, fxSc.perf3Y);
+  dv['gumus-gram'].perf5Y = compPct(silverSc.perf5Y, fxSc.perf5Y);
+  dv['gumus-gram'].fundamentals = { rsi: silverSc.rsi ?? null };
 
   const tv = {};
   for (const item of tvList) {
@@ -581,9 +594,9 @@ async function buildFullDataset() {
         if (scanRow.perf3M != null) item.perf3M = +Number(scanRow.perf3M).toFixed(2);
         if (scanRow.perf6M != null) item.perf6M = +Number(scanRow.perf6M).toFixed(2);
         if (scanRow.perf1Y != null) item.perf1Y = +Number(scanRow.perf1Y).toFixed(2);
-        if (item.perf3Y == null && scanRow.perf3Y != null) item.perf3Y = scanRow.perf3Y;
-        if (item.perf5Y == null && scanRow.perf5Y != null) item.perf5Y = scanRow.perf5Y;
-        if (item.perfAll == null && scanRow.perfAll != null) item.perfAll = scanRow.perfAll;
+        if (scanRow.perf3Y != null) item.perf3Y = +Number(scanRow.perf3Y).toFixed(2);
+        if (scanRow.perf5Y != null) item.perf5Y = +Number(scanRow.perf5Y).toFixed(2);
+        if (scanRow.perfAll != null) item.perfAll = +Number(scanRow.perfAll).toFixed(2);
         item.fundamentals = {
           pe: scanRow.pe,
           pb: scanRow.pb,
@@ -636,9 +649,10 @@ async function buildFullDataset() {
   const tr02y = macroMap['TVC:TR02Y']?.close || 36.23;
   const tr10y = macroMap['TVC:TR10Y']?.close || 33.07;
 
-  // TÜİK 2003=100 Resmi Yıllık TÜFE Serisi ile Kümülatif Bileşik 3Y ve 5Y Enflasyon (Fisher Paydası)
-  const cpi3Y = +(((1 + 0.6477) * (1 + 0.4438) * (1 + cpiYoy / 100) - 1) * 100).toFixed(2);
-  const cpi5Y = +(((1 + 0.3608) * (1 + 0.6427) * (1 + 0.6477) * (1 + 0.4438) * (1 + cpiYoy / 100) - 1) * 100).toFixed(2);
+  // TÜİK 2003=100 Resmi Yıllık TÜFE Serisi ile Doğrulanmış 2026 Kümülatif 3Y ve 5Y Enflasyon:
+  // 2022: %64,27 | 2023: %64,77 | 2024: %44,38 | 2025: %30,89 | Son 12 Ay (2026): cpiYoy (%29,77)
+  const cpi3Y = +(((1 + 0.4438) * (1 + 0.3089) * (1 + cpiYoy / 100) - 1) * 100).toFixed(2);
+  const cpi5Y = +(((1 + 0.6427) * (1 + 0.6477) * (1 + 0.4438) * (1 + 0.3089) * (1 + cpiYoy / 100) - 1) * 100).toFixed(2);
 
   const inflationBenchmarks = {
     perf1W: +((Math.pow(1 + cpiMom / 100, 7 / 30) - 1) * 100).toFixed(2),

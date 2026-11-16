@@ -66,8 +66,8 @@ jobs:
       - name: Publish IPA to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v6.2.0-ios
-          name: "AETHER v6.2 — Otomatik Kupon/Değişken/Vade Motoru, Faizsiz Sukuk Ayrımı & 69 Özgün Rehber (ARM64 iOS IPA)"
+          tag_name: v7.0.0-ios
+          name: "AETHER v7.0 — Kalıpsız 2M ₺ Akıllı Sermaye Pusulası, Zaman Özgürlüğü Motoru & Doğrulanmış 2026 Veri Mimarisi (ARM64 iOS IPA)"
           files: AETHER-iOS.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
