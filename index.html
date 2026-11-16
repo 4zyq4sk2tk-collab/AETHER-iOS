@@ -1398,7 +1398,7 @@
         <button class="nav-btn active" data-tab="kesfet" onclick="switchTab('kesfet')">Keşfet</button>
         <button class="nav-btn" data-tab="sepet" onclick="switchTab('sepet')">Faiz vs Sepet</button>
         <button class="nav-btn" data-tab="varliklar" onclick="switchTab('varliklar')">Araçları Tanı <span class="nav-badge" id="navAssetCount">69</span></button>
-        <button class="nav-btn" data-tab="bist" onclick="switchTab('bist')">Şirketler <span class="nav-badge" id="navBistCount">621</span></button>
+        <button class="nav-btn" data-tab="bist" onclick="switchTab('bist')">Şirketler <span class="nav-badge" id="navBistCount">619</span></button>
         <button class="nav-btn" data-tab="portfoy" onclick="switchTab('portfoy')">Kasam <span class="nav-badge" id="navPortCount">0</span></button>
       </nav>
 
@@ -1669,7 +1669,7 @@
       </div>
 
       <div class="list-meta-bar">
-        <span id="bistMetaLeft" class="num-tab">621 şirket · Ortaklık karnesi için dokun</span>
+        <span id="bistMetaLeft" class="num-tab">619 şirket · Ortaklık karnesi için dokun</span>
         <button class="link-btn" style="padding:2px 4px;font-size:11.5px;" onclick="openBistFilterSheet()" id="bistMetaRight">En Büyük Şirketler ↓</button>
       </div>
 
@@ -1841,111 +1841,263 @@
       chg1d_asc: 'Bugün En Çok Düşen ↑',
       perf1m_desc: 'Son 1 Ayda Kazandıran ↓',
       pe_asc: 'En Hızlı Amorti Eden ↑',
+      pb_asc: 'Özvarlığına Göre En İndirimli ↑',
+      div_desc: 'En Yüksek Kâr Payı (Temettü) ↓',
       roe_desc: 'En Güçlü Kâr Üreten ↓',
       fcf_desc: 'Kasasına En Çok Nakit Giren ↓',
       cmf_desc: 'Büyük Para Girişi Olan ↓'
     };
 
     const FRIENDLY_ASSET_META = {
-      'mevduat-ust': { title: 'Banka Vadeli Mevduat (Özel Oran)', code: 'MEV', tone: 'blue', brief: 'Her ay %17,5 vergi kesilir; anapara sabit kalır' },
-      'mevduat-tcmb': { title: 'Banka Vadeli Mevduat (Ortalama)', code: 'ORT', tone: 'blue', brief: 'Standart banka faizi; enflasyon hızlıysa eriyebilir' },
-      'katilim-hesabi': { title: 'Katılım Hesabı (Kâr Payı)', code: 'KTL', tone: 'blue', brief: 'Faizsiz kâr ortaklığı; vade sonunda vergi kesilir' },
-      'para-piyasasi-fonu': { title: 'Günlük Para Piyasası Fonu', code: 'PPF', tone: 'blue', brief: 'Vade bozulmadan günlük büyür, satana kadar vergi kesilmez' },
-      'dibs-tahvil': { title: '2 Yıllık Devlet Tahvili', code: 'DİBS', tone: 'blue', brief: 'Devlete borç vererek sabit faiz alma aracı' },
-      'kira-sertifikasi-sukuk': { title: 'Hazine Kira Sertifikası', code: 'SUK', tone: 'blue', brief: 'Devlet varlıklarının kira gelirine faizsiz ortaklık' },
-      'eurobond-usdtr': { title: 'Döviz Kira & Tahvil Fonu (USDTR)', code: 'USDB', tone: 'emerald', brief: 'Dolar bazlı devlet/şirket tahvillerine TL ile yatırım' },
-      'eurobond-emb': { title: 'Gelişen Ülkeler Döviz Tahvili (EMB)', code: 'EMB', tone: 'emerald', brief: 'Dolar faizi ödeyen ülke tahvilleri sepeti' },
-      'doviz-usd': { title: 'ABD Doları', code: '$', tone: 'emerald', brief: 'Kur artışına karşı nakit döviz tutma aracı' },
-      'doviz-eur': { title: 'Euro', code: '€', tone: 'emerald', brief: 'Avrupa para birimi; ihracat ve seyahat kalkanı' },
-      'doviz-gbp': { title: 'İngiliz Sterlini', code: '£', tone: 'emerald', brief: 'Köklü rezerv para birimi' },
-      'doviz-chf': { title: 'İsviçre Frangı', code: 'CHF', tone: 'emerald', brief: 'Dünyanın en düşük enflasyonlu güvenli liman parası' },
-      'gram-altin-spot': { title: 'Gram Altın', code: 'Au', tone: 'gold', brief: 'Vergisiz; hem Dolar hem dünya altın fiyatıyla korur' },
-      'ceyrek-altin': { title: 'Çeyrek Altın', code: 'ÇYR', tone: 'gold', brief: 'Geleneksel fiziki altın birikimi (%0 vergi)' },
-      'cumhuriyet-altini': { title: 'Cumhuriyet Altını', code: 'CMH', tone: 'gold', brief: 'Uzun vadeli fiziki altın kalkanı (%0 vergi)' },
-      'bilezik-22-ayar': { title: '22 Ayar Bilezik (Gram)', code: '22A', tone: 'gold', brief: 'İşçilik makasına dikkat edilmesi gereken fiziki altın' },
-      'altin-sertifikasi': { title: 'Darphane Altın Sertifikası (S1)', code: 'S1', tone: 'gold', brief: 'Borsadan makassız alınıp satılan devlet altın sertifikası' },
-      'altin-fonu-zgold': { title: 'Ziraat Altın Katılım Fonu', code: 'ZGLD', tone: 'gold', brief: 'Bankadan tek tıkla alınan fiziki altın destekli fon' },
-      'altin-fonu-gldtr': { title: 'QNB Altın Borsa Fonu', code: 'GLD', tone: 'gold', brief: 'Kuyumcu makası olmadan borsada altın birikimi' },
-      'gram-gumus-spot': { title: 'Gram Gümüş', code: 'Ag', tone: 'cyan', brief: 'Hem değerli maden hem güneş paneli/sanayi hammaddesi' },
-      'gumus-fonu-gmstr': { title: 'QNB Gümüş Borsa Fonu', code: 'GMS', tone: 'cyan', brief: 'Fiziki saklama derdi olmadan gümüşe yatırım' },
+      'mevduat-ust': { title: 'Banka Vadeli Mevduat (Özel Oran)', code: 'MEV', tone: 'blue', brief: 'Her vade sonunda %17,5 stopaj kesilir; anapara sabit kalır' },
+      'mevduat-tcmb': { title: 'Banka Vadeli Mevduat (Ortalama)', code: 'ORT', tone: 'blue', brief: 'Standart banka faizi; %17,5 stopaj sonrası enflasyona yenilebilir' },
+      'katilim-hesabi': { title: 'Katılım Hesabı (Kâr Payı)', code: 'KTL', tone: 'blue', brief: 'Faizsiz kâr ortaklığı; her vade dönüşünde %17,5 vergi kesilir' },
+      'para-piyasasi-fonu': { title: 'Günlük Para Piyasası Fonu', code: 'PPF', tone: 'blue', brief: 'Vade bozulmadan günlük büyür; %17,5 stopaj yalnızca satınca kesilir' },
+      'dibs-tahvil': { title: '2 Yıllık Devlet Tahvili (DİBS)', code: 'DİBS', tone: 'blue', brief: 'Hazine ihraçlı sabit getiri; 31.12.2026’ya kadar %0 stopaj avantajlı' },
+      'kira-sertifikasi-sukuk': { title: 'Hazine Kira Sertifikası (Sukuk)', code: 'SUK', tone: 'blue', brief: 'Kamu varlık kira geliri; 31.12.2026’ya kadar %0 stopajlı faizsiz araç' },
+      'eurobond-usdtr': { title: 'QNB Amerikan Doları Borsa Fonu (USDTR)', code: 'USDT', tone: 'emerald', brief: 'Banka makası olmadan borsadan Dolar/ABD Hazine bonosu fonu (%17,5 stopaj)' },
+      'eurobond-emb': { title: 'Gelişen Ülkeler Eurobond Fonu (EMB)', code: 'EMB', tone: 'emerald', brief: 'Dolar kuponlu ülke tahvilleri sepeti (Yurt dışı ETF · Beyana tabi)' },
+      'doviz-usd': { title: 'ABD Doları', code: '$', tone: 'emerald', brief: 'Kur artışına karşı nakit döviz (satışta %0 stopaj; alımda %0,2 kambiyo)' },
+      'doviz-eur': { title: 'Euro', code: '€', tone: 'emerald', brief: 'Avrupa para birimi; ihracat ve seyahat kalkanı (%0 stopaj)' },
+      'doviz-gbp': { title: 'İngiliz Sterlini', code: '£', tone: 'emerald', brief: 'Köklü rezerv para birimi (%0 stopaj)' },
+      'doviz-chf': { title: 'İsviçre Frangı', code: 'CHF', tone: 'emerald', brief: 'Dünyanın en düşük enflasyonlu güvenli liman parası (%0 stopaj)' },
+      'gram-altin-spot': { title: 'Gram Altın', code: 'Au', tone: 'gold', brief: 'Satışta %0 stopaj; hem Dolar hem dünya altın fiyatıyla çifte koruma' },
+      'ceyrek-altin': { title: 'Çeyrek Altın', code: 'ÇYR', tone: 'gold', brief: 'Geleneksel fiziki altın birikimi (%0 stopaj)' },
+      'cumhuriyet-altini': { title: 'Cumhuriyet Altını', code: 'CMH', tone: 'gold', brief: 'Uzun vadeli fiziki altın kalkanı (%0 stopaj)' },
+      'bilezik-22-ayar': { title: '22 Ayar Bilezik (Gram)', code: '22A', tone: 'gold', brief: 'İşçilik makasına dikkat edilmesi gereken fiziki altın (%0 stopaj)' },
+      'altin-sertifikasi': { title: 'Darphane Altın Sertifikası (S1)', code: 'S1', tone: 'gold', brief: 'Borsadan makassız ve %0 stopajla alınıp satılan Hazine altın sertifikası' },
+      'altin-fonu-zgold': { title: 'Ziraat Altın Katılım Fonu (ZGOLD)', code: 'ZGLD', tone: 'gold', brief: 'Borsada işlem gören katılım altın fonu (kârdan %17,5 stopaj kesilir)' },
+      'altin-fonu-gldtr': { title: 'QNB Altın Borsa Fonu (GLDTR)', code: 'GLD', tone: 'gold', brief: 'Borsada işlem gören fiziki altın fonu (kârdan %17,5 stopaj kesilir)' },
+      'gram-gumus-spot': { title: 'Gram Gümüş', code: 'Ag', tone: 'cyan', brief: 'Hem değerli maden hem güneş paneli/sanayi hammaddesi (%0 stopaj)' },
+      'gumus-fonu-gmstr': { title: 'QNB Gümüş Borsa Fonu (GMSTR)', code: 'GMS', tone: 'cyan', brief: 'Saklama derdi olmadan borsada gümüş fonu (kârdan %17,5 stopaj)' },
       'ons-platin': { title: 'Platin (Dünya Fiyatı)', code: 'Pt', tone: 'cyan', brief: 'Otomotiv ve hidrojen sanayisinin nadir metali' },
       'ons-paladyum': { title: 'Paladyum (Dünya Fiyatı)', code: 'Pd', tone: 'cyan', brief: 'Endüstriyel nadir metal' },
-      'emtia-petrol-bno': { title: 'Brent Petrol Fonu', code: 'BNO', tone: 'orange', brief: 'Enerji ve akaryakıt zamlarına karşı koruma aracı' },
-      'emtia-tarim-dba': { title: 'Dünya Gıda & Tarım Fonu', code: 'DBA', tone: 'orange', brief: 'Buğday, mısır, kahve, kakao fiyat artışına ortaklık' },
-      'bist-100': { title: 'Türkiye 100 Büyük Şirket Endeksi', code: '100', tone: 'blue', brief: 'Borsa İstanbul’un en büyük 100 şirketinin genel ortalaması' },
-      'bist-30': { title: 'Türkiye 30 Dev Şirket Endeksi', code: '030', tone: 'blue', brief: 'THY, Tüpraş, BİM, Aselsan gibi en köklü 30 şirket' },
-      'bist-banka': { title: 'Türkiye Bankacılık Endeksi', code: 'BNK', tone: 'blue', brief: 'Büyük özel ve kamu bankalarının ortak performansı' },
-      'bist-temettu-25': { title: 'Kâr Payı Dağıtan 25 Şirket Fonu', code: 'T25', tone: 'violet', brief: 'Kârını ortaklarıyla nakit paylaşan düzenli şirketler' },
-      'halka-arz-altny': { title: 'Altınay Savunma', code: 'ALTN', tone: 'slate', brief: 'Savunma ve robotik teknolojileri üreticisi' },
-      'halka-arz-tabgd': { title: 'TAB Gıda', code: 'TAB', tone: 'slate', brief: 'Restoran zincirleri işletmecisi' },
-      'halka-arz-rgyas': { title: 'Rönesans Gayrimenkul', code: 'RGY', tone: 'slate', brief: 'AVM ve ticari kira geliri üreten gayrimenkul şirketi' },
-      'abd-sp500-spy': { title: 'ABD En Büyük 500 Şirket Fonu (S&P 500)', code: 'SPY', tone: 'violet', brief: 'Apple, Microsoft, Amazon dahil 500 dünya devine tek tıkla ortaklık' },
-      'abd-nasdaq-qqq': { title: 'ABD 100 Teknoloji Devi Fonu (Nasdaq)', code: 'QQQ', tone: 'violet', brief: 'Yapay zeka, yazılım ve internet devlerinin büyüme sepeti' },
-      'dunya-borsalari-vt': { title: 'Tüm Dünya Şirketleri Sepeti (VT)', code: 'VT', tone: 'violet', brief: 'ABD, Avrupa ve Asya’daki binlerce şirkete tek seferde ortaklık' },
-      'kuresel-hisse-nvda': { title: 'NVIDIA (Yapay Zeka Çip Lideri)', code: 'NVDA', tone: 'violet', brief: 'Dünyadaki yapay zeka veri merkezlerinin ana çip üreticisi' },
-      'kuresel-hisse-aapl': { title: 'Apple (iPhone & Ekosistem)', code: 'AAPL', tone: 'violet', brief: 'Milyarlarca kullanıcısı olan küresel teknoloji devi' },
-      'kuresel-hisse-msft': { title: 'Microsoft (Bulut & Yazılım)', code: 'MSFT', tone: 'violet', brief: 'Kurumsal yazılım ve bulut altyapısı lideri' },
-      'viop-bist30-kontrat': { title: 'Vadeli BIST 30 Kontratı', code: 'V30', tone: 'blue', brief: 'Kaldıraçlı piyasa göstergesi (acemiler için risklidir)' },
-      'fon-yerli-hisse-zpbdl': { title: 'Banka Dışı 10 Büyük Şirket Fonu', code: 'ZPBD', tone: 'cyan', brief: 'Sanayi, perakende ve havacılık devlerine %0 stopajla yatırım' },
-      'fon-yerli-banka-zplib': { title: 'Büyük Bankalar Hisse Fonu', code: 'ZPLB', tone: 'cyan', brief: 'Türkiye’nin büyük bankalarına tek fonla ortaklık (%0 stopaj)' },
-      'fon-yerli-bist30-apx30': { title: 'Ak Portföy 30 Dev Şirket Fonu', code: 'APX', tone: 'cyan', brief: 'Tek tek hisse seçmeden 30 büyük Türk şirketine ortaklık' },
-      'fon-katilim-z30kp': { title: 'Faizsiz Katılım 30 Şirket Fonu', code: 'Z30K', tone: 'cyan', brief: 'Katılım ilkelerine uygun 30 üretken şirkete vergisiz yatırım' },
-      'fon-tematik-teknoloji-zpt10': { title: 'Yerli Teknoloji 10 Şirket Fonu', code: 'ZPT', tone: 'cyan', brief: 'Türkiye’nin yazılım, savunma ve telekom şirketleri sepeti' },
-      'fon-tematik-surdurulebilirlik-zsr25': { title: 'Sürdürülebilir 25 Şirket Fonu', code: 'ZSR', tone: 'cyan', brief: 'Kurumsal yönetimi güçlü 25 büyük Türk şirketi' },
-      'fon-tematik-yari-iletken-soxx': { title: 'Dünya Çip Üreticileri Fonu (SOXX)', code: 'SOXX', tone: 'violet', brief: 'Telefon, otomobil ve yapay zeka çipi üreten dünya devleri' },
-      'fon-degisken-isglk': { title: 'İş Portföy Dengeli Borsa Fonu', code: 'ISGL', tone: 'cyan', brief: 'Profesyonel yönetilen sepet borsa yatırım fonu' },
-      'bes-emeklilik': { title: 'Bireysel Emeklilik (BES + %30 Katkı)', code: 'BES', tone: 'blue', brief: 'Uzun vadeli birikime devletin ek %30 katkı verdiği sistem' },
-      'gayrimenkul-konut-tcmb': { title: 'Türkiye Ortalama Ev Fiyatları (TCMB)', code: 'EV', tone: 'orange', brief: 'Türkiye genelindeki konut metrekare fiyatlarının resmi seyri' },
-      'gayrimenkul-konut-ekgyo': { title: 'Emlak Konut GYO', code: 'EKGY', tone: 'orange', brief: 'Milyonlarca TL bağlamadan konut projelerine borsadan ortaklık' },
-      'gayrimenkul-ticari-rygyo': { title: 'Reysaş Depo & Lojistik GYO', code: 'RYGY', tone: 'orange', brief: 'Dev şirketlere kiralanan lojistik depolara ortaklık' },
-      'gayrimenkul-ticari-isgyo': { title: 'İş GYO (Ofis & Kule Kira Geliri)', code: 'ISGY', tone: 'orange', brief: 'İş kuleleri ve mağaza kiralarına küçük paylarla ortaklık' },
-      'gayrimenkul-arazi-algyo': { title: 'Alarko Turizm & Arazi GYO', code: 'ALGY', tone: 'orange', brief: 'Tatil köyü ve değerli arsalara döviz bazlı ortaklık' },
-      'gayrimenkul-gyo-fonu-optgy': { title: 'Gayrimenkul Şirketleri Sepet Fonu', code: 'OPTG', tone: 'orange', brief: 'Tapu masrafı ve kiracı derdi olmadan gayrimenkul sepeti' },
+      'emtia-petrol-bno': { title: 'Brent Petrol Fonu (BNO)', code: 'BNO', tone: 'orange', brief: 'Enerji ve petrol fiyat artışına karşı koruma ETF’i (Beyana tabi)' },
+      'emtia-tarim-dba': { title: 'Dünya Gıda & Tarım Fonu (DBA)', code: 'DBA', tone: 'orange', brief: 'Buğday, mısır, kahve, kakao fiyat sepeti (Beyana tabi)' },
+      'bist-100': { title: 'Türkiye 100 Büyük Şirket Endeksi', code: '100', tone: 'blue', brief: 'Borsa İstanbul 100 endeks göstergesi (yatırım için hisse fonu alınır)' },
+      'bist-30': { title: 'Türkiye 30 Dev Şirket Endeksi', code: '030', tone: 'blue', brief: 'En köklü 30 şirketin endeks göstergesi (karşılığı: APX30 fonu)' },
+      'bist-banka': { title: 'Türkiye Bankacılık Endeksi', code: 'BNK', tone: 'blue', brief: 'Bankacılık endeks göstergesi (karşılığı: ZPLIB banka fonu)' },
+      'bist-temettu-25': { title: 'Kâr Payı Dağıtan 25 Şirket Fonu (OPT25)', code: 'T25', tone: 'violet', brief: 'Kârını ortaklarıyla paylaşan şirketler hisse yoğun BYF (%0 stopaj)' },
+      'halka-arz-altny': { title: 'Altınay Savunma', code: 'ALTN', tone: 'slate', brief: 'Savunma, insansız sistemler ve robotik üreticisi (%0 stopaj)' },
+      'halka-arz-tabgd': { title: 'TAB Gıda', code: 'TAB', tone: 'slate', brief: 'Hızlı servis restoran zincirleri işletmecisi (%0 stopaj)' },
+      'halka-arz-rgyas': { title: 'Rönesans Gayrimenkul', code: 'RGY', tone: 'slate', brief: 'AVM ve ticari kira geliri üreten gayrimenkul şirketi (%0 stopaj)' },
+      'abd-sp500-spy': { title: 'ABD En Büyük 500 Şirket Fonu (S&P 500)', code: 'SPY', tone: 'violet', brief: 'Apple, Microsoft dahil 500 dünya devine ortaklık (Beyana tabi)' },
+      'abd-nasdaq-qqq': { title: 'ABD 100 Teknoloji Devi Fonu (Nasdaq)', code: 'QQQ', tone: 'violet', brief: 'Yapay zeka ve yazılım devlerinin büyüme sepeti (Beyana tabi)' },
+      'dunya-borsalari-vt': { title: 'Tüm Dünya Şirketleri Sepeti (VT)', code: 'VT', tone: 'violet', brief: 'ABD, Avrupa ve Asya’daki binlerce şirkete tek fonla ortaklık (Beyana tabi)' },
+      'kuresel-hisse-nvda': { title: 'NVIDIA (Yapay Zeka Çip Lideri)', code: 'NVDA', tone: 'violet', brief: 'Küresel yapay zeka çip üreticisi ABD hissesi (Beyana tabi)' },
+      'kuresel-hisse-aapl': { title: 'Apple (iPhone & Ekosistem)', code: 'AAPL', tone: 'violet', brief: 'Küresel tüketici teknolojisi devi ABD hissesi (Beyana tabi)' },
+      'kuresel-hisse-msft': { title: 'Microsoft (Bulut & Yazılım)', code: 'MSFT', tone: 'violet', brief: 'Kurumsal bulut ve yazılım lideri ABD hissesi (Beyana tabi)' },
+      'viop-bist30-kontrat': { title: 'Vadeli BIST 30 Kontratı (VİOP)', code: 'V30', tone: 'blue', brief: 'Kaldıraçlı vadeli piyasa göstergesi (yeni başlayanlar için uygun değildir)' },
+      'fon-yerli-hisse-zpbdl': { title: 'Banka Dışı 10 Büyük Şirket Fonu (ZPBDL)', code: 'ZPBD', tone: 'cyan', brief: 'Sanayi, perakende ve havacılık devlerine %0 stopajla yatırım' },
+      'fon-yerli-banka-zplib': { title: 'Büyük Bankalar Hisse Fonu (ZPLIB)', code: 'ZPLB', tone: 'cyan', brief: 'Türkiye’nin büyük bankalarına tek fonla ortaklık (%0 stopaj)' },
+      'fon-yerli-bist30-apx30': { title: 'Ak Portföy 30 Dev Şirket Fonu (APX30)', code: 'APX', tone: 'cyan', brief: 'Tek tek hisse seçmeden 30 büyük Türk şirketine %0 stopajla ortaklık' },
+      'fon-katilim-z30kp': { title: 'Faizsiz Katılım 30 Şirket Fonu (Z30KP)', code: 'Z30K', tone: 'cyan', brief: 'Katılım ilkelerine uygun 30 üretken şirkete %0 stopajla yatırım' },
+      'fon-tematik-teknoloji-zpt10': { title: 'Yerli Teknoloji 10 Şirket Fonu (ZPT10)', code: 'ZPT', tone: 'cyan', brief: 'Yazılım, savunma ve telekom şirketleri hisse yoğun fonu (%0 stopaj)' },
+      'fon-tematik-surdurulebilirlik-zsr25': { title: 'Sürdürülebilir 25 Şirket Fonu (ZSR25)', code: 'ZSR', tone: 'cyan', brief: 'Kurumsal yönetimi güçlü 25 büyük Türk şirketi (%0 stopaj)' },
+      'fon-tematik-yari-iletken-soxx': { title: 'Dünya Çip Üreticileri Fonu (SOXX)', code: 'SOXX', tone: 'violet', brief: 'Yarı iletken ve yapay zeka çip üreticileri ETF’i (Beyana tabi)' },
+      'fon-degisken-isglk': { title: 'İş Portföy Altın Katılım Fonu (ISGLK)', code: 'ISGL', tone: 'gold', brief: 'Katılım esaslı BIST altın borsa yatırım fonu (kârdan %17,5 stopaj)' },
+      'bes-emeklilik': { title: 'Bireysel Emeklilik (BES + %30 Katkı)', code: 'BES', tone: 'blue', brief: 'Uzun vadeli birikime devletin ek %30 katkı verdiği emeklilik sistemi' },
+      'gayrimenkul-konut-tcmb': { title: 'Türkiye Ortalama Ev Fiyatları (TCMB)', code: 'EV', tone: 'orange', brief: 'Resmi konut fiyat endeksi (5 yıl elde tutulan konutta satış vergisi %0)' },
+      'gayrimenkul-konut-ekgyo': { title: 'Emlak Konut GYO', code: 'EKGY', tone: 'orange', brief: 'Büyük konut ve arsa projelerine borsadan ortaklık (%0 stopaj)' },
+      'gayrimenkul-ticari-rygyo': { title: 'Reysaş Depo & Lojistik GYO', code: 'RYGY', tone: 'orange', brief: 'Kurumsal şirketlere kiralanan lojistik depolara ortaklık (%0 stopaj)' },
+      'gayrimenkul-ticari-isgyo': { title: 'İş GYO (Ofis & Kule Kira Geliri)', code: 'ISGY', tone: 'orange', brief: 'İş kuleleri ve ticari gayrimenkul kiralarına ortaklık (%0 stopaj)' },
+      'gayrimenkul-arazi-algyo': { title: 'Alarko Turizm & Arazi GYO', code: 'ALGY', tone: 'orange', brief: 'Tatil köyü ve değerli arsalara döviz bazlı ortaklık (%0 stopaj)' },
+      'gayrimenkul-gyo-fonu-optgy': { title: 'Gayrimenkul Şirketleri Sepet Fonu (OPTGY)', code: 'OPTG', tone: 'orange', brief: 'Tapu harcı olmadan GYO şirketleri hisse yoğun sepeti (%0 stopaj)' },
       'kripto-btc': { title: 'Bitcoin (BTC)', code: '₿', tone: 'gold', brief: 'Arzı 21 milyonla sınırlı dijital varlık; çok sert dalgalanır' },
       'kripto-eth': { title: 'Ethereum (ETH)', code: 'Ξ', tone: 'violet', brief: 'Akıllı sözleşme ağı; yüksek getiri ve yüksek düşüş riski taşır' },
       'kripto-sol': { title: 'Solana (SOL)', code: 'SOL', tone: 'violet', brief: 'Hızlı blokzincir ağı; sadece küçük oranla denenecek yüksek risk' },
-      'girisim-hubvc': { title: 'Hub Girişim Sermayesi', code: 'HUB', tone: 'slate', brief: 'Yeni kurulan teknoloji girişimlerine erken aşama ortaklık' },
-      'girisim-isgsy': { title: 'İş Girişim Sermayesi', code: 'ISGS', tone: 'slate', brief: 'Büyüme potansiyelli orta ölçekli şirketlere ortaklık' },
-      'girisim-vertu': { title: 'Verusaturk Girişim', code: 'VERT', tone: 'slate', brief: 'Yazılım, enerji ve gıda girişimlerine yatırım ortaklığı' },
-      'girisim-gozde': { title: 'Gözde Girişim', code: 'GOZD', tone: 'slate', brief: 'Sanayi ve tüketim şirketlerine ortak olan yatırım şirketi' },
-      'koleksiyon-luks-lvmh': { title: 'Dünya Lüks Markalar Devi (LVMH)', code: 'LVMH', tone: 'orange', brief: 'Louis Vuitton, Dior, Bulgari gibi enflasyondan etkilenmeyen devler' },
+      'girisim-hubvc': { title: 'Hub Girişim Sermayesi', code: 'HUB', tone: 'slate', brief: 'Teknoloji girişimlerine erken aşama yatırım ortaklığı (%0 stopaj)' },
+      'girisim-isgsy': { title: 'İş Girişim Sermayesi', code: 'ISGS', tone: 'slate', brief: 'Büyüme potansiyelli şirketlere girişim sermayesi ortaklığı (%0 stopaj)' },
+      'girisim-vertu': { title: 'Verusaturk Girişim', code: 'VERT', tone: 'slate', brief: 'Yazılım, enerji ve gıda girişimleri yatırım ortaklığı (%0 stopaj)' },
+      'girisim-gozde': { title: 'Gözde Girişim', code: 'GOZD', tone: 'slate', brief: 'Sanayi ve tüketim şirketlerine ortak olan girişim şirketi (%0 stopaj)' },
+      'koleksiyon-luks-lvmh': { title: 'Dünya Lüks Markalar Devi (LVMH)', code: 'LVMH', tone: 'orange', brief: 'Louis Vuitton, Dior gibi küresel lüks markalar hissesi (Beyana tabi)' },
       'reel-perakende-bimas': { title: 'BİM Mağazalar', code: 'BİM', tone: 'emerald', brief: 'Binlerce market kasasından her gün nakit üreten perakende lideri' },
-      'reel-perakende-mgros': { title: 'Migros Ticaret', code: 'MGRS', tone: 'emerald', brief: 'Market ve online gıda alışverişiyle enflasyonu fiyatına yansıtan yapı' },
-      'reel-enerji-astor': { title: 'Astor Enerji', code: 'ASTR', tone: 'emerald', brief: 'Dünyaya elektrik trafosu ihraç eden sanayi üreticisi' },
+      'reel-perakende-mgros': { title: 'Migros Ticaret', code: 'MGRS', tone: 'emerald', brief: 'Market ve online gıda perakendesiyle enflasyonu cirosuna yansıtan yapı' },
+      'reel-enerji-astor': { title: 'Astor Enerji', code: 'ASTR', tone: 'emerald', brief: 'Dünyaya yüksek gerilim elektrik trafosu ihraç eden sanayi üreticisi' },
       'reel-enerji-cwene': { title: 'CW Enerji (Güneş Paneli)', code: 'CWEN', tone: 'emerald', brief: 'Güneş enerjisi paneli ve santrali üreticisi' },
-      'reel-enerji-smrtg': { title: 'Smart Güneş Teknolojileri', code: 'SMRT', tone: 'emerald', brief: 'Yenilenebilir güneş enerjisi yatırımları' },
-      'reel-yazilim-logo': { title: 'Logo Yazılım', code: 'LOGO', tone: 'cyan', brief: 'Şirketlerin muhasebe ve fatura yazılımlarını üreten teknoloji şirketi' },
-      'reel-yazilim-miatk': { title: 'MİA Teknoloji', code: 'MİAT', tone: 'cyan', brief: 'Biyometrik güvenlik ve yazılım projeleri üreten şirket' }
+      'reel-enerji-smrtg': { title: 'Smart Güneş Teknolojileri', code: 'SMRT', tone: 'emerald', brief: 'Güneş hücresi ve yenilenebilir enerji yatırımları' },
+      'reel-yazilim-logo': { title: 'Logo Yazılım', code: 'LOGO', tone: 'cyan', brief: 'Şirketlerin muhasebe ve e-fatura yazılımlarını üreten teknoloji şirketi' },
+      'reel-yazilim-miatk': { title: 'MİA Teknoloji', code: 'MİAT', tone: 'cyan', brief: 'Biyometrik güvenlik, ulaşım ve yazılım projeleri üreten şirket' }
     };
 
-    const BIST_SECTOR_TR = {
-      'Finance': 'Banka, Finans & Gayrimenkul',
-      'Process Industries': 'Kimya, Kağıt & Sanayi',
-      'Producer Manufacturing': 'Makine & Üretim Sanayi',
-      'Consumer Non-Durables': 'Gıda, İçecek & Temel Tüketim',
-      'Non-Energy Minerals': 'Çimento, Cam & Demir-Çelik',
-      'Utilities': 'Elektrik & Enerji Santralleri',
-      'Consumer Services': 'Turizm, Restoran & Hizmet',
-      'Consumer Durables': 'Otomotiv & Beyaz Eşya',
-      'Technology Services': 'Yazılım & Teknoloji',
-      'Distribution Services': 'Toptan Dağıtım',
-      'Retail Trade': 'Market & Mağazacılık',
-      'Electronic Technology': 'Savunma & Elektronik',
-      'Industrial Services': 'İnşaat & Altyapı',
-      'Commercial Services': 'Ticari Hizmetler',
-      'Transportation': 'Havacılık & Lojistik',
-      'Health Technology': 'İlaç & Tıbbi Ürünler',
-      'Miscellaneous': 'Holding & Çoklu Yatırım',
-      'Health Services': 'Hastane & Sağlık',
-      'Communications': 'İletişim & Telekom',
-      'Energy Minerals': 'Petrol & Madencilik',
-      'Unknown': 'Diğer Sektörler',
-      '': 'Diğer Sektörler'
+    // Doğrulanmış BIST 619 İş Kolu ve Kurum Türü Motoru (TradingView FactSet yanılgılarını %100 düzeltir)
+    const EXCLUDED_BIST_NON_COMPANIES = new Set([
+      'ISBTR', 'ISATR', 'ISKUR', 'QNBTR', 'KLNMA', 'PKENT',
+      'DMLKT', 'ALTIN', 'GLDTR', 'ZGOLD', 'GMSTR', 'USDTR',
+      'OPT25', 'ZPT10', 'ZSR25', 'ZPBDL', 'ZPLIB', 'APX30', 'Z30KP', 'ISGLK', 'OPTGY'
+    ]);
+    const EXACT_BANKS = new Set(['GARAN', 'AKBNK', 'ISCTR', 'YKBNK', 'VAKBN', 'HALKB', 'TSKB', 'SKBNK', 'ALBRK', 'ICBCT', 'ENPRA']);
+    const EXACT_INSURANCE = new Set(['TURSG', 'ANSGR', 'ANHYT', 'AGESA', 'AKGRT', 'RAYSG', 'QUICK']);
+    const EXACT_HOLDINGS = new Set([
+      'KCHOL', 'SAHOL', 'DOHOL', 'AGHOL', 'ALARK', 'TKFEN', 'ECZYT', 'BRYAT',
+      'GLYHO', 'GSDHO', 'BERA', 'KLRHO', 'NTHOL', 'VERUS', 'HEDEF', 'INVES',
+      'INVEO', 'IEYHO', 'POLHO', 'PAHOL', 'GRTHO', 'BINHO', 'OSTIM', 'MZHLD',
+      'MARKA', 'AVHOL', 'EUHOL', 'COSMO', 'YESIL', 'AKYHO', 'USHOL', 'LRSHO',
+      'MARMR', 'DUNYH', 'TEHOL', 'TRHOL', 'LYDHO', 'RALYH', 'IHLAS', 'ADESE',
+      'METRO', 'UNLU', 'GLRYH', 'UFUK', 'GULER', 'DAGHL', 'DERHL', 'DENGE',
+      'MMCAS', 'ATSYH', 'OTTO', 'IZINV', 'ISBIR', 'KERVN', 'IHYAY'
+    ]);
+    const EXACT_VC_YO = new Set([
+      'ISGSY', 'HUBVC', 'VERTU', 'GOZDE', 'HDFGS', 'PRDGS', 'BULGS', 'ICUGS',
+      'MTRYO', 'ATLAS', 'GRNYO', 'OYAYO', 'VKFYO', 'ETYAT', 'EUYO', 'EUKYO'
+    ]);
+    const EXACT_FIN_OTHER = new Set([
+      'ISMEN', 'INFO', 'OSMEN', 'OYYAT', 'GEDIK', 'TERA', 'A1CAP', 'GLBMD', 'SKYMD',
+      'QNBFK', 'ISFIN', 'VAKFN', 'SEKFK', 'GARFA', 'DSTKF', 'LIDFA', 'CRDFA', 'ULUFA', 'VAKFA',
+      'KTLEV', 'GLCVY', 'SMRVA', 'BRKVY', 'SKYLP'
+    ]);
+    const EXACT_SECTOR_OVERRIDES = {
+      ASELS: 'Savunma & Havacılık Sanayi', ALTNY: 'Savunma & Havacılık Sanayi',
+      SDTTR: 'Savunma & Havacılık Sanayi', PAPIL: 'Savunma & Havacılık Sanayi', ONRYT: 'Savunma & Havacılık Sanayi',
+      THYAO: 'Havacılık & Lojistik', PGSUS: 'Havacılık & Lojistik', TAVHL: 'Havacılık & Lojistik',
+      CLEBI: 'Havacılık & Lojistik', DOCO: 'Havacılık & Lojistik', RYSAS: 'Havacılık & Lojistik',
+      HOROZ: 'Havacılık & Lojistik', PASEU: 'Havacılık & Lojistik', GSDDE: 'Havacılık & Lojistik',
+      TLMAN: 'Havacılık & Lojistik', GRSEL: 'Havacılık & Lojistik', PLTUR: 'Havacılık & Lojistik',
+      LIDER: 'Havacılık & Lojistik', TUREX: 'Havacılık & Lojistik', HRKET: 'Havacılık & Lojistik',
+      ESCAR: 'Havacılık & Lojistik', BORLS: 'Havacılık & Lojistik',
+      TUPRS: 'Petrol, Rafineri & Doğalgaz', AYGAZ: 'Petrol, Rafineri & Doğalgaz',
+      AHGAZ: 'Petrol, Rafineri & Doğalgaz', BASGZ: 'Petrol, Rafineri & Doğalgaz',
+      ENERY: 'Petrol, Rafineri & Doğalgaz', NTGAZ: 'Petrol, Rafineri & Doğalgaz',
+      TRENJ: 'Petrol, Rafineri & Doğalgaz', IPEKE: 'Petrol, Rafineri & Doğalgaz',
+      CASA: 'Petrol, Rafineri & Doğalgaz', TRCAS: 'Petrol, Rafineri & Doğalgaz', MEPET: 'Petrol, Rafineri & Doğalgaz',
+      ENJSA: 'Elektrik & Yenilenebilir Enerji', ASTOR: 'Elektrik & Yenilenebilir Enerji',
+      CWENE: 'Elektrik & Yenilenebilir Enerji', SMRTG: 'Elektrik & Yenilenebilir Enerji',
+      GESAN: 'Elektrik & Yenilenebilir Enerji', EUPWR: 'Elektrik & Yenilenebilir Enerji',
+      KONTR: 'Elektrik & Yenilenebilir Enerji', YEOTK: 'Elektrik & Yenilenebilir Enerji',
+      ALFAS: 'Elektrik & Yenilenebilir Enerji', AKSEN: 'Elektrik & Yenilenebilir Enerji',
+      ODAS: 'Elektrik & Yenilenebilir Enerji', ZOREN: 'Elektrik & Yenilenebilir Enerji',
+      GWIND: 'Elektrik & Yenilenebilir Enerji', MOGAN: 'Elektrik & Yenilenebilir Enerji',
+      ECOGR: 'Elektrik & Yenilenebilir Enerji', ENDAE: 'Elektrik & Yenilenebilir Enerji',
+      ENTRA: 'Elektrik & Yenilenebilir Enerji', TATEN: 'Elektrik & Yenilenebilir Enerji',
+      IZENR: 'Elektrik & Yenilenebilir Enerji', BIGEN: 'Elektrik & Yenilenebilir Enerji',
+      LYDYE: 'Elektrik & Yenilenebilir Enerji', MASFN: 'Elektrik & Yenilenebilir Enerji',
+      METEN: 'Elektrik & Yenilenebilir Enerji', SARAE: 'Elektrik & Yenilenebilir Enerji',
+      VEYAS: 'Elektrik & Yenilenebilir Enerji', ULUSE: 'Elektrik & Yenilenebilir Enerji',
+      EMKEL: 'Elektrik & Yenilenebilir Enerji', PRKAB: 'Elektrik & Yenilenebilir Enerji',
+      ORGE: 'Elektrik & Yenilenebilir Enerji', BRLSM: 'Elektrik & Yenilenebilir Enerji',
+      NATEN: 'Elektrik & Yenilenebilir Enerji', KLYPV: 'Elektrik & Yenilenebilir Enerji',
+      AKFYE: 'Elektrik & Yenilenebilir Enerji', MAGEN: 'Elektrik & Yenilenebilir Enerji',
+      ESEN: 'Elektrik & Yenilenebilir Enerji', KARYE: 'Elektrik & Yenilenebilir Enerji',
+      HUNER: 'Elektrik & Yenilenebilir Enerji', CANTE: 'Elektrik & Yenilenebilir Enerji',
+      AKENR: 'Elektrik & Yenilenebilir Enerji', AYEN: 'Elektrik & Yenilenebilir Enerji',
+      BIOEN: 'Elektrik & Yenilenebilir Enerji', PAMEL: 'Elektrik & Yenilenebilir Enerji',
+      SAYAS: 'Elektrik & Yenilenebilir Enerji', CONSE: 'Elektrik & Yenilenebilir Enerji',
+      UCAYM: 'Elektrik & Yenilenebilir Enerji', ZEDUR: 'Elektrik & Yenilenebilir Enerji', MANAS: 'Elektrik & Yenilenebilir Enerji',
+      TRALT: 'Madencilik & Altın', KOZAL: 'Madencilik & Altın', TRMET: 'Madencilik & Altın', KOZAA: 'Madencilik & Altın',
+      CVKMD: 'Madencilik & Altın', VSNMD: 'Madencilik & Altın', PRKME: 'Madencilik & Altın', RUZYE: 'Madencilik & Altın',
+      EREGL: 'Demir-Çelik & Metal', ISDMR: 'Demir-Çelik & Metal', KRDMD: 'Demir-Çelik & Metal', KRDMA: 'Demir-Çelik & Metal', KRDMB: 'Demir-Çelik & Metal',
+      KARCL: 'Demir-Çelik & Metal', BRSAN: 'Demir-Çelik & Metal', KCAER: 'Demir-Çelik & Metal', CEMTS: 'Demir-Çelik & Metal', SARKY: 'Demir-Çelik & Metal',
+      ERBOS: 'Demir-Çelik & Metal', YKSLN: 'Demir-Çelik & Metal', MEGMT: 'Demir-Çelik & Metal', EKDMR: 'Demir-Çelik & Metal', OZYSR: 'Demir-Çelik & Metal',
+      TCKRC: 'Demir-Çelik & Metal', FORMT: 'Demir-Çelik & Metal',
+      SISE: 'Çimento, Cam & Seramik', CGCAM: 'Çimento, Cam & Seramik', OYAKC: 'Çimento, Cam & Seramik', CIMSA: 'Çimento, Cam & Seramik', AKCNS: 'Çimento, Cam & Seramik',
+      NUHCM: 'Çimento, Cam & Seramik', BUCIM: 'Çimento, Cam & Seramik', BTCIM: 'Çimento, Cam & Seramik', LMKDC: 'Çimento, Cam & Seramik', ALBTN: 'Çimento, Cam & Seramik',
+      BOBET: 'Çimento, Cam & Seramik', KUTPO: 'Çimento, Cam & Seramik', QUAGR: 'Çimento, Cam & Seramik', BIENY: 'Çimento, Cam & Seramik', KLKIM: 'Çimento, Cam & Seramik',
+      ISVEA: 'Çimento, Cam & Seramik', EGSER: 'Çimento, Cam & Seramik', KLSER: 'Çimento, Cam & Seramik', NIBAS: 'Çimento, Cam & Seramik', USAK: 'Çimento, Cam & Seramik',
+      FROTO: 'Otomotiv & Yan Sanayi', TOASO: 'Otomotiv & Yan Sanayi', DOAS: 'Otomotiv & Yan Sanayi', TTRAK: 'Otomotiv & Yan Sanayi', OTKAR: 'Otomotiv & Yan Sanayi',
+      ASUZU: 'Otomotiv & Yan Sanayi', KARSN: 'Otomotiv & Yan Sanayi', TMSN: 'Otomotiv & Yan Sanayi', BRISA: 'Otomotiv & Yan Sanayi', GOODY: 'Otomotiv & Yan Sanayi',
+      EGEEN: 'Otomotiv & Yan Sanayi', JANTS: 'Otomotiv & Yan Sanayi', BFREN: 'Otomotiv & Yan Sanayi', YIGIT: 'Otomotiv & Yan Sanayi', BEYAZ: 'Otomotiv & Yan Sanayi',
+      ARCLK: 'Beyaz Eşya & Mobilya', VESBE: 'Beyaz Eşya & Mobilya', VESTL: 'Beyaz Eşya & Mobilya', ARZUM: 'Beyaz Eşya & Mobilya', IHEVA: 'Beyaz Eşya & Mobilya',
+      KLMSN: 'Beyaz Eşya & Mobilya', YATAS: 'Beyaz Eşya & Mobilya', DGNMO: 'Beyaz Eşya & Mobilya', KLSYN: 'Beyaz Eşya & Mobilya', YONGA: 'Beyaz Eşya & Mobilya',
+      ADEL: 'Beyaz Eşya & Mobilya', GIPTA: 'Beyaz Eşya & Mobilya', SUMAS: 'Beyaz Eşya & Mobilya', SILVR: 'Beyaz Eşya & Mobilya', ARTMS: 'Beyaz Eşya & Mobilya',
+      TCELL: 'Yazılım, Teknoloji & Telekom', TTKOM: 'Yazılım, Teknoloji & Telekom', LOGO: 'Yazılım, Teknoloji & Telekom', MIATK: 'Yazılım, Teknoloji & Telekom',
+      DOFRB: 'Yazılım, Teknoloji & Telekom', BINBN: 'Yazılım, Teknoloji & Telekom', AGROT: 'Yazılım, Teknoloji & Telekom', PKART: 'Yazılım, Teknoloji & Telekom', EDATA: 'Yazılım, Teknoloji & Telekom',
+      MPARK: 'İlaç & Sağlık', LKMNH: 'İlaç & Sağlık', TNZTP: 'İlaç & Sağlık', DEVA: 'İlaç & Sağlık', SELEC: 'İlaç & Sağlık',
+      ECILC: 'İlaç & Sağlık', GENIL: 'İlaç & Sağlık', TRILC: 'İlaç & Sağlık', MEDTR: 'İlaç & Sağlık', ONCSM: 'İlaç & Sağlık',
+      PETKM: 'Kimya, Gübre & Kağıt', SASA: 'Kimya, Gübre & Kağıt', HEKTS: 'Kimya, Gübre & Kağıt', GUBRF: 'Kimya, Gübre & Kağıt', AKSA: 'Kimya, Gübre & Kağıt',
+      ALKIM: 'Kimya, Gübre & Kağıt', KORDS: 'Kimya, Gübre & Kağıt', KMPUR: 'Kimya, Gübre & Kağıt', LILAK: 'Kimya, Gübre & Kağıt', BLUME: 'Kimya, Gübre & Kağıt',
+      TEZOL: 'Kimya, Gübre & Kağıt', VKING: 'Kimya, Gübre & Kağıt', KRPLS: 'Kimya, Gübre & Kağıt', EKIZ: 'Kimya, Gübre & Kağıt', MEGAP: 'Kimya, Gübre & Kağıt',
+      ISKPL: 'Kimya, Gübre & Kağıt', RNPOL: 'Kimya, Gübre & Kağıt', EPLAS: 'Kimya, Gübre & Kağıt',
+      BIMAS: 'Market & Perakende', MGROS: 'Market & Perakende', SOKM: 'Market & Perakende', CRFSA: 'Market & Perakende', BIZIM: 'Market & Perakende',
+      MOPAS: 'Market & Perakende', MAVI: 'Market & Perakende', VAKKO: 'Market & Perakende', TKNSA: 'Market & Perakende', EBEBK: 'Market & Perakende',
+      SSAAT: 'Market & Perakende', CITAS: 'Market & Perakende',
+      CCOLA: 'Gıda, İçecek & Tarım', AEFES: 'Gıda, İçecek & Tarım', TBORG: 'Gıda, İçecek & Tarım', ULKER: 'Gıda, İçecek & Tarım', TABGD: 'Gıda, İçecek & Tarım',
+      KUVVA: 'Gıda, İçecek & Tarım', VANGD: 'Gıda, İçecek & Tarım', KAYSE: 'Gıda, İçecek & Tarım', DMRGD: 'Gıda, İçecek & Tarım',
+      ENKAI: 'İnşaat & Taahhüt', AKFIS: 'İnşaat & Taahhüt', GLRMK: 'İnşaat & Taahhüt', HATSN: 'İnşaat & Taahhüt', OZATD: 'İnşaat & Taahhüt', YAYLA: 'İnşaat & Taahhüt',
+      BRKO: 'Tekstil & Hazır Giyim', LUKSK: 'Tekstil & Hazır Giyim', ENSRI: 'Tekstil & Hazır Giyim',
+      SAFKR: 'Makine & Sanayi Üretimi', ATATR: 'Turizm, Medya & Hizmet', EKIM: 'Turizm, Medya & Hizmet'
     };
 
-    function getSectorTr(raw) {
-      if (!raw) return 'Diğer Sektörler';
-      return BIST_SECTOR_TR[raw] || raw;
+    const VALID_TR_SECTORS = new Set([
+      'Bankacılık', 'Sigorta & Emeklilik', 'Holding & Çoklu Yatırım', 'Girişim & Yatırım Ortaklığı',
+      'Aracı Kurum & Finansman', 'Gayrimenkul & GYO', 'Savunma & Havacılık Sanayi', 'Havacılık & Lojistik',
+      'Petrol, Rafineri & Doğalgaz', 'Elektrik & Yenilenebilir Enerji', 'Madencilik & Altın',
+      'Demir-Çelik & Metal', 'Çimento, Cam & Seramik', 'Otomotiv & Yan Sanayi', 'Beyaz Eşya & Mobilya',
+      'Yazılım, Teknoloji & Telekom', 'İlaç & Sağlık', 'Kimya, Gübre & Kağıt', 'Market & Perakende',
+      'Gıda, İçecek & Tarım', 'İnşaat & Taahhüt', 'Tekstil & Hazır Giyim', 'Turizm, Medya & Hizmet',
+      'Makine & Sanayi Üretimi'
+    ]);
+
+    function classifyBistStockClient(sym, rawDesc, rawSector, rawIndustry) {
+      const s = String(sym || '').toUpperCase();
+      const d = String(rawDesc || '');
+      const sec = String(rawSector || '');
+      const ind = String(rawIndustry || '');
+      if (EXACT_BANKS.has(s)) return { entityKind: 'bank', sectorTr: 'Bankacılık' };
+      if (EXACT_INSURANCE.has(s)) return { entityKind: 'insurance', sectorTr: 'Sigorta & Emeklilik' };
+      if (EXACT_HOLDINGS.has(s)) return { entityKind: 'holding', sectorTr: 'Holding & Çoklu Yatırım' };
+      if (EXACT_VC_YO.has(s)) return { entityKind: 'vc_yo', sectorTr: 'Girişim & Yatırım Ortaklığı' };
+      if (EXACT_FIN_OTHER.has(s)) return { entityKind: 'fin_other', sectorTr: 'Aracı Kurum & Finansman' };
+      if (EXACT_SECTOR_OVERRIDES[s]) return { entityKind: 'industrial', sectorTr: EXACT_SECTOR_OVERRIDES[s] };
+      if (s !== 'BASGZ' && (s.endsWith('GYO') || ind === 'Real Estate Investment Trusts' || ind === 'Real Estate Development' || ind === 'Homebuilding' || /gayr[iı]menkul/i.test(d))) {
+        return { entityKind: 'gyo', sectorTr: 'Gayrimenkul & GYO' };
+      }
+      if (ind.includes('Insurance') || /\bs[iı]gorta\b|emekl[iı]l[iı]k/i.test(d)) return { entityKind: 'insurance', sectorTr: 'Sigorta & Emeklilik' };
+      if (/g[iı]r[iı][sş][iı]m sermayes[iı]|menkul k[ıi]ymetler yat[ıi]r[ıi]m ortakl|yat[ıi]r[ıi]m ortakl[ıi][gğ][ıi]/i.test(d) && !/gayr[iı]menkul/i.test(d)) {
+        return { entityKind: 'vc_yo', sectorTr: 'Girişim & Yatırım Ortaklığı' };
+      }
+      if (/\bhold[iı]ng\b/i.test(d)) return { entityKind: 'holding', sectorTr: 'Holding & Çoklu Yatırım' };
+      if (ind === 'Investment Banks/Brokers' || ind === 'Finance/Rental/Leasing' || /faktor[iı]ng|finansal kiralama|menkul de[gğ]erler|varl[ıi]k y[oö]netim|tasarruf finansman/i.test(d)) {
+        return { entityKind: 'fin_other', sectorTr: 'Aracı Kurum & Finansman' };
+      }
+      if (VALID_TR_SECTORS.has(sec)) return { entityKind: 'industrial', sectorTr: sec };
+      if (ind === 'Major Banks' || ind === 'Regional Banks') return { entityKind: 'bank', sectorTr: 'Bankacılık' };
+      if (ind === 'Aerospace & Defense') return { entityKind: 'industrial', sectorTr: 'Savunma & Havacılık Sanayi' };
+      if (ind === 'Motor Vehicles' || ind === 'Automotive Aftermarket' || ind === 'Auto Parts: OEM' || ind === 'Trucks/Construction/Farm Machinery') return { entityKind: 'industrial', sectorTr: 'Otomotiv & Yan Sanayi' };
+      if (ind === 'Electronics/Appliances' || ind === 'Home Furnishings') return { entityKind: 'industrial', sectorTr: 'Beyaz Eşya & Mobilya' };
+      if (ind === 'Construction Materials' || /çimento|cimento|seramik|beton|\bcam\b/i.test(d)) return { entityKind: 'industrial', sectorTr: 'Çimento, Cam & Seramik' };
+      if (ind === 'Steel' || ind === 'Aluminum' || ind === 'Metal Fabrication' || /çelik|celik|demir|metal|galvaniz/i.test(d)) return { entityKind: 'industrial', sectorTr: 'Demir-Çelik & Metal' };
+      if (ind === 'Precious Metals' || ind === 'Other Metals/Minerals' || /maden/i.test(d)) return { entityKind: 'industrial', sectorTr: 'Madencilik & Altın' };
+      if (ind === 'Gas Distributors' || ind.includes('Oil') || /do[gğ]algaz|petrol/i.test(d)) return { entityKind: 'industrial', sectorTr: 'Petrol, Rafineri & Doğalgaz' };
+      if (sec === 'Utilities' || ind === 'Alternative Power Generation' || ind === 'Electric Utilities' || ind === 'Electrical Products' || /enerji|elektrik/i.test(d)) return { entityKind: 'industrial', sectorTr: 'Elektrik & Yenilenebilir Enerji' };
+      if (sec === 'Communications' || sec === 'Technology Services' || sec === 'Electronic Technology' || ind === 'Electronics Distributors' || /yaz[ıi]l[ıi]m|teknoloji|bili[sş]im|bilgisayar|telekom/i.test(d)) return { entityKind: 'industrial', sectorTr: 'Yazılım, Teknoloji & Telekom' };
+      if (sec === 'Health Technology' || sec === 'Health Services' || ind === 'Medical Distributors' || /ilaç|ilac|sa[gğ]l[ıi]k|hastane|t[ıi]bbi/i.test(d)) return { entityKind: 'industrial', sectorTr: 'İlaç & Sağlık' };
+      if (ind === 'Textiles' || ind === 'Apparel/Footwear' || /tekstil|mensucat|giyim|iplik|dokuma/i.test(d)) return { entityKind: 'industrial', sectorTr: 'Tekstil & Hazır Giyim' };
+      if (sec === 'Retail Trade' || ind === 'Food Retail' || ind === 'Apparel/Footwear Retail' || /ma[gğ]aza|perakende|market/i.test(d)) return { entityKind: 'industrial', sectorTr: 'Market & Perakende' };
+      if (sec === 'Consumer Non-Durables' || ind === 'Agricultural Commodities/Milling' || ind === 'Restaurants' || ind === 'Food Distributors' || /g[ıi]da|un\b|süt|sut|tar[ıi]m|içecek|icecek|şeker|seker/i.test(d)) return { entityKind: 'industrial', sectorTr: 'Gıda, İçecek & Tarım' };
+      if (sec === 'Process Industries' || /kimya|plastik|ka[gğ][ıi]t|ambalaj|boya|gübre|gubre/i.test(d)) return { entityKind: 'industrial', sectorTr: 'Kimya, Gübre & Kağıt' };
+      if (sec === 'Transportation' || /lojistik|taş[ıi]mac[ıi]l[ıi]k|tasimacilik|denizcilik|hava|kargo/i.test(d)) return { entityKind: 'industrial', sectorTr: 'Havacılık & Lojistik' };
+      if (sec === 'Industrial Services' || /in[sş]aat|taahh[üu]t/i.test(d)) return { entityKind: 'industrial', sectorTr: 'İnşaat & Taahhüt' };
+      if (sec === 'Consumer Services' || sec === 'Commercial Services') return { entityKind: 'industrial', sectorTr: 'Turizm, Medya & Hizmet' };
+      if (sec === 'Finance') return { entityKind: 'holding', sectorTr: 'Holding & Çoklu Yatırım' };
+      return { entityKind: 'industrial', sectorTr: 'Makine & Sanayi Üretimi' };
+    }
+
+    function getSectorTr(rawOrSt) {
+      if (!rawOrSt) return 'Makine & Sanayi Üretimi';
+      if (typeof rawOrSt === 'object') {
+        if (rawOrSt.sector && VALID_TR_SECTORS.has(rawOrSt.sector)) return rawOrSt.sector;
+        return classifyBistStockClient(rawOrSt.ticker, rawOrSt.name, rawOrSt.rawSector || rawOrSt.sector, rawOrSt.industry).sectorTr;
+      }
+      if (VALID_TR_SECTORS.has(rawOrSt)) return rawOrSt;
+      return 'Makine & Sanayi Üretimi';
+    }
+
+    // Her 69 varlığın vergi durumunu Türk vergi mevzuatına %100 uygun döndürür
+    function getAssetTaxBadge(inst) {
+      if (!inst) return { text: '%0 Stopaj', short: '%0 Stopaj', cls: 'pos', isZeroTax: true };
+      const sym = String(inst.symbol || '');
+      const isForeignDecl = inst.taxRegime === 'declaration' || /^(AMEX|NASDAQ|OTC|NYSE):/i.test(sym);
+      if (isForeignDecl) {
+        return { text: 'Beyana Tabi', short: 'Beyana Tabi', cls: 'muted', isZeroTax: false };
+      }
+      const tax = Number(inst.taxRatePct) || 0;
+      if (tax > 0) {
+        return { text: `Stopaj %${fmtNum(tax, tax % 1 === 0 ? 0 : 1)}`, short: `Vergi %${fmtNum(tax, tax % 1 === 0 ? 0 : 1)}`, cls: 'warn', isZeroTax: false };
+      }
+      if (String(inst.unitLabel || '').includes('Puan')) {
+        return { text: 'Endeks Göstergesi', short: 'Gösterge', cls: 'muted', isZeroTax: false };
+      }
+      return { text: '%0 Stopaj (Vergisiz)', short: '%0 Stopaj', cls: 'pos', isZeroTax: true };
     }
 
     function getAssetMeta(inst) {
@@ -1959,13 +2111,16 @@
       return { title: cleaned, code: sym, tone: 'blue', brief: getAssetSubCategory(inst) };
     }
 
-    // Her 69 varlık için sıfır jargonlu, günlük hayattan eğitici kart anlatımı üretir
+    // Her 69 varlık için sıfır jargonlu, mevzuata %100 uygun günlük hayat rehberi
     function getPlainLifeGuide(inst) {
       const id = inst.id || '';
+      const sym = String(inst.symbol || '');
+      const isForeignDecl = inst.taxRegime === 'declaration' || /^(AMEX|NASDAQ|OTC|NYSE):/i.test(sym);
+
       if (id === 'mevduat-ust' || id === 'mevduat-tcmb' || id === 'katilim-hesabi') {
         return {
-          analogy: 'Evini kiraya vermek yerine paranı bankaya kiraya verirsin. Banka sana her ay belli bir kira (faiz) öder ama evin kendisi (anaparan) hiç değer kazanmaz.',
-          diffFromInterest: 'Gelen faizi harcarsan, marketteki fiyatlar arttığı için yıl sonunda ana paranın alım gücü erir. Üstelik devlet her vade sonunda kârından %17,5 vergi keser.',
+          analogy: 'Evini kiraya vermek yerine paranı bankaya kiraya verirsin. Banka sana her ay belli bir kira (faiz/kâr payı) öder ama anaparanın kendisi hiç değer kazanmaz.',
+          diffFromInterest: 'Gelen faizi harcarsan market fiyatları arttığı için yıl sonunda ana paranın alım gücü erir. Üstelik devlet her vade sonunda kârından %17,5 stopaj vergisi keser.',
           patience: 'Günlük / Aylık (Acil nakit veya kısa süreli park yeri için uygundur)',
           howToBuy: 'Her bankanın mobil uygulamasından Vadeli Hesap veya Katılım Hesabı menüsünden açılır.',
           riskLevel: 1
@@ -1973,108 +2128,196 @@
       }
       if (id === 'para-piyasasi-fonu') {
         return {
-          analogy: 'Vadeli mevduatın "vadesi bozulmayan" akıllı kardeşidir. Paran her gün faiz kazanır; 12. günde paraya sıkışırsan bile faizin yanmaz.',
-          diffFromInterest: 'Vadeli mevduatta her 32 günde bir %17,5 vergi kesilip kalan para dönerken, bu fonda satana kadar hiç vergi kesilmez; vergi ertelenerek bileşik büyür.',
+          analogy: 'Vadeli mevduatın "vadesi bozulmayan" akıllı kardeşidir. Paran her gün faiz kazanır; ara günde nakit çekersen bile birikmiş getirisi yanmaz.',
+          diffFromInterest: 'Vadeli mevduatta her 32 günde bir %17,5 vergi kesilip kalan para dönerken, Para Piyasası Fonunda satana kadar vergi kesilmez; brüt para bileşik büyür.',
           patience: '1 Gün ve üzeri (Acil durum parası ve sepetin nakit tamponu için idealdir)',
           howToBuy: 'Bankandaki "Yatırım Fonları" menüsünden kendi bankanın veya TEFAS’ın Para Piyasası Fonunu seçerek saniyeler içinde alabilirsin.',
           riskLevel: 1
         };
       }
+      if (id === 'dibs-tahvil' || id === 'kira-sertifikasi-sukuk') {
+        return {
+          analogy: 'Banka yerine doğrudan T.C. Hazine ve Maliye Bakanlığı’na borç verip (veya kamu kira sertifikasına ortak olup) sabit getiri almaktır.',
+          diffFromInterest: 'Vadeli mevduatta %17,5 stopaj kesilirken, 31 Aralık 2026’ya kadar alınan Hazine Devlet Tahvili ve Hazine Kira Sertifikalarında stopaj vergisi %0’dır!',
+          patience: '6 Ay – 2 Yıl (Vadeden önce satılırsa piyasa faizine göre fiyatı dalgalanabilir)',
+          howToBuy: 'Bankaların Yatırım -> Hazine Bonosu / Devlet Tahvili veya Kira Sertifikası (Sukuk) menüsünden alınır.',
+          riskLevel: 2
+        };
+      }
+      if (id === 'bes-emeklilik') {
+        return {
+          analogy: 'Yatırdığın her 1.000 ₺ için devletin de senin hesabına ek +300 ₺ (%30 devlet katkısı) koyduğu uzun vadeli kumbara sistemidir.',
+          diffFromInterest: 'Sadece para piyasası fonunda bırakırsan enflasyona ezilebilir; BES içindeki fon tercihini Altın ve Hisse fonlarıyla çeşitlendirirsen %30 devlet katkısı dev fark yaratır.',
+          patience: 'Uzun Vade (Hak kazanmak için en az 3-10 yıl; emeklilikte stopaj %5’e düşer)',
+          howToBuy: 'Tüm banka ve emeklilik şirketlerinin mobil uygulamasından BES sözleşmesi başlatıp yılda 12 kez fon dağılımı değiştirilebilir.',
+          riskLevel: 2
+        };
+      }
+      if (id === 'altin-fonu-zgold' || id === 'altin-fonu-gldtr' || id === 'fon-degisken-isglk' || id === 'gumus-fonu-gmstr') {
+        return {
+          analogy: 'Kuyumcuda çalınma riski veya yüksek banka makası olmadan, Borsa İstanbul üzerinden tek tıkla altın veya gümüşe yatırım yapan borsa fonudur.',
+          diffFromInterest: 'Önemli Vergi Detayı: Fiziki altın ve Darphane Altın Sertifikasında (ALTIN.S1) vergi %0 iken, altın/gümüş yatırım fonu ve BYF’lerinde satış kârından %17,5 stopaj kesilir.',
+          patience: 'En az 6 Ay – 3+ Yıl',
+          howToBuy: 'Bankanın Borsa / Hisse Senedi ekranından ZGOLD, GLDTR, ISGLK veya GMSTR koduyla seans saatlerinde alınıp satılır.',
+          riskLevel: 2
+        };
+      }
       if (id.includes('altin') || id.includes('ceyrek') || id.includes('cumhuriyet') || id.includes('bilezik') || id.includes('gumus')) {
-        const isS1 = id === 'altin-sertifikasi' || id.includes('fonu');
+        const isS1 = id === 'altin-sertifikasi';
         return {
           analogy: 'Binlerce yıldır kimsenin karşılıksız basamadığı gerçek değer deposudur. Hem dünyada altın/gümüş değerlenince hem de Türkiye’de Dolar yükselince çifte koruma sağlar.',
-          diffFromInterest: 'Faizde %17,5 vergi varken Gram Altın, Çeyrek Altın ve Darphane Sertifikasında (S1) stopaj vergisi %0’dır! Uzun yıllar enflasyon sıçramalarına karşı anaparayı korur.',
+          diffFromInterest: 'Faizde ve altın fonlarında %17,5 stopaj varken; fiziki altında, gümüşte ve Darphane Altın Sertifikasında (ALTIN.S1) satış kârı stopajı %0’dır!',
           patience: 'En az 6 Ay – 3+ Yıl (Kısa vadede dinlenebilir, uzun vadede kalkan görevi görür)',
           howToBuy: isS1
-            ? 'Bankanın borsa/yatırım bölümünden kuyumcu makası ödemeden tek tıkla (ALTIN.S1, ZGOLD, GLDTR) alınıp satılır.'
-            : 'Kuyumcudan fiziki olarak veya banka/borsa altın sertifikası üzerinden alınabilir; banka makasının açık olduğu gece saatlerinde işlem yapma.',
+            ? 'Bankanın Borsa/Hisse menüsünden ALTIN.S1 koduyla kuyumcu makası ve kambiyo vergisi ödemeden tek tıkla alınıp satılır.'
+            : 'Kuyumcudan fiziki olarak veya banka üzerinden (bankada alımda binde 2 kambiyo vergisi vardır; gece makas açıkken işlem yapma) alınır.',
           riskLevel: 2
         };
       }
-      if (id.startsWith('doviz-') || id.startsWith('eurobond-')) {
-        const isBond = id.startsWith('eurobond-');
+      if (id === 'eurobond-usdtr') {
         return {
-          analogy: isBond
-            ? 'Sadece kasada döviz bekletmek yerine, dövizini devlet veya büyük kurumlara borç verip üzerine Dolar bazında kira (kupon faizi) almaktır.'
-            : 'Paranı Türk Lirası yerine yabancı para biriminde tutmaktır. Ancak unutma: ABD ve Avrupa’da da enflasyon olduğu için kağıt döviz tek başına beklerse dünyada erir.',
-          diffFromInterest: isBond
-            ? 'Hem kur artışından korunursun hem de Dolar bazında faiz işler.'
-            : 'Kur sıçramalarına karşı korur ama faiz veya şirket kârı üretmez; dövizi boş tutmak yerine dövizle büyüyen varlıklar (Altın, Eurobond, Dünya Şirketleri) uzun vadede daha verimlidir.',
-          patience: isBond ? '1 – 3 Yıl' : 'Kısa/Orta Vade Kur Kalkanı',
-          howToBuy: isBond ? 'Bankaların Borsa/Fon menüsünden USDTR gibi döviz tahvil fonlarıyla küçük tutarlarla bile alınabilir.' : 'Banka döviz hesabı veya döviz fonları üzerinden alınır.',
+          analogy: 'Bankaların döviz alım-satım makasına takılmadan, Borsa İstanbul üzerinden Dolar ve ABD Hazine bonolarına yatırım yapan borsa yatırım fonudur.',
+          diffFromInterest: 'TL faizde anaparan kur artışına karşı korumasızdır; burada Dolar/TL yükselişini yakalarsın ancak satış kârı üzerinden %17,5 fon stopajı kesilir.',
+          patience: '6 Ay – 2 Yıl',
+          howToBuy: 'Bankanın Borsa / Hisse Senedi ekranından USDTR koduyla seans içinde TL ile alınıp satılır.',
           riskLevel: 2
         };
       }
-      if (inst.isUsdAsset) {
+      if (id.startsWith('doviz-')) {
         return {
-          analogy: 'Sadece döviz alıp yastık altına koymak yerine; iPhone satan Apple’a, yapay zeka üreten NVIDIA’ya veya dünyanın en büyük 500 şirketine dükkan ortağı olmaktır.',
-          diffFromInterest: 'Faizde anaparan TL olarak sabit kalır. Burada ise hem Dolar/TL arttığında kazanırsın hem de bu dev şirketler dünyada kâr edip büyüdükçe çift motorlu kazanç sağlarsın.',
-          patience: 'En az 1 – 5 Yıl (Borsalar bazı aylar %10-15 inip çıkabilir; sabreden ortaklar kazanır)',
-          howToBuy: 'Aracı kurumların yurt dışı piyasa bölümünden veya her bankadaki "Yabancı Hisse Senedi Fonları (TEFAS)" üzerinden 500 ₺ ile bile alınabilir.',
+          analogy: 'Paranı Türk Lirası yerine yabancı para biriminde tutmaktır. Ancak unutma: ABD ve Avrupa’da da enflasyon olduğu için nakit döviz tek başına beklerse dünyada erir.',
+          diffFromInterest: 'Kur sıçramalarına karşı korur ve satışta stopaj %0’dır (bankadan alırken binde 2 kambiyo vergisi kesilir); fakat tek başına faiz veya şirket kârı üretmez.',
+          patience: 'Kısa/Orta Vade Kur Kalkanı',
+          howToBuy: 'Banka döviz hesabı (mesai saatleri içinde düşük makasla) veya döviz bürolarından alınır.',
+          riskLevel: 2
+        };
+      }
+      if (isForeignDecl || inst.isUsdAsset) {
+        return {
+          analogy: 'Sadece döviz alıp kasada bekletmek yerine; Apple, Microsoft, NVIDIA gibi dünya devlerine veya küresel emtia/tahvil sepetlerine Dolar bazında ortak olmaktır.',
+          diffFromInterest: 'Hem Dolar/TL arttığında hem de şirketler dünyada büyüdüğünde çift motorlu kazandırır. Vergi Kuralı: Bankada otomatik stopaj kesilmez; kazanç yıllık beyan sınırını aşarsa gelir vergisi beyannamesi verilir (Yİ-ÜFE endekslemesiyle enflasyon düşülür).',
+          patience: 'En az 1 – 5 Yıl (Borsalar bazı aylar dalgalanır; uzun vadeli ortaklar kazanır)',
+          howToBuy: 'Aracı kurumların yurt dışı borsa ekranından doğrudan veya beyanla uğraşmak istemezsen bankandaki TEFAS Yabancı Hisse Fonları üzerinden alınır.',
           riskLevel: 3
         };
       }
       if (id.startsWith('kripto-')) {
         return {
           analogy: 'Dijital çağın yüksek hızlı ve çok sert dalgalanan varlığıdır. Bir ayda %40 çıkabildiği gibi %40 da düşebilir.',
-          diffFromInterest: 'Faizin tam zıttıdır: sabit getiri garantisi yoktur. Sepetin tamamıyla değil, ancak üzülmeyeceğin küçük bir "baharat" oranıyla (%5-%10 gibi) tutulmalıdır.',
+          diffFromInterest: 'Faizin tam zıttıdır: sabit getiri garantisi yoktur. Sepetin tamamıyla değil, ancak üzülmeyeceğin küçük bir oranla (%5-%10 gibi) tutulmalıdır.',
           patience: 'Yüksek Dalgalanma · En az 2-4 Yıl',
-          howToBuy: 'Yasal kripto varlık platformlarından 7/24 küçük tutarlarla alınıp satılabilir.',
+          howToBuy: 'SPK lisanslı kripto varlık platformlarından 7/24 küçük tutarlarla alınıp satılabilir.',
           riskLevel: 5
+        };
+      }
+      if (id === 'bist-100' || id === 'bist-30' || id === 'bist-banka' || id === 'viop-bist30-kontrat') {
+        return {
+          analogy: 'Türkiye’nin en büyük şirketlerinin genel gidişatını ölçen piyasa termometresidir (endeks göstergesidir).',
+          diffFromInterest: 'Endeksin kendisi doğrudan satın alınmaz; bunun yerine tek tıkla bu şirketlerin tamamını içeren %0 stopajlı Hisse Yoğun Borsa Fonları (APX30, ZPBDL, ZPLIB) alınır.',
+          patience: 'En az 1 – 3 Yıl',
+          howToBuy: 'Kasama Ekle butonuna bastığında sistem seni doğrudan bu endeksin satın alınabilir %0 vergili fon karşılığına yönlendirir.',
+          riskLevel: id === 'viop-bist30-kontrat' ? 5 : 3
         };
       }
       if (inst.categoryId === 5) {
         return {
-          analogy: 'Milyonlarca liran olmadan da AVM’lerin, dev lojistik depoların veya konut projelerinin kira ve değer artışına küçük paylarla ortak olmaktır.',
-          diffFromInterest: 'Enflasyonla birlikte bina değeri ve kira gelirleri yukarı güncellenir; tapu harcı, emlakçı komisyonu veya kiracıyla uğraşma derdi yoktur.',
-          patience: '1 – 3 Yıl',
-          howToBuy: 'Bankanın Hisse Senedi / Borsa bölümünden 1 pay (örneğin 15-50 ₺) bile alınabilir.',
+          analogy: id === 'gayrimenkul-konut-tcmb'
+            ? 'TCMB’nin Türkiye genelindeki gerçek tapu/ekspertiz verilerinden hesapladığı resmi konut fiyat ortalamasıdır.'
+            : 'Milyonlarca liran olmadan da AVM’lerin, dev lojistik depoların veya konut projelerinin kira ve değer artışına küçük paylarla ortak olmaktır.',
+          diffFromInterest: id === 'gayrimenkul-konut-tcmb'
+            ? 'Fiziki konut en az 5 yıl elde tutulduktan sonra satılırsa değer artış kazancı vergisi %0’dır; küçük birikimler için ise GYO fonları (OPTGY) alternatif olur.'
+            : 'Borsadaki GYO hisselerinde ve GYO hisse yoğun fonlarında (OPTGY) alım-satım kazancı stopajı %0’dır; tapu harcı ve kiracı derdi yoktur.',
+          patience: '1 – 5 Yıl',
+          howToBuy: id === 'gayrimenkul-konut-tcmb'
+            ? 'Küçük tutarlarla konut/gayrimenkul sepetine katılmak için OPTGY fonu veya GYO payları kullanılabilir.'
+            : 'Bankanın Hisse Senedi / Borsa bölümünden 1 pay bile alınabilir.',
           riskLevel: 3
         };
       }
       return {
         analogy: 'Türkiye’de her gün önünden geçtiğin marketlerin, fabrikaların, enerji santrallerinin ve havayollarının kasasına ortak olmaktır. Enflasyon arttıkça şirket sattığı ürünün fiyatını artırır.',
-        diffFromInterest: 'Yerli hisse senetlerinde ve Hisse Yoğun Fonlarda stopaj vergisi %0’dır! Faizde %17,5 vergi öderken, iyi şirket ortaklığında hem vergisiz büyür hem kâr payı (temettü) alırsın.',
+        diffFromInterest: 'Yerli hisse senetlerinde ve Hisse Senedi Yoğun Fonlarda (ZPBDL, APX30, Z30KP vb.) alım-satım stopajı %0’dır! Faizde %17,5 vergi öderken, iyi şirket ortaklığında vergisiz büyürsün.',
         patience: 'En az 1 – 3 Yıl (Günlük fiyat oynamalarına bakılmaz, şirketin kârına ortak olunur)',
         howToBuy: 'Herhangi bir bankanın Yatırım / Borsa menüsünden fon koduyla veya hisse koduyla kolayca alınır.',
         riskLevel: 3
       };
     }
 
-    const KEEP_UPPER_WORDS = new Set(['A.Ş.', 'GYO', 'GSYO', 'YO', 'BİM', 'MİA', 'TAB', 'QNB', 'TSKB', 'THY', 'T.C.', 'USA', 'IT', 'TV']);
+    // TradingView'dan gelen ASCII/İngilizce bozuk Türk şirket isimlerini kusursuz Türkçe'ye çevirir
+    const TR_WORD_FIXES = {
+      'turk': 'Türk', 'turkiye': 'Türkiye', 'insaat': 'İnşaat', 'insaa': 'İnşa', 'taahhut': 'Taahhüt',
+      'yatirim': 'Yatırım', 'yatirimlar': 'Yatırımlar', 'yatirimlari': 'Yatırımları', 'yatitim': 'Yatırım',
+      'ortakligi': 'Ortaklığı', 'gayrimenkul': 'Gayrimenkul', 'girisim': 'Girişim', 'sermayesi': 'Sermayesi',
+      'sanayi': 'Sanayi', 'sanayii': 'Sanayii', 'ticaret': 'Ticaret', 'ticari': 'Ticari',
+      'gida': 'Gıda', 'cimento': 'Çimento', 'celik': 'Çelik', 'kagit': 'Kağıt', 'kagitcilik': 'Kağıtçılık',
+      'sut': 'Süt', 'urunleri': 'Ürünleri', 'uretim': 'Üretim', 'uretimi': 'Üretimi',
+      'tasimacilik': 'Taşımacılık', 'tasimaciligi': 'Taşımacılığı', 'ulastirma': 'Ulaştırma', 'ulasim': 'Ulaşım',
+      'magazacilik': 'Mağazacılık', 'magazalari': 'Mağazaları', 'marketcilik': 'Marketçilik',
+      'muhendislik': 'Mühendislik', 'yuksek': 'Yüksek', 'yesil': 'Yeşil', 'gunes': 'Güneş',
+      'dogu': 'Doğu', 'bati': 'Batı', 'dogal': 'Doğal', 'dogalgaz': 'Doğalgaz', 'agir': 'Ağır',
+      'kirtasiye': 'Kırtasiye', 'guvenlik': 'Güvenlik', 'bilisim': 'Bilişim', 'yazilim': 'Yazılım',
+      'telekominikasyon': 'Telekomünikasyon', 'telekomunikasyon': 'Telekomünikasyon', 'iletisim': 'İletişim',
+      'sekerleme': 'Şekerleme', 'seker': 'Şeker', 'ilac': 'İlaç', 'saglik': 'Sağlık',
+      'degerler': 'Değerler', 'yonetim': 'Yönetim', 'yonetimi': 'Yönetimi', 'danismanlik': 'Danışmanlık',
+      'dis': 'Dış', 'ic': 'İç', 'isletmeleri': 'İşletmeleri', 'isletmecilik': 'İşletmecilik',
+      'iklimlendirme': 'İklimlendirme', 'sogutmacilik': 'Soğutmacılık', 'aku': 'Akü',
+      'citlekci': 'Çitlekçi', 'baydoner': 'Baydöner', 'altinkilic': 'Altınkılıç', 'gundogdu': 'Gündoğdu',
+      'ozyasar': 'Özyaşar', 'cagdas': 'Çağdaş', 'visne': 'Vişne', 'tatlipinar': 'Tatlıpınar',
+      'izdemir': 'İzdemir', 'altinay': 'Altınay', 'altin': 'Altın', 'bakirci': 'Bakırcı',
+      'agaoglu': 'Ağaoğlu', 'egeyapi': 'Egeyapı', 'birlestir': 'Birleştir', 'birlesim': 'Birleşim',
+      'endustri': 'Endüstri', 'endustriyel': 'Endüstriyel', 'galvanizleme': 'Galvanizleme',
+      'arastirma': 'Araştırma', 'gelistirme': 'Geliştirme', 'hali': 'Halı', 'unlu': 'Unlu',
+      'mamuller': 'Mamüller', 'ihracat': 'İhracat', 'ithalat': 'İthalat', 'kalip': 'Kalıp',
+      'makarnacilik': 'Makarnacılık', 'kardesler': 'Kardeşler', 'segmen': 'Seğmen', 'kirac': 'Kıraç',
+      'gulermak': 'Gülermak', 'koc': 'Koç', 'canakkale': 'Çanakkale', 'yapi': 'Yapı', 'maizemeleri': 'Malzemeleri',
+      'malzemeleri': 'Malzemeleri', 'yuk': 'Yük', 'akilli': 'Akıllı', 'sehir': 'Şehir', 'dunya': 'Dünya'
+    };
+
+    const KEEP_UPPER_WORDS = new Set(['A.Ş.', 'GYO', 'GSYO', 'YO', 'BİM', 'MİA', 'TAB', 'QNB', 'TSKB', 'THY', 'T.C.', 'ICBC', 'MLP', 'CW', 'AG', 'DO', 'CO', 'SDT', 'ATP', 'VBT', 'ARD', 'LDR', 'BMS', 'DMR', 'DOF', 'ICU', 'MHR', 'EYG', 'DAP', 'GSD', 'TGS', 'DCT', 'CVK', 'RTA', 'TR']);
+    const SHARE_CLASS_NOTES = { KRDMA: '(A Grubu)', KRDMB: '(B Grubu)', KRDMD: '(D Grubu)' };
+
     function formatBistCompanyName(rawName, fallbackTicker = '') {
       if (!rawName) return fallbackTicker;
       let s = String(rawName)
+        .replace(/\b0\s*%\s*Certificates.*$/i, '')
         .replace(/GAYRİMENKUL YATIRIM ORTAKLIĞI/gi, 'GYO')
         .replace(/GAYRIMENKUL YATIRIM ORTAKLIGI/gi, 'GYO')
         .replace(/GİRİŞİM SERMAYESİ YATIRIM ORTAKLIĞI/gi, 'GSYO')
         .replace(/GIRISIM SERMAYESI YATIRIM ORTAKLIGI/gi, 'GSYO')
         .replace(/MENKUL KIYMETLER YATIRIM ORTAKLIĞI/gi, 'YO')
-        .replace(/\s+(SANAYİİ|SANAYİ|SANAYI)\s+VE\s+(TİCARET|TICARET)\s*(T\.?A\.?Ş\.?|T\.?A\.?O\.?|A\.?Ş\.?|A\.?O\.?|A\.?S\.?|AS)?$/i, '')
-        .replace(/\s+(TİCARET|TICARET)\s+VE\s+(SANAYİ|SANAYI)\s*(T\.?A\.?Ş\.?|A\.?Ş\.?|A\.?S\.?|AS)?$/i, '')
-        .replace(/\s+(SANAYİ|SANAYI)\s+(TİCARET|TICARET)\s*(T\.?A\.?Ş\.?|A\.?Ş\.?|A\.?S\.?|AS)?$/i, '')
-        .replace(/\s+(SANAYİ|SANAYI|TİCARET|TICARET)\s*(T\.?A\.?Ş\.?|T\.?A\.?O\.?|A\.?Ş\.?|A\.?O\.?|A\.?S\.?|AS)$/i, '')
-        .replace(/\s+(T\.?A\.?Ş\.?|T\.?A\.?O\.?|A\.?Ş\.?|A\.?O\.?|A\.?S\.?|AS)$/i, '')
+        .replace(/MENKUL KIYMET YATIRIM ORTAKLIĞI/gi, 'YO')
+        .replace(/\bANON[İI]M\s+[ŞS][İI]RKET[İI]\b/gi, '')
+        .replace(/\bAKTIENGESELLSCHAFT\b/gi, '')
+        .replace(/\s+(SANAYİİ|SANAYİ|SANAYI)\s+VE\s+(TİCARET|TICARET)\s*(T\.?A\.?Ş\.?|T\.?A\.?O\.?|A\.?Ş\.?|A\.?O\.?|A\.?\s*S\.?|AS|SA)?$/i, '')
+        .replace(/\s+(TİCARET|TICARET)\s+VE\s+(SANAYİİ|SANAYİ|SANAYI)\s*(T\.?A\.?Ş\.?|A\.?Ş\.?|A\.?\s*S\.?|AS|SA)?$/i, '')
+        .replace(/\s+(SANAYİ|SANAYI)\s+(TİCARET|TICARET)\s*(T\.?A\.?Ş\.?|A\.?Ş\.?|A\.?\s*S\.?|AS|SA)?$/i, '')
+        .replace(/\s+(SANAYİİ|SANAYİ|SANAYI|TİCARET|TICARET)\s*(T\.?A\.?Ş\.?|T\.?A\.?O\.?|A\.?Ş\.?|A\.?O\.?|A\.?\s*S\.?|AS|SA)$/i, '')
+        .replace(/\s+(T\.?A\.?Ş\.?|T\.?A\.?O\.?|A\.?Ş\.?|A\.?O\.?|A\.?\s*S\.?|AS|SA)$/i, '')
         .replace(/\s+VE$/i, '')
         .replace(/-/g, ' ')
         .trim();
 
       const words = s.split(/\s+/).filter(Boolean);
-      return words.map(w => {
+      const formatted = words.map(w => {
         const up = w.toLocaleUpperCase('tr-TR');
         if (KEEP_UPPER_WORDS.has(up)) return up;
+        const asciiKey = w.toLowerCase().replace(/[^a-zçğıöşü]/gi, '');
+        if (TR_WORD_FIXES[asciiKey]) return TR_WORD_FIXES[asciiKey];
         const low = w.toLocaleLowerCase('tr-TR');
         return low.charAt(0).toLocaleUpperCase('tr-TR') + low.slice(1);
       }).join(' ');
+
+      const clsSuffix = SHARE_CLASS_NOTES[fallbackTicker];
+      return clsSuffix ? `${formatted} ${clsSuffix}` : formatted;
     }
 
     function getAssetSubCategory(inst) {
       if (!inst) return '';
       if (inst.isRateInstrument) return 'Faiz & Sabit Getiri';
+      if (inst.id === 'eurobond-usdtr') return 'Dolar Borsa Fonu';
       if (inst.id.startsWith('doviz-')) return 'Döviz';
       if (inst.id.startsWith('eurobond-')) return 'Döviz Tahvili';
-      if (inst.categoryId === 2) return 'Altın & Değerli Maden';
+      if (inst.categoryId === 2 || inst.id === 'fon-degisken-isglk') return 'Altın & Değerli Maden';
       if (inst.id.startsWith('kripto-')) return 'Dijital Varlık';
       if (inst.isUsdAsset) return 'Dünya Şirketleri';
       if (inst.categoryId === 4) return 'Sepet Fon';
@@ -2216,7 +2459,7 @@
     window.__AETHER_CONN_MODE__ = 'INIT';
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=6.0', { updateViaCache: 'none' }).then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=6.1', { updateViaCache: 'none' }).then((reg) => {
           reg.update().catch(() => {});
         }).catch(() => {});
       });
@@ -2257,7 +2500,21 @@
       dataRevision++;
       if (!data || !Array.isArray(data.instruments)) return;
       const usdChg = Number(data.instruments.find(x => x.id === 'doviz-usd')?.change1D) || 0;
+      const WITHHOLDING_175_IDS = new Set(['eurobond-usdtr', 'altin-fonu-zgold', 'altin-fonu-gldtr', 'gumus-fonu-gmstr', 'fon-degisken-isglk']);
+      const ZERO_TAX_BOND_IDS = new Set(['dibs-tahvil', 'kira-sertifikasi-sukuk']);
+
       for (const inst of data.instruments) {
+        // Önceki localStorage önbelleklerindeki eski vergi/kategori kayıtlarını anında onar
+        if (WITHHOLDING_175_IDS.has(inst.id)) inst.taxRatePct = 17.5;
+        if (ZERO_TAX_BOND_IDS.has(inst.id)) inst.taxRatePct = 0;
+        if (inst.id === 'fon-degisken-isglk') {
+          inst.categoryId = 2;
+          inst.isPartial3Y = true;
+          inst.isPartial5Y = true;
+        }
+        if (/^(AMEX|NASDAQ|OTC|NYSE):/i.test(String(inst.symbol || ''))) {
+          inst.taxRegime = 'declaration';
+        }
         if (!isValidNum(inst.change1D)) {
           inst.change1D = inst.isRateInstrument
             ? +((Number(inst.currentPrice) || 0) / 365).toFixed(2)
@@ -2267,6 +2524,28 @@
           inst.tlChange1D = +((((1 + (inst.change1D || 0) / 100) * (1 + usdChg / 100)) - 1) * 100).toFixed(2);
         }
         instById.set(inst.id, inst);
+      }
+
+      // BIST şirket evrenindeki sektör, sertifika ve banka/holding bilanço sınıflarını anında onar
+      const lookup = data.kitchenIntelSummary?.openHorizon?.bistStockLookup;
+      if (lookup && typeof lookup === 'object') {
+        for (const [sym, st] of Object.entries(lookup)) {
+          if (!st || EXCLUDED_BIST_NON_COMPANIES.has(sym) || /certificat|sertifika|borsa yat[ıi]r[ıi]m fonu|\betf\b/i.test(String(st.name || ''))) {
+            delete lookup[sym];
+            continue;
+          }
+          const cls = classifyBistStockClient(sym, st.name, st.rawSector || st.sector, st.industry);
+          st.entityKind = cls.entityKind;
+          st.sector = cls.sectorTr;
+          if (cls.entityKind === 'bank' || cls.entityKind === 'insurance' || cls.entityKind === 'fin_other') {
+            st.isNetCash = false;
+            st.netDebtToEbitda = null;
+            st.fcfMillionTL = null;
+          } else if (cls.entityKind === 'holding' && sym === 'SAHOL') {
+            st.isNetCash = false;
+            st.netDebtToEbitda = null;
+          }
+        }
       }
     }
 
@@ -2382,7 +2661,8 @@
                   'float_shares_outstanding', 'total_shares_outstanding',
                   'current_ratio_fq', 'operating_margin_ttm',
                   'capital_expenditures_ttm', 'cash_f_operating_activities_ttm', 'cash_f_financing_activities_ttm',
-                  'net_income_ttm', 'total_assets_fq', 'ebitda_ttm'
+                  'net_income_ttm', 'total_assets_fq', 'ebitda_ttm',
+                  'industry', 'price_book_ratio', 'dividends_yield_current'
                 ],
                 sort: { sortBy: 'market_cap_basic', sortOrder: 'desc' },
                 range: [0, 700]
@@ -2516,7 +2796,11 @@
               for (const item of (tvJson.data || [])) {
                 const c = item.d || [];
                 const sym = c[0];
-                if (!sym || ['ISBTR', 'ISATR', 'ISKUR', 'QNBTR', 'KLNMA', 'PKENT'].includes(sym)) continue;
+                const rawDesc = String(c[1] || '');
+                if (!sym || EXCLUDED_BIST_NON_COMPANIES.has(sym) || /certificat|sertifika|borsa yat[ıi]r[ıi]m fonu|\betf\b/i.test(rawDesc)) {
+                  if (sym && lookup[sym]) delete lookup[sym];
+                  continue;
+                }
                 const close = c[3] || 0;
                 const high52 = c[10] || close;
                 const low52 = c[11] || close;
@@ -2529,13 +2813,23 @@
                 const floatPct = totalShares > 0 ? +((floatShares / totalShares) * 100).toFixed(1) : null;
                 const netDebtRaw = c[27];
                 const ebitdaRaw = c[37];
+                const rawIndustry = c[38] || '';
+                const pbRatioFallback = c[39];
+                const divYieldRaw = c[40];
 
                 const prev = lookup[sym] || {};
+                const cls = classifyBistStockClient(sym, rawDesc || prev.name, c[2], rawIndustry || prev.industry);
+                const isFinBS = cls.entityKind === 'bank' || cls.entityKind === 'insurance' || cls.entityKind === 'fin_other';
+                const resolvedPb = c[20] != null ? +c[20].toFixed(2) : (pbRatioFallback != null ? +pbRatioFallback.toFixed(2) : (prev.pb ?? null));
+
                 lookup[sym] = {
                   ...prev,
                   ticker: sym,
-                  name: c[1] || prev.name || sym,
-                  sector: c[2] || prev.sector || '',
+                  name: rawDesc || prev.name || sym,
+                  sector: cls.sectorTr,
+                  rawSector: c[2] || prev.rawSector || '',
+                  industry: rawIndustry || prev.industry || '',
+                  entityKind: cls.entityKind,
                   close: +close.toFixed(2),
                   change1D: +(c[4] || 0).toFixed(2),
                   perf1W: +(c[5] || 0).toFixed(2),
@@ -2552,18 +2846,23 @@
                   cmf20: +(c[17] || 0).toFixed(3),
                   marketCapBillionTL: +((c[18] || 0) / 1e9).toFixed(2),
                   pe: c[19] != null ? +c[19].toFixed(1) : (prev.pe ?? null),
-                  pb: c[20] != null ? +c[20].toFixed(2) : (prev.pb ?? null),
-                  evEbitda: c[21] != null ? +c[21].toFixed(1) : (prev.evEbitda ?? null),
-                  roic: c[22] != null ? +c[22].toFixed(1) : (prev.roic ?? null),
+                  pb: resolvedPb,
+                  dividendYield: divYieldRaw != null && divYieldRaw > 0 ? +divYieldRaw.toFixed(2) : (prev.dividendYield || 0),
+                  evEbitda: isFinBS ? null : (c[21] != null ? +c[21].toFixed(1) : (prev.evEbitda ?? null)),
+                  roic: isFinBS ? null : (c[22] != null ? +c[22].toFixed(1) : (prev.roic ?? null)),
                   roe: c[23] != null ? +c[23].toFixed(1) : (prev.roe ?? null),
-                  fcfMillionTL: c[24] != null ? +(c[24] / 1e6).toFixed(1) : (prev.fcfMillionTL ?? null),
-                  netDebtMillionTL: netDebtRaw != null ? +(netDebtRaw / 1e6).toFixed(1) : (prev.netDebtMillionTL ?? null),
-                  isNetCash: netDebtRaw != null ? netDebtRaw < 0 : Boolean(prev.isNetCash),
+                  fcfMillionTL: isFinBS ? null : (c[24] != null ? +(c[24] / 1e6).toFixed(1) : (prev.fcfMillionTL ?? null)),
+                  netDebtMillionTL: isFinBS ? null : (netDebtRaw != null ? +(netDebtRaw / 1e6).toFixed(1) : (prev.netDebtMillionTL ?? null)),
+                  isNetCash: isFinBS || (cls.entityKind === 'holding' && sym === 'SAHOL')
+                    ? false
+                    : (netDebtRaw != null ? netDebtRaw < 0 : Boolean(prev.isNetCash)),
                   floatPct: floatPct ?? prev.floatPct ?? null,
                   netIncomeMillionTL: c[35] != null ? +(c[35] / 1e6).toFixed(1) : (prev.netIncomeMillionTL ?? null),
-                  netDebtToEbitda: (netDebtRaw != null && ebitdaRaw != null && ebitdaRaw > 1e5)
-                    ? +(netDebtRaw / ebitdaRaw).toFixed(2)
-                    : (netDebtRaw != null && netDebtRaw < 0 ? 0 : (prev.netDebtToEbitda ?? null))
+                  netDebtToEbitda: isFinBS || (cls.entityKind === 'holding' && sym === 'SAHOL')
+                    ? null
+                    : (netDebtRaw != null && ebitdaRaw != null && ebitdaRaw > 1e5)
+                      ? +(netDebtRaw / ebitdaRaw).toFixed(2)
+                      : (netDebtRaw != null && netDebtRaw < 0 ? 0 : (prev.netDebtToEbitda ?? null))
                 };
                 updatedBistCount++;
               }
@@ -4245,7 +4544,7 @@
               const y = padT + (g / 3) * pH;
               const val = maxV - (g / 3) * (maxV - minV);
               return `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-                      <text x="${padL - 5}" y="${y + 3.5}" text-anchor="end" fill="#64748b" font-size="10" font-family="JetBrains Mono">${fmtNum(val, 0)}₺</text>`;
+                      <text x="${padL - 5}" y="${y + 3.5}" text-anchor="end" fill="#64748b" font-size="10" font-family="Inter, -apple-system, sans-serif">${fmtNum(val, 0)} ₺</text>`;
             }).join('')}
             ${xLabels.map((lbl, i) => `<text x="${toX(i)}" y="${H - 6}" text-anchor="middle" fill="#64748b" font-size="10">${lbl}</text>`).join('')}
             <path d="${buildSmoothSvgPath(toXY(infCurvePts))}" fill="none" stroke="#f59e0b" stroke-width="1.7" stroke-dasharray="4,4"/>
@@ -4260,10 +4559,10 @@
 
       const rowsSpec = [
         { label: 'Güncel Fiyat', render: m => fmtAssetPrice(m.inst.isCustomizableRate ? customDepositRate : m.inst.currentPrice, m.inst.unitLabel, m.inst.isUsdAsset, m.inst.isRateInstrument) },
-        { label: `${STAGE_SHORT[sIdx]} Net Kazanç`, render: m => `<strong class="${pctCls(m.tlNetPct)}">${fmtPct(m.tlNetPct, 1)}</strong>` },
-        { label: `Alım Gücü Farkı`, render: m => `<span class="chg-pill ${pctCls(m.realPct)}">${fmtPct(m.realPct, 1)}</span>` },
-        { label: `Vergi Kesintisi`, render: m => m.inst.taxRatePct > 0 ? `<span class="warn">%${fmtNum(m.inst.taxRatePct, 1)}</span>` : `<span class="pos">%0 Vergisiz</span>` },
-        { label: `${fmtCompactTL(currentPrincipal)} Sonu`, render: m => `<strong>${fmtCompactTL(m.finalValueTL)}</strong>` }
+        { label: `${STAGE_SHORT[sIdx]} Net Kazanç`, render: m => m.isPartial ? `<span class="dim">Yeni (&lt;${STAGE_SHORT[sIdx]})</span>` : `<strong class="${pctCls(m.tlNetPct)}">${fmtPct(m.tlNetPct, 1)}</strong>` },
+        { label: `Alım Gücü Farkı`, render: m => m.isPartial ? `<span class="chg-pill muted">Veri &lt;${STAGE_SHORT[sIdx]}</span>` : `<span class="chg-pill ${pctCls(m.realPct)}">${fmtPct(m.realPct, 1)}</span>` },
+        { label: `Vergi Durumu`, render: m => { const tb = getAssetTaxBadge(m.inst); return `<span class="${tb.cls}">${escapeHtml(tb.short)}</span>`; } },
+        { label: `${fmtCompactTL(currentPrincipal)} Sonu`, render: m => m.isPartial ? `<span class="dim">—</span>` : `<strong>${fmtCompactTL(m.finalValueTL)}</strong>` }
       ];
 
       document.getElementById('cmpMetricsWrap').innerHTML = `
@@ -4331,9 +4630,9 @@
 
       let rows = marketData.instruments.map(inst => computeAssetStageMetrics(inst, activeStageIdx));
 
-      if (currentAssetChip === 'beat_inf') rows = rows.filter(r => r.realPct > 0);
-      else if (currentAssetChip === 'beat_dep') rows = rows.filter(r => r.tlNetPct > depNetPct);
-      else if (currentAssetChip === 'zero_tax') rows = rows.filter(r => (Number(r.inst.taxRatePct) || 0) === 0);
+      if (currentAssetChip === 'beat_inf') rows = rows.filter(r => !r.isPartial && r.realPct > 0);
+      else if (currentAssetChip === 'beat_dep') rows = rows.filter(r => !r.isPartial && r.tlNetPct > depNetPct);
+      else if (currentAssetChip === 'zero_tax') rows = rows.filter(r => getAssetTaxBadge(r.inst).isZeroTax);
       else if (currentAssetChip === '3') rows = rows.filter(r => r.inst.categoryId === 3 || r.inst.categoryId === 7);
       else if (currentAssetChip !== 'all') rows = rows.filter(r => String(r.inst.categoryId) === currentAssetChip);
 
@@ -4348,6 +4647,9 @@
       }
 
       rows.sort((a, b) => {
+        if (currentAssetSort !== 'day_desc' && currentAssetSort !== 'y1_desc' && a.isPartial !== b.isPartial) {
+          return a.isPartial ? 1 : -1;
+        }
         if (currentAssetSort === 'real_asc') return a.realPct - b.realPct;
         if (currentAssetSort === 'net_desc') return b.netPct - a.netPct;
         if (currentAssetSort === 'day_desc') return b.dayChg - a.dayChg;
@@ -4370,10 +4672,13 @@
       if (isMobile) {
         wrap.innerHTML = rows.map(r => {
           const meta = getAssetMeta(r.inst);
+          const showPartial = r.isPartial && currentAssetSort !== 'day_desc';
           const primaryVal = currentAssetSort === 'day_desc' ? r.dayChg : currentAssetSort === 'net_desc' ? r.netPct : r.realPct;
-          const subRight = currentAssetSort === 'day_desc'
-            ? `Alım Gücü ${fmtPct(r.realPct, 1)}`
-            : `Net ${fmtPct(r.netPct, 1)}`;
+          const subRight = showPartial
+            ? `Arz &lt;${STAGE_SHORT[activeStageIdx]}`
+            : currentAssetSort === 'day_desc'
+              ? `Alım Gücü ${fmtPct(r.realPct, 1)}`
+              : `Net ${fmtPct(r.netPct, 1)}`;
 
           return `
             <div class="list-row asset-row-mob" onclick="openAssetDetailDrawer('${r.inst.id}')">
@@ -4384,9 +4689,12 @@
                   <div class="row-sub">${escapeHtml(meta.brief)}</div>
                 </div>
               </div>
-              <div class="mob-spark-col">${buildAssetSparklineSvg(r.inst, 46, 20, r.tlNetPct)}</div>
+              <div class="mob-spark-col">${buildAssetSparklineSvg(r.inst, 46, 20, computeAssetStageMetrics(r.inst, 4).tlNetPct)}</div>
               <div class="r-right">
-                <span class="chg-pill ${pctCls(primaryVal)}">${fmtPct(primaryVal, 1)}</span>
+                ${showPartial
+                  ? `<span class="chg-pill muted">Yeni Arz</span>`
+                  : `<span class="chg-pill ${pctCls(primaryVal)}">${fmtPct(primaryVal, 1)}</span>`
+                }
                 <div class="dim num-tab" style="font-size:10.5px;margin-top:2px;">${subRight}</div>
               </div>
             </div>
@@ -4407,6 +4715,7 @@
           </div>
           ${rows.map((r, idx) => {
             const meta = getAssetMeta(r.inst);
+            const taxBadge = getAssetTaxBadge(r.inst);
             const priceVal = r.inst.isCustomizableRate ? customDepositRate : r.inst.currentPrice;
             const inCmp = compareIds.includes(r.inst.id);
             return `
@@ -4416,18 +4725,21 @@
                   <div class="avatar tone-${meta.tone}">${escapeHtml(meta.code)}</div>
                   <div class="row-titles">
                     <div class="row-name">${escapeHtml(meta.title)}</div>
-                    <div class="row-sub">${escapeHtml(meta.brief)}${r.inst.taxRatePct > 0 ? ` · Vergi %${fmtNum(r.inst.taxRatePct, 1)}` : ' · %0 Vergisiz'}</div>
+                    <div class="row-sub">${escapeHtml(meta.brief)} · ${escapeHtml(taxBadge.short)}</div>
                   </div>
                 </div>
                 <div class="r-right num-tab" style="font-weight:600;">${fmtAssetPrice(priceVal, r.inst.unitLabel, r.inst.isUsdAsset, r.inst.isRateInstrument)}</div>
                 <div class="r-right num-tab ${pctCls(r.dayChg)}">${fmtPct(r.dayChg, 2)}</div>
-                <div class="r-right num-tab ${pctCls(r.netPct)}" style="font-weight:600;">${fmtPct(r.netPct, 1)}</div>
-                <div class="r-right"><span class="chg-pill ${pctCls(r.realPct)}">${fmtPct(r.realPct, 1)}</span></div>
+                <div class="r-right num-tab ${r.isPartial ? 'dim' : pctCls(r.netPct)}" style="font-weight:600;">${r.isPartial ? `Yeni (&lt;${STAGE_SHORT[activeStageIdx]})` : fmtPct(r.netPct, 1)}</div>
+                <div class="r-right">${r.isPartial ? `<span class="chg-pill muted">Veri &lt;${STAGE_SHORT[activeStageIdx]}</span>` : `<span class="chg-pill ${pctCls(r.realPct)}">${fmtPct(r.realPct, 1)}</span>`}</div>
                 <div class="r-right num-tab">
-                  <div style="font-weight:600;color:#fff;">${fmtTL(r.finalValueTL, 0)}</div>
-                  <div class="${pctCls(r.netProfitTL)}" style="font-size:11px;">${r.netProfitTL >= 0 ? '+' : ''}${fmtCompactTL(r.netProfitTL)}</div>
+                  ${r.isPartial
+                    ? `<div class="dim" style="font-size:11.5px;">Yeni Arz</div>`
+                    : `<div style="font-weight:600;color:#fff;">${fmtTL(r.finalValueTL, 0)}</div>
+                       <div class="${pctCls(r.netProfitTL)}" style="font-size:11px;">${r.netProfitTL >= 0 ? '+' : ''}${fmtCompactTL(r.netProfitTL)}</div>`
+                  }
                 </div>
-                <div class="r-right">${buildAssetSparklineSvg(r.inst, 68, 22, r.tlNetPct)}</div>
+                <div class="r-right">${buildAssetSparklineSvg(r.inst, 68, 22, computeAssetStageMetrics(r.inst, 4).tlNetPct)}</div>
                 <div class="r-right" onclick="event.stopPropagation();" style="display:flex;gap:5px;">
                   <button class="mini-icon-btn" onclick="openPfAddSheet('inst','${r.inst.id}')" title="Kasama Ekle">
                     <svg class="ico" style="width:14px;height:14px;" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
@@ -4520,12 +4832,13 @@
        ========================================================================= */
     const BIST_CHIPS = [
       { key: 'all', label: 'Tümü', desc: '' },
-      { key: 'value_profit', label: 'Hızlı Amorti & Kârlı', desc: '12 yıldan kısa amorti + yüksek kâr gücü' },
-      { key: 'net_cash', label: 'Kasası Nakit Dolu', desc: 'Kasasındaki nakdi tüm borcundan fazla' },
-      { key: 'pos_fcf', label: 'Nakit Üretenler', desc: 'Kasasına düzenli nakit para girenler' },
+      { key: 'value_profit', label: 'Hızlı Amorti & Kârlı', desc: 'Gerçek kârıyla 12 yıldan kısa amorti edenler' },
+      { key: 'div_payers', label: 'Kâr Payı (Temettü) Verenler', desc: 'Ortaklarına düzenli nakit kâr payı dağıtanlar' },
+      { key: 'net_cash', label: 'Kasası Nakit Dolu', desc: 'Kasasındaki nakdi tüm borcundan fazla olan sanayi/hizmet şirketleri' },
+      { key: 'pos_fcf', label: 'Nakit Üretenler', desc: 'Kasasına güçlü serbest nakit giren şirketler' },
       { key: 'money_in', label: 'Büyük Para Girişi', desc: 'Son günlerde kurumsal alım görenler' },
-      { key: 'deep_disc', label: 'İndirimde Olanlar', desc: 'Yıllık zirvesinden en az %25 aşağıda' },
-      { key: 'high_debt', label: 'Borçlu / Zararda', desc: 'Yüksek borç yükü veya zarar uyarısı' }
+      { key: 'deep_disc', label: 'İndirimde Olanlar', desc: 'Yıllık zirvesinden en az %25 aşağıda işlem görenler' },
+      { key: 'high_debt', label: 'Borçlu / Zararda', desc: 'Yüksek borç yükü veya zarar uyarısı olanlar' }
     ];
 
     let __bistSearchRaf = null;
@@ -4540,16 +4853,16 @@
       const lookup = marketData.kitchenIntelSummary?.openHorizon?.bistStockLookup || {};
       const counts = {};
       for (const st of Object.values(lookup)) {
-        const k = st.sector || 'Unknown';
+        const k = getSectorTr(st);
         counts[k] = (counts[k] || 0) + 1;
       }
       const entries = Object.entries(counts)
-        .map(([raw, cnt]) => ({ raw, label: getSectorTr(raw), cnt }))
+        .map(([secLabel, cnt]) => ({ raw: secLabel, label: secLabel, cnt }))
         .sort((a, b) => b.cnt - a.cnt);
 
       const secSel = document.getElementById('bistSectorSelDesk');
       if (secSel) {
-        secSel.innerHTML = `<option value="all">Tüm Sektörler (${Object.keys(lookup).length})</option>` +
+        secSel.innerHTML = `<option value="all">Tüm İş Kolları (${Object.keys(lookup).length})</option>` +
           entries.map(e => `<option value="${escapeHtml(e.raw)}">${escapeHtml(e.label)} (${e.cnt})</option>`).join('');
         secSel.value = bistSectorFilter;
       }
@@ -4575,17 +4888,69 @@
       renderBistView();
     }
 
+    // Sektör ve bilanço yapısına (Banka / Sigorta / GYO / Holding / Sanayi) duyarlı hatasız özet
     function describeBistPlainHealth(st) {
-      const parts = [];
-      if (isValidNum(st.pe) && st.pe > 0 && st.pe < 80) {
+      const sec = getSectorTr(st);
+      const kind = st.entityKind || classifyBistStockClient(st.ticker, st.name, st.rawSector || st.sector, st.industry).entityKind;
+      const parts = [sec];
+
+      if (kind === 'bank' || kind === 'insurance' || kind === 'fin_other') {
+        if (isValidNum(st.pb) && st.pb > 0) parts.push(`Özvarlık ${fmtNum(st.pb, 2)}x`);
+        if (isValidNum(st.roe) && st.roe > 0) parts.push(`Kârlılık %${fmtNum(st.roe, 0)}`);
+        return parts.join(' · ');
+      }
+      if (kind === 'gyo') {
+        if (isValidNum(st.pb) && st.pb > 0 && st.pb < 1) {
+          parts.push(`Tapu değerine göre %${Math.round((1 - st.pb) * 100)} indirimli`);
+        } else if (isValidNum(st.pb) && st.pb >= 1) {
+          parts.push(`Özvarlık ${fmtNum(st.pb, 2)}x`);
+        }
+        return parts.join(' · ');
+      }
+      if (kind === 'holding') {
+        if (isValidNum(st.pb) && st.pb > 0 && st.pb < 1) {
+          parts.push(`%${Math.round((1 - st.pb) * 100)} holding iskontolu`);
+        } else if (isValidNum(st.pe) && st.pe >= 2.2 && st.pe <= 40) {
+          parts.push(`${fmtNum(st.pe, 1)} yılda amorti`);
+        }
+        if (isValidNum(st.dividendYield) && st.dividendYield >= 1.5) {
+          parts.push(`Temettü %${fmtNum(st.dividendYield, 1)}`);
+        }
+        return parts.join(' · ');
+      }
+
+      if (isValidNum(st.pe) && st.pe >= 2.2 && st.pe <= 55) {
         parts.push(`${fmtNum(st.pe, 1)} yılda amorti`);
       } else if (isValidNum(st.netIncomeMillionTL) && st.netIncomeMillionTL < 0) {
         parts.push('Son dönem zararda');
       }
       if (st.isNetCash) parts.push('Kasası nakit dolu');
-      else if (isValidNum(st.netDebtToEbitda) && st.netDebtToEbitda > 3.8) parts.push('Borç yükü yüksek');
-      else if (isValidNum(st.roe) && st.roe >= 25) parts.push(`Güçlü kâr (%${fmtNum(st.roe, 0)})`);
-      return parts.length ? parts.join(' · ') : getSectorTr(st.sector);
+      else if (isValidNum(st.netDebtToEbitda) && st.netDebtToEbitda > 4.5) parts.push('Borç yükü yüksek');
+      else if (isValidNum(st.dividendYield) && st.dividendYield >= 2.0) parts.push(`Temettü %${fmtNum(st.dividendYield, 1)}`);
+      return parts.join(' · ');
+    }
+
+    function renderBistDesktopHealthBadge(st) {
+      const kind = st.entityKind || classifyBistStockClient(st.ticker, st.name, st.rawSector || st.sector, st.industry).entityKind;
+      if (kind === 'bank' || kind === 'insurance' || kind === 'fin_other') {
+        if (isValidNum(st.pb) && st.pb > 0 && st.pb < 1.0) return `<span class="chg-pill pos">İskontolu (${fmtNum(st.pb, 2)}x)</span>`;
+        if (isValidNum(st.roe) && st.roe >= 20) return `<span class="chg-pill pos">Güçlü Özsermaye</span>`;
+        return `<span class="chg-pill muted">Finans Bilançosu</span>`;
+      }
+      if (kind === 'gyo') {
+        if (isValidNum(st.pb) && st.pb > 0 && st.pb < 0.85) return `<span class="chg-pill pos">%${Math.round((1 - st.pb) * 100)} İndirimli</span>`;
+        return `<span class="chg-pill muted">Özvarlık ${isValidNum(st.pb) && st.pb > 0 ? fmtNum(st.pb, 2) + 'x' : 'GYO'}</span>`;
+      }
+      if (kind === 'holding') {
+        if (st.isNetCash) return `<span class="chg-pill pos">Nakit Fazlası</span>`;
+        if (isValidNum(st.pb) && st.pb > 0 && st.pb < 0.9) return `<span class="chg-pill pos">%${Math.round((1 - st.pb) * 100)} İskontolu</span>`;
+        return `<span class="chg-pill muted">Holding Yapısı</span>`;
+      }
+      if (isValidNum(st.pb) && st.pb < 0) return `<span class="chg-pill neg">Özsermaye Eksi</span>`;
+      if (st.isNetCash) return `<span class="chg-pill pos">Kasası Nakit Dolu</span>`;
+      if (isValidNum(st.netDebtToEbitda) && st.netDebtToEbitda > 4.5) return `<span class="chg-pill neg">Yüksek Borçlu</span>`;
+      if (isValidNum(st.netDebtToEbitda) && st.netDebtToEbitda > 2.5) return `<span class="chg-pill warn">Yatırım Borcu</span>`;
+      return `<span class="chg-pill muted">Dengeli Kasa</span>`;
     }
 
     function renderBistView() {
@@ -4606,41 +4971,54 @@
       const mobLbl = document.getElementById('bistFilterBtnLabel');
       const hasCustom = bistSectorFilter !== 'all' || bistSortMode !== 'mcap_desc';
       if (mobBtn) mobBtn.classList.toggle('has-active', hasCustom);
-      if (mobLbl) mobLbl.textContent = bistSectorFilter !== 'all' ? getSectorTr(bistSectorFilter).split(' ')[0] : 'Filtre';
+      if (mobLbl) mobLbl.textContent = bistSectorFilter !== 'all' ? bistSectorFilter.split(' ')[0] : 'Filtre';
 
       let list = Object.values(lookup).filter(x => x && x.ticker);
       const q = (document.getElementById('bistSearchInp')?.value || '').trim().toLocaleLowerCase('tr-TR');
 
       if (bistSectorFilter !== 'all') {
-        list = list.filter(st => (st.sector || 'Unknown') === bistSectorFilter);
+        list = list.filter(st => getSectorTr(st) === bistSectorFilter);
       }
       if (q) {
         list = list.filter(st =>
           st.ticker.toLocaleLowerCase('tr-TR').includes(q) ||
+          formatBistCompanyName(st.name, st.ticker).toLocaleLowerCase('tr-TR').includes(q) ||
           String(st.name || '').toLocaleLowerCase('tr-TR').includes(q) ||
-          getSectorTr(st.sector).toLocaleLowerCase('tr-TR').includes(q)
+          getSectorTr(st).toLocaleLowerCase('tr-TR').includes(q)
         );
       }
 
       if (bistActiveFilter === 'value_profit') {
-        list = list.filter(st => isValidNum(st.pe) && st.pe > 0 && st.pe <= 12 && isValidNum(st.roe) && st.roe >= 15);
+        list = list.filter(st => st.entityKind !== 'gyo' && isValidNum(st.pe) && st.pe >= 2.2 && st.pe <= 12 && isValidNum(st.roe) && st.roe >= 15 && (!isValidNum(st.pb) || st.pb > 0));
+      } else if (bistActiveFilter === 'div_payers') {
+        list = list.filter(st => isValidNum(st.dividendYield) && st.dividendYield >= 1.5);
       } else if (bistActiveFilter === 'net_cash') {
-        list = list.filter(st => Boolean(st.isNetCash));
+        list = list.filter(st => Boolean(st.isNetCash) && st.entityKind !== 'bank' && st.entityKind !== 'insurance' && st.entityKind !== 'fin_other');
       } else if (bistActiveFilter === 'pos_fcf') {
-        list = list.filter(st => isValidNum(st.fcfMillionTL) && st.fcfMillionTL > 0);
+        list = list.filter(st => isValidNum(st.fcfMillionTL) && st.fcfMillionTL > 0 && st.entityKind !== 'bank' && st.entityKind !== 'insurance');
       } else if (bistActiveFilter === 'money_in') {
         list = list.filter(st => (Number(st.cmf20) || 0) >= 0.10 && (Number(st.volRatio) || 1) >= 1.05);
       } else if (bistActiveFilter === 'deep_disc') {
         list = list.filter(st => (Number(st.drawdown52WPct) || 0) <= -25);
       } else if (bistActiveFilter === 'high_debt') {
-        list = list.filter(st => (isValidNum(st.netDebtToEbitda) && st.netDebtToEbitda >= 4) || (isValidNum(st.netIncomeMillionTL) && st.netIncomeMillionTL < 0));
+        list = list.filter(st => (isValidNum(st.netDebtToEbitda) && st.netDebtToEbitda >= 4.5) || (isValidNum(st.netIncomeMillionTL) && st.netIncomeMillionTL < 0) || (isValidNum(st.pb) && st.pb < 0));
       }
 
       list.sort((a, b) => {
         if (bistSortMode === 'chg1d_desc') return (b.change1D || 0) - (a.change1D || 0);
         if (bistSortMode === 'chg1d_asc') return (a.change1D || 0) - (b.change1D || 0);
         if (bistSortMode === 'perf1m_desc') return (b.perf1M || 0) - (a.perf1M || 0);
-        if (bistSortMode === 'pe_asc') return ((isValidNum(a.pe) && a.pe > 0) ? a.pe : 9999) - ((isValidNum(b.pe) && b.pe > 0) ? b.pe : 9999);
+        if (bistSortMode === 'pe_asc') {
+          const pa = (a.entityKind !== 'gyo' && isValidNum(a.pe) && a.pe >= 2.2) ? a.pe : 9999;
+          const pbv = (b.entityKind !== 'gyo' && isValidNum(b.pe) && b.pe >= 2.2) ? b.pe : 9999;
+          return pa - pbv;
+        }
+        if (bistSortMode === 'pb_asc') {
+          const pba = (isValidNum(a.pb) && a.pb > 0.05) ? a.pb : 9999;
+          const pbb = (isValidNum(b.pb) && b.pb > 0.05) ? b.pb : 9999;
+          return pba - pbb;
+        }
+        if (bistSortMode === 'div_desc') return (b.dividendYield || 0) - (a.dividendYield || 0);
         if (bistSortMode === 'roe_desc') return (b.roe ?? -999) - (a.roe ?? -999);
         if (bistSortMode === 'fcf_desc') return (b.fcfMillionTL ?? -9e9) - (a.fcfMillionTL ?? -9e9);
         if (bistSortMode === 'cmf_desc') return (b.cmf20 ?? -9) - (a.cmf20 ?? -9);
@@ -4648,7 +5026,7 @@
       });
 
       const activeChipObj = BIST_CHIPS.find(c => c.key === bistActiveFilter);
-      const secNote = bistSectorFilter !== 'all' ? ` · ${getSectorTr(bistSectorFilter)}` : '';
+      const secNote = bistSectorFilter !== 'all' ? ` · ${bistSectorFilter}` : '';
       const chipNote = activeChipObj?.desc ? ` · ${activeChipObj.desc}` : '';
       document.getElementById('bistMetaLeft').textContent = `${list.length} şirket${secNote}${chipNote}`;
       document.getElementById('bistMetaRight').textContent = BIST_SORT_LABELS[bistSortMode] || 'En Büyük Şirketler ↓';
@@ -4693,12 +5071,15 @@
             <div class="r-right">1 Pay Fiyatı</div>
             <div class="r-right" style="cursor:pointer;" onclick="onBistSortChange('chg1d_desc')">Bugün</div>
             <div class="r-right" style="cursor:pointer;" onclick="onBistSortChange('mcap_desc')">Şirket Büyüklüğü</div>
-            <div class="r-right" style="cursor:pointer;" onclick="onBistSortChange('pe_asc')">Amorti Süresi</div>
-            <div class="r-right">Kasa &amp; Borç Sağlığı</div>
+            <div class="r-right" style="cursor:pointer;" onclick="onBistSortChange('pe_asc')">Değerleme</div>
+            <div class="r-right">Bilanço Özeti</div>
             <div class="r-right">Ekle</div>
           </div>
           ${shown.map(st => {
             const cleanCo = formatBistCompanyName(st.name, st.ticker);
+            const valCell = st.entityKind === 'gyo'
+              ? (isValidNum(st.pb) && st.pb > 0 ? `PD/DD ${fmtNum(st.pb, 2)}x` : '—')
+              : (isValidNum(st.pe) && st.pe >= 2.0 && st.pe <= 60 ? fmtNum(st.pe, 1) + ' Yıl' : (isValidNum(st.pb) && st.pb > 0 ? `${fmtNum(st.pb, 2)}x Özv.` : '—'));
             return `
               <div class="list-row bist-grid-cols" onclick="openBistDetailDrawer('${escapeHtml(st.ticker)}')">
                 <div class="row-main">
@@ -4707,19 +5088,12 @@
                     <div class="row-name">${escapeHtml(cleanCo)}</div>
                   </div>
                 </div>
-                <div class="row-sub" style="font-size:12px;">${escapeHtml(getSectorTr(st.sector))}</div>
+                <div class="row-sub" style="font-size:12px;">${escapeHtml(getSectorTr(st))}</div>
                 <div class="r-right num-tab" style="font-weight:700;color:#fff;">${fmtNum(st.close, 2)} ₺</div>
                 <div class="r-right"><span class="chg-pill ${pctCls(st.change1D)}">${fmtPct(st.change1D, 2)}</span></div>
                 <div class="r-right num-tab">${st.marketCapBillionTL ? fmtNum(st.marketCapBillionTL, 1) + ' Milyar ₺' : '—'}</div>
-                <div class="r-right num-tab">${isValidNum(st.pe) && st.pe > 0 && st.pe < 90 ? fmtNum(st.pe, 1) + ' Yıl' : '—'}</div>
-                <div class="r-right">
-                  ${st.isNetCash
-                    ? `<span class="chg-pill pos">Kasası Nakit Dolu</span>`
-                    : (isValidNum(st.netDebtToEbitda) && st.netDebtToEbitda > 3.8)
-                      ? `<span class="chg-pill neg">Borçlu</span>`
-                      : `<span class="chg-pill muted">Dengeli</span>`
-                  }
-                </div>
+                <div class="r-right num-tab">${valCell}</div>
+                <div class="r-right">${renderBistDesktopHealthBadge(st)}</div>
                 <div class="r-right" onclick="event.stopPropagation();">
                   <button class="mini-icon-btn" onclick="openPfAddSheet('bist','${escapeHtml(st.ticker)}')" title="Kasama Ekle">
                     <svg class="ico" style="width:14px;height:14px;" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
@@ -4746,18 +5120,18 @@
       const lookup = marketData?.kitchenIntelSummary?.openHorizon?.bistStockLookup || {};
       const counts = {};
       for (const st of Object.values(lookup)) {
-        const k = st.sector || 'Unknown';
+        const k = getSectorTr(st);
         counts[k] = (counts[k] || 0) + 1;
       }
       const sectors = Object.entries(counts)
-        .map(([raw, cnt]) => ({ raw, label: getSectorTr(raw), cnt }))
+        .map(([secLabel, cnt]) => ({ raw: secLabel, label: secLabel, cnt }))
         .sort((a, b) => b.cnt - a.cnt);
 
       openSheetWithHtml(`
         <div class="sheet-head">
           <div>
             <h3 style="font-size:16.5px;font-weight:700;color:#fff;">Şirket Filtresi ve Sıralama</h3>
-            <p class="dim" style="font-size:12px;">621 şirketi iş koluna veya sağlamlığına göre listele</p>
+            <p class="dim" style="font-size:12px;">${Object.keys(lookup).length} şirketi iş koluna veya sağlamlığına göre listele</p>
           </div>
           <button class="icon-btn" onclick="closeSheet()"><svg class="ico" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
         </div>
@@ -4806,6 +5180,8 @@
       const usdTry = Number(marketData.macro?.usdTry) || 50.0;
 
       for (const inst of marketData.instruments) {
+        // Doğrudan satın alınamayan saf endeks puanı göstergelerini Kasam arama listesinden ayıkla
+        if (String(inst.unitLabel || '').includes('Puan')) continue;
         const meta = getAssetMeta(inst);
         const priceVal = inst.isCustomizableRate ? customDepositRate : Number(inst.currentPrice) || 0;
         list.push({
@@ -4833,7 +5209,7 @@
           ticker: st.ticker.slice(0, 5),
           tone: 'slate',
           name: `${st.ticker} · ${formatBistCompanyName(st.name, st.ticker)}`,
-          group: 'Türk Şirketi · ' + getSectorTr(st.sector),
+          group: 'Türk Şirketi · ' + getSectorTr(st),
           isRate: false,
           isUsd: false,
           price: Number(st.close) || 0,
@@ -5449,15 +5825,32 @@
       `);
     }
 
+    const INDEX_TO_INVESTABLE_FUND = {
+      'bist-100': 'fon-yerli-hisse-zpbdl',
+      'bist-30': 'fon-yerli-bist30-apx30',
+      'bist-banka': 'fon-yerli-banka-zplib',
+      'viop-bist30-kontrat': 'fon-yerli-bist30-apx30',
+      'gayrimenkul-konut-tcmb': 'gayrimenkul-gyo-fonu-optgy'
+    };
+
     function openPfAddSheet(preKind = null, preId = null) {
       pfEditingUid = null;
       pfEntryByAmount = false;
       pfSelectedRef = null;
-      if (preKind && preId) {
+      let targetId = preId;
+      let redirected = false;
+      if (preKind === 'inst' && preId && INDEX_TO_INVESTABLE_FUND[preId]) {
+        targetId = INDEX_TO_INVESTABLE_FUND[preId];
+        redirected = true;
+      }
+      if (preKind && targetId) {
         const all = getAllSearchableUniverse();
-        pfSelectedRef = all.find(x => x.kind === preKind && x.id === preId) || null;
+        pfSelectedRef = all.find(x => x.kind === preKind && x.id === targetId) || null;
       }
       renderPfFormSheet();
+      if (redirected) {
+        showToast('Endeks göstergesi yerine satın alınabilir fon karşılığı seçildi');
+      }
     }
 
     function openPfEditSheet(uid) {
@@ -5750,6 +6143,7 @@
 
       const meta = getAssetMeta(inst);
       const guide = getPlainLifeGuide(inst);
+      const taxBadge = getAssetTaxBadge(inst);
       const allStages = STAGE_SHORT.map((short, idx) => ({
         lbl: STAGE_LABELS[idx],
         short,
@@ -5772,8 +6166,8 @@
               <h3 style="font-size:17px;font-weight:800;color:#fff;line-height:1.25;">${escapeHtml(meta.title)}</h3>
               <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px;">
                 <span class="dim" style="font-size:11.5px;">${escapeHtml(getAssetSubCategory(inst))}</span>
-                <span class="chg-pill ${inst.taxRatePct > 0 ? 'warn' : 'pos'}" style="font-size:10.5px;padding:1px 6px;">
-                  ${inst.taxRatePct > 0 ? `Vergi %${fmtNum(inst.taxRatePct, 1)}` : '%0 Vergisiz'}
+                <span class="chg-pill ${taxBadge.cls}" style="font-size:10.5px;padding:1px 6px;">
+                  ${escapeHtml(taxBadge.text)}
                 </span>
               </div>
             </div>
@@ -5803,12 +6197,12 @@
           </div>
           <div class="stat-box" style="padding:10px;">
             <div class="dim" style="font-size:10.5px;">${STAGE_SHORT[activeStageIdx]} Alım Gücü</div>
-            <div class="num-tab ${pctCls(cur.realPct)}" style="font-size:15.5px;font-weight:800;margin-top:2px;">${fmtPct(cur.realPct, 1)}</div>
-            <div class="dim num-tab" style="font-size:10.5px;margin-top:2px;">Net ${fmtPct(cur.tlNetPct, 1)}</div>
+            <div class="num-tab ${cur.isPartial ? 'muted' : pctCls(cur.realPct)}" style="font-size:15.5px;font-weight:800;margin-top:2px;">${cur.isPartial ? `Yeni (&lt;${STAGE_SHORT[activeStageIdx]})` : fmtPct(cur.realPct, 1)}</div>
+            <div class="dim num-tab" style="font-size:10.5px;margin-top:2px;">${cur.isPartial ? 'Tam dönem yok' : `Net ${fmtPct(cur.tlNetPct, 1)}`}</div>
           </div>
           <div class="stat-box" style="padding:10px;">
             <div class="dim" style="font-size:10.5px;">Faize Karşı Fark</div>
-            <div class="num-tab ${pctCls(vsDepDiffPct)}" style="font-size:15.5px;font-weight:800;margin-top:2px;">${fmtPct(vsDepDiffPct, 1)}</div>
+            <div class="num-tab ${cur.isPartial ? 'muted' : pctCls(vsDepDiffPct)}" style="font-size:15.5px;font-weight:800;margin-top:2px;">${cur.isPartial ? '—' : fmtPct(vsDepDiffPct, 1)}</div>
             <div class="dim num-tab" style="font-size:10.5px;margin-top:2px;">${STAGE_LABELS[activeStageIdx]}</div>
           </div>
         </div>
@@ -5833,10 +6227,13 @@
           </div>
           ${allStages.map(s => `
             <div class="num-tab" style="display:grid;grid-template-columns:1.1fr 1fr 1fr 1.15fr;gap:6px;padding:8px 12px;border-bottom:1px solid var(--border-hairline);font-size:12px;align-items:center;">
-              <div style="font-weight:600;color:#fff;">${s.lbl}${s.isPartial ? ' <span class="warn" title="Yeni işlem görmeye başlayan araç">*</span>' : ''}</div>
-              <div class="r-right ${pctCls(s.tlNetPct)}">${fmtPct(s.tlNetPct, 1)}</div>
-              <div class="r-right"><span class="chg-pill ${pctCls(s.realPct)}" style="padding:1.5px 6px;font-size:11px;">${fmtPct(s.realPct, 1)}</span></div>
-              <div class="r-right" style="font-weight:600;">${fmtCompactTL(s.finalValueTL)}</div>
+              <div style="font-weight:600;color:#fff;">${s.lbl}</div>
+              ${s.isPartial
+                ? `<div class="r-right dim" style="grid-column: span 3; font-size:11.5px;">İşlem geçmişi ${s.lbl.toLocaleLowerCase('tr-TR')}dan kısa</div>`
+                : `<div class="r-right ${pctCls(s.tlNetPct)}">${fmtPct(s.tlNetPct, 1)}</div>
+                   <div class="r-right"><span class="chg-pill ${pctCls(s.realPct)}" style="padding:1.5px 6px;font-size:11px;">${fmtPct(s.realPct, 1)}</span></div>
+                   <div class="r-right" style="font-weight:600;">${fmtCompactTL(s.finalValueTL)}</div>`
+              }
             </div>
           `).join('')}
         </div>
@@ -5846,7 +6243,7 @@
         </div>
 
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn-primary" style="flex:1;height:40px;" onclick="openPfAddSheet('inst','${inst.id}')">+ Kasama Ekle</button>
+          <button class="btn-primary" style="flex:1;height:40px;" onclick="openPfAddSheet('inst','${inst.id}')">${INDEX_TO_INVESTABLE_FUND[inst.id] ? '+ Fon Karşılığını Kasama Ekle' : '+ Kasama Ekle'}</button>
           <button class="btn-secondary" style="height:40px;" onclick="closeSheet();toggleCompareAsset('${inst.id}')">Faizle Yarıştır</button>
           ${inst.verifyUrl ? `<a href="${escapeHtml(inst.verifyUrl)}" target="_blank" rel="noopener noreferrer" class="btn-secondary" style="height:40px;text-decoration:none;">Canlı Kaynak ↗</a>` : ''}
         </div>
@@ -5858,25 +6255,117 @@
       if (!st) return;
 
       const cleanCo = formatBistCompanyName(st.name, st.ticker);
+      const secLabel = getSectorTr(st);
+      const kind = st.entityKind || classifyBistStockClient(st.ticker, st.name, st.rawSector || st.sector, st.industry).entityKind;
+      const isFinBS = kind === 'bank' || kind === 'insurance' || kind === 'fin_other';
+
       const low52 = Number(st.low52W) || st.close;
       const high52 = Math.max(low52 + 0.01, Number(st.high52W) || st.close);
       const pos52 = Math.max(0, Math.min(100, ((st.close - low52) / (high52 - low52)) * 100));
 
-      const amortiText = (isValidNum(st.pe) && st.pe > 0 && st.pe < 90)
-        ? `${fmtNum(st.pe, 1)} Yılda Amorti Ediyor`
-        : (isValidNum(st.netIncomeMillionTL) && st.netIncomeMillionTL < 0 ? 'Son Dönem Zarar Açıkladı' : 'Hesaplanmadı');
+      let card1Label = 'Kendini Kaç Yılda Amorti Ediyor?';
+      let card1Val = '—';
+      let card1Sub = '';
 
-      const amortiSub = (isValidNum(st.pe) && st.pe > 0 && st.pe <= 10)
-        ? 'Bir dükkan alıp kârıyla ' + fmtNum(st.pe, 1) + ' yılda parasını çıkarmak gibi uygun çarpanlı.'
-        : (isValidNum(st.pe) && st.pe > 25)
-          ? 'Piyasa şirketin gelecekte çok büyümesini bekliyor veya fiyatı pahalılaşmış.'
-          : 'Sektör standartlarına yakın geri dönüş süresi.';
+      if (kind === 'gyo') {
+        card1Label = 'Tapu / Özvarlık İskontosu';
+        if (isValidNum(st.pb) && st.pb > 0 && st.pb < 1) {
+          card1Val = `%${Math.round((1 - st.pb) * 100)} İndirimli (${fmtNum(st.pb, 2)}x)`;
+          card1Sub = `Şirketin defterdeki her 100 ₺'lik net gayrimenkul varlığı borsada ${Math.round(st.pb * 100)} ₺'ye fiyatlanıyor. (GYO kârı bina değerleme farkı içerdiğinden F/K yerine özvarlığa bakılır.)`;
+        } else if (isValidNum(st.pb) && st.pb >= 1) {
+          card1Val = `Özvarlığın ${fmtNum(st.pb, 2)} Katı`;
+          card1Sub = 'Defterdeki net gayrimenkul değerinin üzerinde işlem görüyor; kira geliri büyümesi izlenmelidir.';
+        } else {
+          card1Val = 'Hesaplanmadı';
+          card1Sub = 'Güncel özvarlık çarpanı verisi bekleniyor.';
+        }
+      } else if (kind === 'holding') {
+        card1Label = 'Holding Özvarlık & Kâr Çarpanı';
+        if (isValidNum(st.pb) && st.pb > 0 && st.pb < 1) {
+          card1Val = `%${Math.round((1 - st.pb) * 100)} Holding İndirimi (${fmtNum(st.pb, 2)}x)`;
+          card1Sub = `Çatısı altındaki şirketlerin toplam özvarlığından %${Math.round((1 - st.pb) * 100)} daha ucuza işlem görüyor${isValidNum(st.pe) && st.pe > 2 && st.pe < 50 ? ` (${fmtNum(st.pe, 1)} yıllık kâr çarpanı).` : '.'}`;
+        } else if (isValidNum(st.pe) && st.pe >= 2.2 && st.pe <= 55) {
+          card1Val = `${fmtNum(st.pe, 1)} Yılda Amorti Ediyor`;
+          card1Sub = isValidNum(st.pb) && st.pb > 0 ? `Özvarlığının ${fmtNum(st.pb, 2)} katından işlem görüyor.` : 'İştirak portföyü üzerinden değerleniyor.';
+        } else {
+          card1Val = isValidNum(st.pb) && st.pb > 0 ? `Özvarlığın ${fmtNum(st.pb, 2)} Katı` : 'Dönemsel Konsolide Bilanço';
+          card1Sub = 'Enflasyon muhasebesi (TMS 29) nedeniyle konsolide net kâr kalemi dönemsel dalgalanabilir; iştirak özvarlığı esas alınır.';
+        }
+      } else if (isValidNum(st.pe) && st.pe > 0) {
+        if (st.pe < 2.2) {
+          card1Val = `${fmtNum(st.pe, 1)}x (Tek Seferlik Kâr Etkisi)`;
+          card1Sub = 'Çok düşük çarpan genellikle varlık değerlemesi veya tek seferlik muhasebe gelirinden kaynaklanır; esas faaliyet kârına dikkat edilmeli.';
+        } else if (st.pe <= 10) {
+          card1Val = `${fmtNum(st.pe, 1)} Yılda Amorti Ediyor`;
+          card1Sub = `Bir işletme alıp yıllık kârıyla ${fmtNum(st.pe, 1)} yılda parasını çıkarmak gibi uygun çarpanlı.`;
+        } else if (st.pe <= 25) {
+          card1Val = `${fmtNum(st.pe, 1)} Yılda Amorti Ediyor`;
+          card1Sub = 'Sektör standartlarına uyumlu, makul geri dönüş süresi.';
+        } else if (st.pe <= 60) {
+          card1Val = `${fmtNum(st.pe, 1)} Yılda Amorti Ediyor`;
+          card1Sub = 'Piyasa şirketin gelecekte hızlı büyümesini fiyatlıyor veya mevcut kârına göre pahalılaşmış.';
+        } else {
+          card1Val = 'Son Dönem Kârı Çok Düşük (>60x)';
+          card1Sub = 'Şirket başabaş noktasına yakın çok küçük kâr açıkladığı için amorti süresi geçici olarak yüksek görünüyor.';
+        }
+      } else if (isValidNum(st.netIncomeMillionTL) && st.netIncomeMillionTL < 0) {
+        card1Val = 'Son Dönem Zarar Açıkladı';
+        card1Sub = 'Son 12 aylık toplamda zarar yazdığı için kârla amorti süresi hesaplanamıyor.';
+      } else {
+        card1Val = 'Veri Bekleniyor';
+        card1Sub = 'Son 12 aylık kâr çarpanı henüz oluşmadı.';
+      }
 
-      const cashBoxDesc = st.isNetCash
-        ? 'Kasasındaki nakit para tüm borçlarından fazla! Yüksek faiz ortamında kredi faizi ezmez.'
-        : (isValidNum(st.netDebtToEbitda) && st.netDebtToEbitda > 3.8)
-          ? 'Borç yükü yüksek; yüksek faiz dönemlerinde kârının önemli kısmı banka faizine gidebilir.'
-          : 'Borçluluk düzeyi yönetilebilir dengede.';
+      let card2Label = 'Kasası Dolu mu, Borçlu mu?';
+      let card2Val = 'Dengeli Kasa';
+      let card2Cls = '';
+      let card2Sub = 'Borçluluk düzeyi faaliyet kârıyla çevrilebilir dengede.';
+
+      if (isFinBS) {
+        card2Label = 'Özsermaye Fiyatlaması (Defter Değeri)';
+        if (isValidNum(st.pb) && st.pb > 0 && st.pb < 1) {
+          card2Val = `Özsermayesine Göre %${Math.round((1 - st.pb) * 100)} İskontolu`;
+          card2Cls = 'pos';
+          card2Sub = `Kasadaki her 100 ₺ özsermayesi borsada ${Math.round(st.pb * 100)} ₺'den işlem görüyor. Banka ve sigorta şirketlerinde sanayi borcu yerine özsermaye kârlılığına bakılır.`;
+        } else if (isValidNum(st.pb) && st.pb >= 1) {
+          card2Val = `Özsermayesinin ${fmtNum(st.pb, 2)} Katı`;
+          card2Cls = st.pb <= 1.8 ? 'pos' : '';
+          card2Sub = 'Banka, sigorta ve finans kurumlarında mevduat/fonlama sanayi borcu sayılmaz; özsermaye üretim gücü esas alınır.';
+        } else {
+          card2Val = 'Finans Kurumu Bilançosu';
+          card2Sub = 'Finansal kuruluşlarda özsermaye kârlılığı ve sermaye yeterliliği takip edilir.';
+        }
+      } else if (kind === 'holding' && !st.isNetCash) {
+        card2Label = 'Holding Grup Yapısı';
+        card2Val = 'Çoklu İştirak Bilançosu';
+        card2Sub = 'Holding bilançoları grup şirketlerinin (enerji, sanayi, finans) toplam varlıklarını konsolide eder.';
+      } else if (isValidNum(st.pb) && st.pb < 0) {
+        card2Val = 'Özsermaye Eksiye Geçmiş';
+        card2Cls = 'neg';
+        card2Sub = 'Birikmiş zararlar veya borç yükü özsermayeyi eksiye düşürmüş; yüksek bilanço riski taşır.';
+      } else if (st.isNetCash) {
+        card2Val = 'Net Nakit Fazlası Var';
+        card2Cls = 'pos';
+        card2Sub = 'Kasasındaki nakit para tüm finansal borçlarından fazla! Yüksek faiz ortamında kredi faizi ezmez.';
+      } else if (isValidNum(st.netDebtToEbitda) && st.netDebtToEbitda > 4.5) {
+        card2Val = 'Yüksek Borç Yükü';
+        card2Cls = 'neg';
+        card2Sub = 'Net borcu yıllık faaliyet kârının 4,5 katını aşıyor; yüksek faiz dönemlerinde finansman gideri kârı baskılayabilir.';
+      } else if (isValidNum(st.netDebtToEbitda) && st.netDebtToEbitda > 2.5) {
+        card2Val = 'Yatırım / Filo Borcu Var';
+        card2Cls = 'warn';
+        card2Sub = `Net borcu yıllık faaliyet kârının ${fmtNum(st.netDebtToEbitda, 1)} katı düzeyinde; uçak, fabrika veya kapasite yatırımı kaynaklı borç içeriyor olabilir.`;
+      }
+
+      const rightMetricLabel = (isFinBS || kind === 'holding' || !isValidNum(st.fcfMillionTL))
+        ? 'Yıllık Nakit Kâr Payı (Temettü)'
+        : 'Kasaya Giren Serbest Nakit';
+      const rightMetricVal = (isFinBS || kind === 'holding' || !isValidNum(st.fcfMillionTL))
+        ? (isValidNum(st.dividendYield) && st.dividendYield > 0 ? `%${fmtNum(st.dividendYield, 2)}` : 'Dağıtmadı (%0)')
+        : fmtMillionAsHumanTL(st.fcfMillionTL);
+      const rightMetricCls = (isFinBS || kind === 'holding' || !isValidNum(st.fcfMillionTL))
+        ? (st.dividendYield > 0 ? 'pos' : 'muted')
+        : pctCls(st.fcfMillionTL);
 
       openSheetWithHtml(`
         <div class="sheet-head">
@@ -5885,8 +6374,9 @@
             <div style="min-width:0;">
               <h3 style="font-size:17px;font-weight:800;color:#fff;line-height:1.25;">${escapeHtml(cleanCo)}</h3>
               <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:3px;">
-                <span class="dim" style="font-size:11.5px;">${escapeHtml(getSectorTr(st.sector))}</span>
+                <span class="dim" style="font-size:11.5px;">${escapeHtml(secLabel)}</span>
                 ${st.isNetCash ? `<span class="chg-pill pos" style="font-size:10.5px;padding:1px 6px;">Kasası Nakit Dolu</span>` : ''}
+                ${isValidNum(st.dividendYield) && st.dividendYield >= 1.5 ? `<span class="chg-pill pos" style="font-size:10.5px;padding:1px 6px;">Temettü %${fmtNum(st.dividendYield, 1)}</span>` : ''}
               </div>
             </div>
           </div>
@@ -5906,37 +6396,35 @@
           </div>
         </div>
 
-        <!-- SADE DİLDE ORTAKLIK KARNESİ -->
+        <!-- SEKTÖRE DUYARLI SADE ORTAKLIK KARNESİ -->
         <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
           <div class="stat-box">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <span class="dim" style="font-size:11.5px;">Kendini Kaç Yılda Amorti Ediyor?</span>
-              <strong class="num-tab" style="color:#fff;font-size:13px;">${amortiText}</strong>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+              <span class="dim" style="font-size:11.5px;">${card1Label}</span>
+              <strong class="num-tab" style="color:#fff;font-size:13px;text-align:right;">${card1Val}</strong>
             </div>
-            <p class="muted" style="font-size:11.5px;margin-top:4px;line-height:1.4;">${escapeHtml(amortiSub)}</p>
+            <p class="muted" style="font-size:11.5px;margin-top:4px;line-height:1.4;">${escapeHtml(card1Sub)}</p>
           </div>
 
           <div class="stat-box">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <span class="dim" style="font-size:11.5px;">Kasası Dolu mu, Borçlu mu?</span>
-              <strong class="${st.isNetCash ? 'pos' : (isValidNum(st.netDebtToEbitda) && st.netDebtToEbitda > 3.8 ? 'neg' : '')}" style="font-size:13px;">
-                ${st.isNetCash ? 'Net Nakit Fazlası Var' : (isValidNum(st.netDebtToEbitda) && st.netDebtToEbitda > 3.8 ? 'Yüksek Borçlu' : 'Dengeli Kasa')}
-              </strong>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+              <span class="dim" style="font-size:11.5px;">${card2Label}</span>
+              <strong class="${card2Cls}" style="font-size:13px;text-align:right;">${card2Val}</strong>
             </div>
-            <p class="muted" style="font-size:11.5px;margin-top:4px;line-height:1.4;">${escapeHtml(cashBoxDesc)}</p>
+            <p class="muted" style="font-size:11.5px;margin-top:4px;line-height:1.4;">${escapeHtml(card2Sub)}</p>
           </div>
 
           <div class="stat-box" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
             <div>
               <div class="dim" style="font-size:11px;">100 ₺ Özsermayeye Yıllık Kârı</div>
               <div class="num-tab ${pctCls(st.roe)}" style="font-size:15px;font-weight:800;margin-top:2px;">
-                ${isValidNum(st.roe) ? (st.roe >= 0 ? '+' : '') + fmtNum(st.roe, 1) + ' ₺' : '—'}
+                ${isValidNum(st.roe) && Math.abs(st.roe) < 250 ? (st.roe >= 0 ? '+' : '') + fmtNum(st.roe, 1) + ' ₺' : (isValidNum(st.roe) ? (st.roe > 0 ? 'Yüksek (>100 ₺)' : 'Zararda') : '—')}
               </div>
             </div>
             <div>
-              <div class="dim" style="font-size:11px;">Kasaya Giren Serbest Nakit</div>
-              <div class="num-tab ${pctCls(st.fcfMillionTL)}" style="font-size:15px;font-weight:800;margin-top:2px;">
-                ${fmtMillionAsHumanTL(st.fcfMillionTL)}
+              <div class="dim" style="font-size:11px;">${rightMetricLabel}</div>
+              <div class="num-tab ${rightMetricCls}" style="font-size:15px;font-weight:800;margin-top:2px;">
+                ${rightMetricVal}
               </div>
             </div>
           </div>

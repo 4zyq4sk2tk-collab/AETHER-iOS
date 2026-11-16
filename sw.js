@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aether-ios-standalone-v7';
+const CACHE_NAME = 'aether-ios-standalone-v8';
 const CORE_ASSETS = [
   './',
   './index.html',
