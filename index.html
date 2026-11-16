@@ -588,7 +588,7 @@
       flex: 1;
       min-width: 0;
       height: 30px;
-      padding: 0 8px;
+      padding: 0 7px;
       border-radius: 8px;
       font-size: 12px;
       font-weight: 600;
@@ -597,7 +597,45 @@
       align-items: center;
       justify-content: center;
       white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       transition: background 0.16s var(--spring), color 0.16s var(--spring), transform 0.1s;
+    }
+
+    /* OTOMATİK KUPON, DEĞİŞKEN ORAN VE VADE MOTORU KARTLARI */
+    .auto-struct-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .auto-struct-card {
+      background: var(--bg-input);
+      border: 1px solid var(--border-hairline);
+      border-radius: 14px;
+      padding: 12px 13px;
+      min-width: 0;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, transform 0.12s var(--spring);
+    }
+    .auto-struct-card:hover { border-color: var(--border-subtle); background: #141826; }
+    .auto-struct-card.active {
+      border-color: rgba(59, 130, 246, 0.55);
+      background: linear-gradient(165deg, rgba(59, 130, 246, 0.12) 0%, #111522 75%);
+    }
+    .auto-sched-row {
+      display: grid;
+      grid-template-columns: 82px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 11px;
+      border-bottom: 1px solid var(--border-hairline);
+      font-size: 12px;
+    }
+    .auto-sched-row:last-child { border-bottom: none; }
+    @media (max-width: 720px) {
+      .auto-struct-grid { grid-template-columns: 1fr; gap: 8px; }
+      .seg-item { font-size: 11.5px; padding: 0 5px; }
     }
     .seg-item:hover { color: var(--text-secondary); }
     .seg-item:active { transform: scale(0.96); }
@@ -1457,11 +1495,12 @@
       </div>
     </section>
 
-    <!-- ==================== SEKME 2: FAİZ VS SEPET (TEK TUŞ KARŞILAŞTIRMA MOTORU) ==================== -->
+    <!-- ==================== SEKME 2: FAİZ VS SEPET & OTOMATİK VADE/KUPON MOTORU ==================== -->
     <section id="tab-sepet" class="tab-panel">
       <div class="seg-bar" style="margin-bottom:12px;" id="toolsSubNav">
-        <button class="seg-item active" data-tool="duel" onclick="setToolSubTab('duel')">Faizde Kalsaydım vs Sepet</button>
-        <button class="seg-item" data-tool="compare" onclick="setToolSubTab('compare')">Araç Kıyasla &amp; Başabaş</button>
+        <button class="seg-item active" data-tool="duel" onclick="setToolSubTab('duel')">Faiz vs Sepet</button>
+        <button class="seg-item" data-tool="coupon" onclick="setToolSubTab('coupon')">Oto Kupon &amp; Vade</button>
+        <button class="seg-item" data-tool="compare" onclick="setToolSubTab('compare')">Araç Kıyasla</button>
       </div>
 
       <!-- MOD 1: TEK TUŞLA "PARAMI FAİZDE TUTSAYDIM NE OLURDU, BU SEPETTE TUTTUM NE OLDU" -->
@@ -1536,6 +1575,11 @@
           <!-- CANLI DÜELLO SONUÇLARI + ZAMAN GRAFİĞİ + GÜNLÜK HAYAT ÇEVİRİCİSİ -->
           <div id="duelDynamicResults"></div>
         </div>
+      </div>
+
+      <!-- MOD 1.5: OTOMATİK SABİT KUPONLU, DEĞİŞKEN ORANLI, TÜFE ENDEKSLİ, SUKUK & FARKLI VADE GÜNÜ HESAPLAYICI -->
+      <div id="toolCouponPane" style="display:none;">
+        <div class="surface surface-pad" id="autoCouponEngineBox"></div>
       </div>
 
       <!-- MOD 2: TEKİL ARAÇ KIYASLAMA & MEVDUAT BAŞABAŞ HESABI -->
@@ -1851,10 +1895,10 @@
     const FRIENDLY_ASSET_META = {
       'mevduat-ust': { title: 'Banka Vadeli Mevduat (Özel Oran)', code: 'MEV', tone: 'blue', brief: 'Her vade sonunda %17,5 stopaj kesilir; anapara sabit kalır' },
       'mevduat-tcmb': { title: 'Banka Vadeli Mevduat (Ortalama)', code: 'ORT', tone: 'blue', brief: 'Standart banka faizi; %17,5 stopaj sonrası enflasyona yenilebilir' },
-      'katilim-hesabi': { title: 'Katılım Hesabı (Kâr Payı)', code: 'KTL', tone: 'blue', brief: 'Faizsiz kâr ortaklığı; her vade dönüşünde %17,5 vergi kesilir' },
+      'katilim-hesabi': { title: 'Katılım Hesabı (Faizsiz Kâr Payı)', code: 'KTL', tone: 'emerald', brief: 'Faizsiz kâr-zarar ortaklığı; vade sonunda kâr payından %17,5 stopaj kesilir' },
       'para-piyasasi-fonu': { title: 'Günlük Para Piyasası Fonu', code: 'PPF', tone: 'blue', brief: 'Vade bozulmadan günlük büyür; %17,5 stopaj yalnızca satınca kesilir' },
-      'dibs-tahvil': { title: '2 Yıllık Devlet Tahvili (DİBS)', code: 'DİBS', tone: 'blue', brief: 'Hazine ihraçlı sabit getiri; 31.12.2026’ya kadar %0 stopaj avantajlı' },
-      'kira-sertifikasi-sukuk': { title: 'Hazine Kira Sertifikası (Sukuk)', code: 'SUK', tone: 'blue', brief: 'Kamu varlık kira geliri; 31.12.2026’ya kadar %0 stopajlı faizsiz araç' },
+      'dibs-tahvil': { title: '2 Yıllık Devlet Tahvili (DİBS)', code: 'DİBS', tone: 'blue', brief: '2 yıl vadeli gösterge Hazine tahvili; 31.12.2026’ya kadar %0 stopajlı' },
+      'kira-sertifikasi-sukuk': { title: 'Hazine Kira Sertifikası (Sukuk)', code: 'SUK', tone: 'emerald', brief: 'Faizsiz kamu varlık kira ortaklığı; 31.12.2026’ya kadar %0 stopajlı' },
       'eurobond-usdtr': { title: 'QNB Amerikan Doları Borsa Fonu (USDTR)', code: 'USDT', tone: 'emerald', brief: 'Banka makası olmadan borsadan Dolar/ABD Hazine bonosu fonu (%17,5 stopaj)' },
       'eurobond-emb': { title: 'Gelişen Ülkeler Eurobond Fonu (EMB)', code: 'EMB', tone: 'emerald', brief: 'Dolar kuponlu ülke tahvilleri sepeti (Yurt dışı ETF · Beyana tabi)' },
       'doviz-usd': { title: 'ABD Doları', code: '$', tone: 'emerald', brief: 'Kur artışına karşı nakit döviz (satışta %0 stopaj; alımda %0,2 kambiyo)' },
@@ -2111,134 +2155,577 @@
       return { title: cleaned, code: sym, tone: 'blue', brief: getAssetSubCategory(inst) };
     }
 
-    // Her 69 varlık için sıfır jargonlu, mevzuata %100 uygun günlük hayat rehberi
-    function getPlainLifeGuide(inst) {
-      const id = inst.id || '';
-      const sym = String(inst.symbol || '');
-      const isForeignDecl = inst.taxRegime === 'declaration' || /^(AMEX|NASDAQ|OTC|NYSE):/i.test(sym);
+    // 69 varlığın her biri için sıfır şablon/kopya, varlığa özgü günlük hayat rehberi
+    const PARTICIPATION_ASSET_IDS = new Set([
+      'katilim-hesabi', 'kira-sertifikasi-sukuk', 'altin-fonu-zgold', 'fon-degisken-isglk', 'fon-katilim-z30kp'
+    ]);
 
-      if (id === 'mevduat-ust' || id === 'mevduat-tcmb' || id === 'katilim-hesabi') {
-        return {
-          analogy: 'Evini kiraya vermek yerine paranı bankaya kiraya verirsin. Banka sana her ay belli bir kira (faiz/kâr payı) öder ama anaparanın kendisi hiç değer kazanmaz.',
-          diffFromInterest: 'Gelen faizi harcarsan market fiyatları arttığı için yıl sonunda ana paranın alım gücü erir. Üstelik devlet her vade sonunda kârından %17,5 stopaj vergisi keser.',
-          patience: 'Günlük / Aylık (Acil nakit veya kısa süreli park yeri için uygundur)',
-          howToBuy: 'Her bankanın mobil uygulamasından Vadeli Hesap veya Katılım Hesabı menüsünden açılır.',
-          riskLevel: 1
-        };
+    const BESPOKE_ASSET_GUIDES = {
+      'mevduat-ust': {
+        analogy: 'Nakit birikimini özel/dijital bankaların hoş geldin veya üst bant faiz oranından 32 günlük vadeye bağlamaktır; her ay kira gibi faiz alırsın fakat anaparanın kendisi hiç büyümez.',
+        diffLabel: 'Enflasyon & Vergi Gerçeği:',
+        diffFromInterest: 'Her 32 günlük vade dönüşünde brüt faizden %17,5 stopaj kesilir; gelen faizi harcarsan yıl sonunda anaparanın market alım gücü enflasyon kadar erir.',
+        patience: '32 – 92 Gün (Kısa vadeli nakit parkı; uzun vadede reel erime riski taşır)',
+        howToBuy: 'Özel ve dijital bankaların mobil uygulamasından 32-92 günlük Vadeli TL Mevduat hesabı açılarak bağlanır.',
+        riskLevel: 1
+      },
+      'mevduat-tcmb': {
+        analogy: 'Pazarlık yapmadan standart bir banka şubesinin sunduğu ortalama vadeli mevduat oranıdır; genellikle en yüksek piyasa faizinin birkaç puan gerisinde kalır.',
+        diffLabel: 'Enflasyon & Vergi Gerçeği:',
+        diffFromInterest: 'Hem oran ortalamada kaldığı hem de her vade sonunda %17,5 stopaj kesildiği için enflasyon hızlandığında paranın alım gücünü koruyamaz.',
+        patience: '32 Gün (Yalnızca geçici bekleme parası için uygundur)',
+        howToBuy: 'Tüm ticari bankaların mobil şubesinden standart Vadeli TL Hesap adımıyla açılır.',
+        riskLevel: 1
+      },
+      'katilim-hesabi': {
+        analogy: 'Faizli borç verme yerine, katılım bankasının gerçek ticaret ve üretim finansmanından elde ettiği kâra ortak olduğun faizsiz kâr-zarar ortaklığı havuzudur.',
+        diffLabel: 'Faizli Araçlardan Farkı (Katılım İlkesi):',
+        diffFromInterest: 'Önceden sabit faiz taahhüdü yoktur; vade sonunda havuzun ürettiği gerçek kâr payı (genellikle 80/20 paylaşım oranıyla) dağıtılır ve kâr payından %17,5 stopaj kesilir.',
+        patience: '32 – 181 Gün (Faizsiz kısa vadeli TL birikim havuzu)',
+        howToBuy: 'Katılım bankalarının (Ziraat Katılım, Vakıf Katılım, Kuveyt Türk, Albaraka vb.) mobil uygulamasından Katılım Hesabı açılarak katılınır.',
+        riskLevel: 1
+      },
+      'para-piyasasi-fonu': {
+        analogy: 'Vade gününü bekleme zorunluluğunu ortadan kaldıran günlük likit nakit fonudur; öğleye kadar bozdurduğunda birikmiş getirin yanmadan aynı gün nakde dönersin.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Vadeli mevduatta her 32 günde bir %17,5 vergi kesilip kalan tutar dönerken, Para Piyasası Fonunda satana kadar vergi kesilmez; brüt bakiye her gün bileşik büyür.',
+        patience: '1 Gün ve üzeri (Acil durum fonu ve sepetin nakit tamponu için en pratik araçtır)',
+        howToBuy: 'Herhangi bir bankanın Yatırım Fonları (TEFAS) menüsünden Para Piyasası Fonu seçilerek mesai saatlerinde anında alınıp satılır.',
+        riskLevel: 1
+      },
+      'dibs-tahvil': {
+        analogy: 'T.C. Hazine ve Maliye Bakanlığı’na 2 yıl vadeyle doğrudan borç verip 6 ayda bir kupon faizi aldığın gösterge devlet iç borçlanma senedidir (faizli borçlanma aracıdır).',
+        diffLabel: 'Banka Faizinden & Kısa Bonodan Farkı:',
+        diffFromInterest: '31.12.2026’ya kadar alınan DİBS’lerde stopaj %0’dır. Ancak 2 yıllık sabit kuponlu tahvilin faiz hassasiyeti (dürasyonu ~1,55 yıl) 6 aylık bonodan ~3 kat yüksektir: vadeden önce satarsan piyasa faizi çıktığında tahvil fiyatı düşer, faiz düştüğünde ise ekstra değer kazancı yazar.',
+        patience: 'Tam Vade: 2 Yıl / 728 Gün (Erken satışta dürasyon kaynaklı fiyat dalgalanması vardır)',
+        howToBuy: 'Bankaların Yatırım -> Hazine Bonosu / Devlet Tahvili (DİBS) ekranından sabit kuponlu, TLREF değişken veya TÜFE endeksli tertipler seçilerek alınır.',
+        riskLevel: 3
+      },
+      'kira-sertifikasi-sukuk': {
+        analogy: 'Faizli borç senedi değildir; Hazine Varlık Kiralama A.Ş. bünyesindeki kamu binaları ve varlıklarının kira gelirine sertifika yoluyla ortak olduğun faizsiz katılım aracıdır.',
+        diffLabel: 'Faizli Araçlardan Farkı (Katılım İlkesi):',
+        diffFromInterest: 'Devlete faizle borç verilmez, gerçek bir kamu varlığının 6 aylık kira geliri paylaşılır ve 31.12.2026’ya kadar stopaj %0’dır. Kira ödemelerini harcarsan basit kira oranını, gelen kiraları yeniden Sukuk’a yatırırsan bileşik getiriyi elde edersin.',
+        patience: '1 – 2 Yıl Kira Dönemi (Vade sonuna kadar tutulduğunda kira akışı ve anapara korunur)',
+        howToBuy: 'Katılım bankaları ve tüm bankaların Yatırım -> Kira Sertifikası (Hazine Sukuk) menüsünden sabit kira veya TÜFE’ye endeksli kira tertipleriyle alınır.',
+        riskLevel: 2
+      },
+      'eurobond-usdtr': {
+        analogy: 'Döviz bürosu veya gece banka makası ödemeden, Borsa İstanbul’da TL ile tek tıkla ABD Doları ve kısa vadeli ABD Hazine bonolarına yatırım yapan borsa fonudur.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'TL mevduatta kur sıçramasına karşı savunmasız kalırken USDTR hem Dolar/TL artışını hem ABD kısa vadeli bono getirisini yansıtır; satış kârından %17,5 stopaj kesilir.',
+        patience: '6 Ay – 2 Yıl (Döviz bazlı nakit/bono dengesi arayanlar için)',
+        howToBuy: 'Bankanın Borsa / Hisse Senedi ekranından USDTR koduyla seans saatlerinde TL ödeyerek 1 pay dahi alınabilir.',
+        riskLevel: 2
+      },
+      'eurobond-emb': {
+        analogy: 'Türkiye, Brezilya, Meksika gibi gelişen ülkelerin Dolar cinsinden ihraç ettiği devlet tahvillerini (Eurobond) tek sepette toplayan küresel Dolar tahvil fonudur.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Yalnızca TL faizi yerine Dolar bazında düzenli tahvil kuponu ve kur koruması üretir; yurt dışı ETF olduğu için otomatik stopaj yoktur, kazanç beyan sınırını aşarsa yıllık gelir vergisi beyanına tabidir.',
+        patience: '1 – 4 Yıl (Küresel Dolar faizlerine ve ülke risk primlerine duyarlıdır)',
+        howToBuy: 'Yurt dışı piyasa erişimi olan aracı kurumlardan EMB koduyla veya vergi beyanıyla uğraşmamak için TEFAS Eurobond Borçlanma Araçları Fonlarıyla alınır.',
+        riskLevel: 3
+      },
+      'doviz-usd': {
+        analogy: 'Birikimi küresel ticaretin ana rezerv parası olan ABD Dolarına çevirmektir; TL’nin değer kaybına karşı kalkan kurar ama kasanın içinde durdukça yeni üretim yapmaz.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Satışta stopaj %0’dır (bankadan alımda binde 2 kambiyo vergisi ödenir); kur şokundan korusa da ABD’nin kendi enflasyonu yüzünden nakit Dolar uzun vadede tek başına erir.',
+        patience: 'Kısa / Orta Vade Kur Tamponu (Uzun vadede Dolar bazlı varlıklarla desteklenmelidir)',
+        howToBuy: 'Bankaların döviz ekranından hafta içi 10:00-17:00 dar makas saatlerinde veya fiziki döviz bürolarından alınır.',
+        riskLevel: 2
+      },
+      'doviz-eur': {
+        analogy: 'Türkiye’nin en büyük ihracat pazarı olan Avrupa Birliği’nin ortak para birimidir; hem TL değer kaybına hem de Euro/Dolar paritesi yükselişine duyarlıdır.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Satış kazancında stopaj %0’dır (banka alımında binde 2 kambiyo vergisi vardır); Avrupa seyahati veya Euro bazlı harcaması olanlar için doğal kur koruması sağlar ama faiz/temettü üretmez.',
+        patience: 'Kısa / Orta Vade Döviz Sepeti',
+        howToBuy: 'Banka döviz hesaplarından mesai saatleri içinde veya serbest piyasa döviz gişelerinden temin edilir.',
+        riskLevel: 2
+      },
+      'doviz-gbp': {
+        analogy: 'Birleşik Krallık’ın yüksek birim değerli ve köklü rezerv para birimidir; döviz sepetinde Dolar ve Euro dışına çeşitlendirme yapmak isteyenlerce kullanılır.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Satışta %0 stopajlıdır; ancak bankalarda Sterlin alım-satım makası Dolar’a göre biraz daha geniş olabileceği için çok kısa vadeli al-sat yerine orta vadeli tutulur.',
+        patience: 'Orta Vade Döviz Çeşitlendirmesi',
+        howToBuy: 'Bankaların mobil döviz menüsünden mesai saatlerinde makas kontrol edilerek alınır.',
+        riskLevel: 2
+      },
+      'doviz-chf': {
+        analogy: 'Küresel krizlerde yatırımcıların sığındığı ve dünyada enflasyonu en düşük kalmış para birimlerinden biri olan İsviçre Frangıdır.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Satış kârında stopaj %0’dır; küresel jeopolitik sarsıntılarda Dolar ve Euro’ya kıyasla daha güçlü güvenli liman refleksi gösterir fakat nakit durduğunda kâr payı üretmez.',
+        patience: 'Orta / Uzun Vade Güvenli Liman Döviz Payı',
+        howToBuy: 'Uluslararası döviz pariteleri sunan banka yatırım hesaplarından hafta içi mesai saatlerinde alınır.',
+        riskLevel: 2
+      },
+      'gram-altin-spot': {
+        analogy: 'Hem dünyadaki Ons Altın fiyatını hem de içerideki Dolar/TL kurunu aynı anda arkasına alan, Türkiye’deki hanehalkının en temel alım gücü kalkanıdır.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Mevduatta %17,5 ve altın fonlarında %17,5 stopaj varken, fiziki veya vadesiz gram altın satış kazancında stopaj %0’dır (banka alımında yalnızca binde 2 kambiyo vergisi kesilir).',
+        patience: 'En az 1 – 3+ Yıl (Merkez bankaları para bastıkça uzun vadede alım gücünü korur)',
+        howToBuy: 'Kuyumcudan 24 ayar paketli gram külçe olarak veya hafta içi mesai saatlerinde banka altın hesabından alınır.',
+        riskLevel: 2
+      },
+      'ceyrek-altin': {
+        analogy: 'Darphane tarafından 22 ayar olarak basılan (1,75 gram ağırlığında, ~1,606 gram saf altın içeren) geleneksel fiziki tasarruf altınıdır.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Satış kârında vergi %0’dır ve bankacılık sisteminden bağımsız fiziki güvence sunar; ancak Darphane basım/işçilik primi nedeniyle yoğun talep dönemlerinde alım-satım makası açılabilir.',
+        patience: '1 – 5 Yıl (Fiziki yastık altı / kasa birikimi)',
+        howToBuy: 'Yetkili kuyumculardan ve sarraflardan tarih/kulplu-kulpsuz makas farkı sorulup kontrol edilerek alınır.',
+        riskLevel: 2
+      },
+      'cumhuriyet-altini': {
+        analogy: 'Darphane’nin yüksek tutarlı fiziki birikimler için bastığı (~7,21 gram 22 ayar) Ata Lira / Cumhuriyet altınıdır; birim işçilik oranı çeyrek altına göre daha düşüktür.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Tamamen %0 vergili fiziki servet saklama aracıdır; TL faizde anapara enflasyona karşı erirken Cumhuriyet altını nesiller boyu satın alma gücünü taşır.',
+        patience: '2 – 5+ Yıl (Uzun vadeli fiziki servet koruma)',
+        howToBuy: 'Güvenilir sarraflardan veya banka kiralık kasasında saklanmak üzere fiziki olarak alınır.',
+        riskLevel: 2
+      },
+      'bilezik-22-ayar': {
+        analogy: 'Hem takı hem birikim amacıyla alınan 22 ayar (%91,6 saflıkta) fiziki altındır; ancak tasarım ve işçilik maliyeti bozdururken kesintiye uğrar.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Satışta vergi %0 olsa da yüksek işçilikli modeller bozdurulurken %5-%12 işçilik kaybı yaşatır; yatırım amaçlı alınıyorsa mutlaka "işçiliksiz ajda/burma" tercih edilmelidir.',
+        patience: '2 – 5+ Yıl (Kısa sürede bozdurulursa işçilik makası zarar yazar)',
+        howToBuy: 'Kuyumculardan gram ve işçilik düşüş oranı baştan teyit edilerek işçiliksiz 22 ayar olarak alınır.',
+        riskLevel: 2
+      },
+      'altin-sertifikasi': {
+        analogy: 'Hazine ve Darphane güvencesiyle Borsa İstanbul’da hisse senedi gibi alınıp satılan (her 1 sertifika = 0,01 gram 995 saflıkta altın) dijital/fiziki dönüşümlü altın sertifikasıdır.',
+        diffLabel: 'Banka Faizinden & Altın Fonundan Farkı:',
+        diffFromInterest: 'Altın fonlarında %17,5 stopaj ve banka altında binde 2 kambiyo vergisi varken, ALTIN.S1’de hem stopaj %0 hem kambiyo vergisi %0’dır; 50 gram ve üzerine ulaşınca Darphane’den fiziki altın olarak da talep edilebilir.',
+        patience: '6 Ay – 3+ Yıl (Piyasa talebine göre bazen spot gram altına göre primli fiyatlanabilir)',
+        howToBuy: 'Bankanın Hisse Senedi / Borsa menüsünden ALTIN.S1 koduyla hafta içi seans saatlerinde dar makasla alınıp satılır.',
+        riskLevel: 2
+      },
+      'altin-fonu-zgold': {
+        analogy: 'Ziraat Portföy’ün topladığı birikimi Borsa İstanbul Kıymetli Madenler Piyasası’nda fiziki külçe altına ve faizsiz kira sertifikalarına yatıran katılım altın borsa fonudur.',
+        diffLabel: 'Faizli Araçlardan Farkı (Katılım İlkesi):',
+        diffFromInterest: 'Faiz içermez, katılım finans ilkelerine uygundur; ancak 9 Temmuz 2025 vergi düzenlemesi sonrası altın BYF satış kârından %17,5 stopaj kesildiği için vergisiz ALTIN.S1 ile net getirisi karşılaştırılmalıdır.',
+        patience: '6 Ay – 3 Yıl',
+        howToBuy: 'Banka veya aracı kurumun Borsa İstanbul ekranından ZGOLD koduyla 1 pay dahi alınıp satılır.',
+        riskLevel: 2
+      },
+      'altin-fonu-gldtr': {
+        analogy: 'QNB Portföy tarafından yönetilen, İstanbul Takasbank kasalarında saklanan fiziki külçe altın değerini pay başına birebir izleyen Borsa İstanbul altın fonudur.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Kuyumcu makası ve saklama riski olmadan altın fiyatını izler; fakat satış anında elde edilen TL kâr üzerinden %17,5 fon stopajı otomatik kesilir.',
+        patience: '6 Ay – 3 Yıl',
+        howToBuy: 'Tüm banka yatırım hesaplarının Hisse / BYF alım ekranından GLDTR koduyla seans saatlerinde alınır.',
+        riskLevel: 2
+      },
+      'gram-gumus-spot': {
+        analogy: 'Yarısı değerli maden, diğer yarısı güneş paneli, elektrikli araç ve elektronik çip sanayisinin vazgeçilmez hammaddesi olan "sanayici altını"dır.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Vadesiz gümüş hesabı veya fiziki gümüş satış kazancında stopaj %0’dır (banka alımında binde 2 kambiyo vergisi uygulanır); altına göre çok daha sert yükselip sert düzeltme yapabilir.',
+        patience: '1 – 4 Yıl (Sanayi büyümesi ve değerli maden döngüsüyle hareket eder)',
+        howToBuy: 'Bankaların kıymetli maden hesaplarından (hafta içi dar makasta) veya sertifikalı granül/külçe gümüş olarak alınır.',
+        riskLevel: 3
+      },
+      'gumus-fonu-gmstr': {
+        analogy: 'Evde kilolarca fiziki gümüş saklama ve kararma derdi olmadan, Takasbank kasasındaki fiziki gümüş külçelerine Borsa İstanbul üzerinden ortak eden borsa fonudur.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Bankaların gümüş alım-satım makasından daha dar marjla işlem görür; ancak satış kârı üzerinden %17,5 BYF stopajı kesildiği unutulmamalıdır.',
+        patience: '1 – 3 Yıl (Gümüş fiyat oynaklığı altına göre daha yüksektir)',
+        howToBuy: 'Bankanın Borsa / Hisse Senedi bölümünden GMSTR kodu yazılarak seans saatlerinde alınıp satılır.',
+        riskLevel: 3
+      },
+      'ons-platin': {
+        analogy: 'Altından çok daha nadir çıkarılan; otomotiv katalizörleri, hidrojen yakıt hücreleri ve ağır kimya sanayisinde kullanılan stratejik değerli metalin dünya Ons ($/oz) fiyatıdır.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Faiz gibi sabit TL nakit üretmez; küresel sanayi üretimi hızlandığında ve maden arzı daraldığında hem Dolar/TL hem Ons fiyatıyla değerlenir.',
+        patience: '2 – 5 Yıl (Küresel otomotiv ve yeşil hidrojen yatırım döngülerine duyarlıdır)',
+        howToBuy: 'Platin hesabı sunan bankaların kıymetli maden menüsünden (USD/TL gram karşılığıyla) veya uluslararası emtia fonlarından alınır.',
+        riskLevel: 3
+      },
+      'ons-paladyum': {
+        analogy: 'Benzinli ve hibrit araçların egzoz emisyon filtrelerinde kullanılan, arzı belirli maden bölgelerinde yoğunlaştığı için sert fiyat sıçramaları yaşayabilen endüstriyel soy metaldir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Sabit getiri sağlamaz; küresel tedarik zinciri kesintilerinde çok hızlı yükselebildiği gibi elektrikli araç geçiş hızına göre sert düşüşler de gösterebilir.',
+        patience: '2 – 5 Yıl (Yüksek emtia oynaklığı nedeniyle sepet içinde sınırlı payla izlenir)',
+        howToBuy: 'Uluslararası emtia erişimi sunan aracı kurumlardan veya çoklu kıymetli maden sepet fonları aracılığıyla yatırım yapılır.',
+        riskLevel: 4
+      },
+      'emtia-petrol-bno': {
+        analogy: 'Dünya enerji fiyatlarının referansı olan Kuzey Denizi Brent ham petrol vadeli kontratlarını Dolar bazında izleyen küresel enerji borsa fonudur.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Akaryakıt ve enerji kaynaklı küresel enflasyon şoklarına karşı koruma (hedge) sağlar; yurt dışı ETF olduğu için otomatik stopaj yoktur, yıllık beyan sınırını aşan kazanç beyana tabidir.',
+        patience: '6 Ay – 2 Yıl (Jeopolitik gerilimler ve OPEC üretim kararlarıyla sert dalgalanır)',
+        howToBuy: 'Yurt dışı borsa hesabı üzerinden BNO koduyla veya yerli bankalardaki TEFAS Petrol / Enerji Fonları (ör. AES) üzerinden alınır.',
+        riskLevel: 4
+      },
+      'emtia-tarim-dba': {
+        analogy: 'Buğday, mısır, soya, kahve, kakao ve şeker gibi temel dünya gıda hammaddelerini tek sepette toplayan küresel tarım emtiası fonudur.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'İklim krizleri ve küresel gıda enflasyonu dönemlerinde TL faizin koruyamadığı mutfak maliyeti artışına Dolar bazında kalkan kurar; yurt dışı ETF olarak beyan rejimine tabidir.',
+        patience: '1 – 3 Yıl (Mevsimsel hasat ve küresel kuraklık döngülerine duyarlıdır)',
+        howToBuy: 'Uluslararası piyasa erişimli aracı kurumlardan DBA koduyla veya TEFAS Tarım ve Gıda Temalı Fonlar üzerinden alınır.',
+        riskLevel: 3
+      },
+      'bist-100': {
+        analogy: 'Borsa İstanbul’daki en büyük 100 şirketin toplam nabzını ölçen ana piyasa termometresidir; tek başına alınıp satılan bir hisse değil endeks göstergesidir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Enflasyon ortamında şirketlerin fabrika, bina ve satış ciroları büyüdüğü için uzun vadede endeks de büyür; bu endekse yatırım yapmak için %0 stopajlı Hisse Yoğun Fonlar kullanılır.',
+        patience: 'En az 1 – 3 Yıl (Kısa vadeli dalgalanmalar şirketlerin gerçek değerini değiştirmez)',
+        howToBuy: 'Doğrudan alınmaz; Kasama Ekle’ye dokunduğunda sistem seni %0 stopajlı BIST Hisse Yoğun BYF karşılığına (ZPBDL) yönlendirir.',
+        riskLevel: 3
+      },
+      'bist-30': {
+        analogy: 'Türkiye ekonomisinin lokomotifi olan en yüksek piyasa değerli ve en likit 30 dev şirketin (THY, Koç, Tüpraş, BİM, Aselsan vb.) endeks göstergesidir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Faizde anapara sabit kalırken, Türkiye’nin 30 dev kuruluşu ürünlerine enflasyonu yansıtıp ihracat yaptıkça kârlarını büyütür; hisse yoğun fon karşılıklarında stopaj %0’dır.',
+        patience: '1 – 4 Yıl',
+        howToBuy: 'Endeksin birebir yatırım karşılığı olan Ak Portföy BIST 30 BYF (APX30) veya BIST 30 endeks fonları üzerinden %0 stopajla alınır.',
+        riskLevel: 3
+      },
+      'bist-banka': {
+        analogy: 'Türkiye’nin önde gelen ticari bankalarının (Garanti, Akbank, İş Bankası, Yapı Kredi vb.) borsa performansını gösteren sektör endeksidir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Bankaya mevduat müşterisi olmak yerine bizzat bankaların ortağı olma fikrini ölçer; faiz indirim döngüleri yaklaşırken bankaların elindeki tahvil ve kredi marjları hızla değerlenir.',
+        patience: '1 – 3 Yıl (Faiz ve kredi döngülerine en hızlı tepki veren sektördür)',
+        howToBuy: 'Kasama Ekle ile doğrudan bu endeksi izleyen %0 stopajlı Ziraat Portföy Likit Banka BYF (ZPLIB) üzerinden yatırım yapılabilir.',
+        riskLevel: 4
+      },
+      'bist-temettu-25': {
+        analogy: 'Elde ettiği kârı kasada tutmak yerine ortaklarına düzenli nakit kâr payı (temettü) dağıtan 25 köklü BIST şirketine tek işlemle ortak eden borsa yatırım fonudur.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Ev alıp hem değer artışından hem kirasından faydalanmak gibidir: şirketlerin hem pay fiyatı enflasyonla büyür hem nakit temettü üretir; üstelik alım-satım stopajı %0’dır.',
+        patience: '2 – 5 Yıl (Temettü yatırımcılığı sabırlı ortaklık gerektirir)',
+        howToBuy: 'Bankanın Hisse / Borsa menüsünden OPT25 koduyla %0 stopaj avantajıyla alınıp satılır.',
+        riskLevel: 3
+      },
+      'halka-arz-altny': {
+        analogy: 'İnsansız hava/kara sistemleri, hareket kontrol mekanizmaları ve endüstriyel robotik üreten yüksek teknolojili yerli savunma sanayi şirketidir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Yerli hisse senedi olduğu için alım-satım kazancı stopajı %0’dır; savunma projeleri genellikle döviz bazlı ve uzun soluklu sipariş stokuna (backlog) dayanır.',
+        patience: '2 – 5 Yıl (Tekil büyüme hissesi olduğu için endeksten daha sert dalgalanabilir)',
+        howToBuy: 'Banka yatırım hesabının Borsa İstanbul ekranından ALTNY hisse koduyla 1 lot dahi alınabilir.',
+        riskLevel: 4
+      },
+      'halka-arz-tabgd': {
+        analogy: 'Türkiye genelinde binlerce hızlı servis restoran şubesini (Burger King, Popeyes, Sbarro, Usta Dönerci vb.) işleten dev gıda perakende ağıdır.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Gıda enflasyonu arttığında menü fiyatlarını anında güncelleyerek günlük sıcak nakit akışı üretir; BIST payı olarak alım-satım kazancında stopaj %0’dır.',
+        patience: '1 – 3 Yıl',
+        howToBuy: 'Bankanın Hisse Senedi ekranından TABGD koduyla seans saatlerinde alınıp satılır.',
+        riskLevel: 3
+      },
+      'halka-arz-rgyas': {
+        analogy: 'Türkiye’nin büyük şehirlerindeki yüksek doluluklu alışveriş merkezlerini (Optimum, Piazza, Hilltown vb.) ve ticari ofisleri yöneten kira odaklı gayrimenkul şirketidir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Mağaza kiraları ciro paylı ve enflasyona endeksli arttığı için hem gayrimenkul değer artışı hem düzenli kira gücü sunar; borsa alım-satım stopajı %0’dır.',
+        patience: '2 – 5 Yıl',
+        howToBuy: 'Borsa İstanbul hisse ekranından RGYAS koduyla tek paydan başlayarak alınır.',
+        riskLevel: 3
+      },
+      'abd-sp500-spy': {
+        analogy: 'Apple, Microsoft, Amazon, Visa, Coca-Cola dahil ABD’nin en büyük ve en kârlı 500 şirketinin tamamına tek bir fon payıyla Dolar bazında ortak olmaktır.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Yüzyılı aşkın süredir Dolar enflasyonunu yenen küresel büyüme motorudur; hem Dolar/TL artışı hem şirket kârlarıyla çalışır. Yurt dışı ETF kazancı beyan sınırını aşarsa Yİ-ÜFE endekslemesi düşülerek beyan edilir.',
+        patience: '3 – 5+ Yıl (Uzun vadeli küresel servet birikiminin omurgasıdır)',
+        howToBuy: 'Yurt dışı borsa hesabından SPY/VOO koduyla veya beyansız otomatik vergi isteyenler için TEFAS Yabancı Hisse Fonları üzerinden alınır.',
+        riskLevel: 3
+      },
+      'abd-nasdaq-qqq': {
+        analogy: 'Dünyanın yazılım, bulut bilişim, yapay zeka ve internet ekonomisini yöneten en büyük 100 teknoloji devine (Nasdaq-100) Dolar bazında ortak eden büyüme fonudur.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'S&P 500’e göre daha hızlı büyüme potansiyeli ama düşüş dönemlerinde daha yüksek oynaklık taşır; Dolar bazlı değer artışıyla TL mevduat erimesine karşı güçlü büyüme kalkanıdır (beyana tabi).',
+        patience: '3 – 5+ Yıl (Teknoloji döngülerinde sabırlı kalabilenler için)',
+        howToBuy: 'Aracı kurum yurt dışı ekranından QQQ koduyla veya bankalardaki TEFAS Teknoloji Yabancı Fon Sepeti fonlarıyla alınır.',
+        riskLevel: 4
+      },
+      'dunya-borsalari-vt': {
+        analogy: 'Sadece ABD değil; Avrupa, Japonya ve gelişen ülkeler dahil dünyadaki 9.000’den fazla şirketi tek sepette birleştiren "tüm dünya ekonomisi" fonudur.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Tek bir ülkenin ekonomik veya siyasi riskine bağlı kalmadan küresel üretime Dolar bazında ortak olmayı sağlar; yurt dışı ETF olarak beyan rejimine tabidir.',
+        patience: '3 – 7 Yıl (En geniş coğrafi çeşitlendirmeye sahip hisse sepetidir)',
+        howToBuy: 'Uluslararası piyasa erişimi olan yatırım hesaplarından VT koduyla Dolar bazında alınır.',
+        riskLevel: 3
+      },
+      'kuresel-hisse-nvda': {
+        analogy: 'Yapay zeka veri merkezlerinin beyni sayılan grafik ve yapay zeka işlemcilerini (GPU) tasarlayan küresel yarı iletken liderinin tekil ABD hissesidir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Yüksek kâr büyümesiyle servet katlayabildiği gibi tek bir çeyrek bilançosunda %20-%35 sert dalgalanabilir; sepetin tamamıyla değil büyüme dilimiyle tutulur (beyana tabi).',
+        patience: '3 – 5+ Yıl (Yüksek oynaklıklı tekil teknoloji ortaklığı)',
+        howToBuy: 'Yurt dışı hisse işlemi sunan banka ve aracı kurumlardan NVDA koduyla tam veya parça hisse olarak alınır.',
+        riskLevel: 4
+      },
+      'kuresel-hisse-aapl': {
+        analogy: 'Dünya genelinde 2 milyardan fazla aktif iPhone, Mac ve uygulama ekosistemi kullanıcısından sürekli nakit üreten küresel tüketici teknolojisi devidir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Devasa nakit kasası ve hisse geri alımlarıyla nakit Dolarda beklemekten çok daha üretkendir; yurt dışı hisse olduğu için beyan sınırı üzeri reel kazanç beyana tabidir.',
+        patience: '2 – 5+ Yıl',
+        howToBuy: 'Aracı kurumların ABD borsaları (NASDAQ) menüsünden AAPL koduyla alınır.',
+        riskLevel: 3
+      },
+      'kuresel-hisse-msft': {
+        analogy: 'Dünyadaki şirketlerin işletim sistemini (Windows/Office), kurumsal bulut altyapısını (Azure) ve kurumsal yapay zeka yazılımlarını sağlayan abonelik devidir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Şirketlerden her ay düzenli abonelik geliri topladığı için Dolar bazında istikrarlı büyür; TL faizin aksine hem kur koruması hem küresel teknoloji ortaklığı sunar (beyana tabi).',
+        patience: '2 – 5+ Yıl',
+        howToBuy: 'ABD borsalarına erişim veren yatırım hesaplarından MSFT koduyla alınır.',
+        riskLevel: 3
+      },
+      'viop-bist30-kontrat': {
+        analogy: 'BIST 30 endeksinin gelecekteki fiyatına küçük bir teminat yatırarak 5 ila 10 kat büyüklüğünde işlem açılan kaldıraçlı vadeli işlem kontratıdır.',
+        diffLabel: 'Banka Faizinden Farkı (Kritik Kaldıraç Uyarısı):',
+        diffFromInterest: 'Uzun vadeli birikim aracı DEĞİLDİR! Kaldıraç yüzünden endeks ters yönde %10 oynadığında yatırdığın teminatın neredeyse tamamı eriyebilir; yeni başlayanlar bunun yerine kaldıraçsız APX30 fonunu seçmelidir.',
+        patience: 'Profesyonel Korunma (Hedge) Aracı · Yeni yatırımcılar için uygun değildir',
+        howToBuy: 'Doğrudan birikim için önerilmez; Kasama Ekle tıklandığında sistem seni güvenli ve %0 stopajlı BIST 30 Hisse Fonuna (APX30) yönlendirir.',
+        riskLevel: 5
+      },
+      'fon-yerli-hisse-zpbdl': {
+        analogy: 'Bankaları dışarıda bırakarak Türkiye’nin en büyük 10 reel sektör devine (havacılık, perakende, rafineri, sanayi, savunma) tek tıkla ortak eden borsa yatırım fonudur.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Hisse senedi yoğun BYF olduğu için satış kazancında stopaj kesintisi %0’dır; tek bir şirketin kötü gitme riskini 10 dev üreticiye bölerek azaltır.',
+        patience: '1 – 3+ Yıl',
+        howToBuy: 'Herhangi bir bankanın Borsa / Hisse ekranından ZPBDL koduyla T+0 anlık fiyatla alınıp satılır.',
+        riskLevel: 3
+      },
+      'fon-yerli-banka-zplib': {
+        analogy: 'Tek bir banka hissesi seçmek yerine Türkiye’nin en büyük ve en likit bankalarının tamamını tek pakette toplayan bankacılık borsa yatırım fonudur.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Yerli hisse yoğun BYF statüsünde olduğundan alım-satım kazancı stopajı %0’dır; faiz indirim beklentisi başladığında mevduat faizinden çok daha hızlı değer kazanma potansiyeli taşır.',
+        patience: '1 – 3 Yıl (Ekonomik döngülere duyarlı sektörel fon)',
+        howToBuy: 'Bankanın Hisse Senedi / BYF menüsünden ZPLIB koduyla seans saatlerinde alınır.',
+        riskLevel: 4
+      },
+      'fon-yerli-bist30-apx30': {
+        analogy: 'Ak Portföy yönetiminde Türkiye’nin en büyük 30 şirketini ağırlıklarına göre tek sepette sunan, borsa yatırımcılığının en sade başlangıç fonudur.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Faizde %17,5 stopaj öderken APX30’da stopaj %0’dır; bilanço okuma zahmeti olmadan Türkiye’nin en güçlü 30 şirketinin toplam büyümesine ortak eder.',
+        patience: '1 – 4 Yıl',
+        howToBuy: 'Tüm banka ve aracı kurumların Borsa İstanbul ekranından APX30 koduyla 1 pay bile alınabilir.',
+        riskLevel: 3
+      },
+      'fon-katilim-z30kp': {
+        analogy: 'Faiz geliri ve aşırı faizli borcu bulunmayan, katılım finans ilkelerine uygun en büyük 30 üretken BIST şirketini bir araya getiren faizsiz hisse yoğun fondur.',
+        diffLabel: 'Faizli Araçlardan Farkı (Katılım İlkesi):',
+        diffFromInterest: 'Hem katılım ilkelerine tam uyumludur hem de yerli hisse yoğun BYF olduğu için alım-satım kârında stopaj vergisi %0’dır; katılımcıyı doğrudan reel üretime ortak eder.',
+        patience: '1 – 4 Yıl',
+        howToBuy: 'Katılım bankaları ve tüm bankaların Borsa / Hisse ekranından Z30KP koduyla kolayca alınır.',
+        riskLevel: 3
+      },
+      'fon-tematik-teknoloji-zpt10': {
+        analogy: 'Borsa İstanbul’daki en büyük 10 yazılım, savunma elektroniği ve telekomünikasyon şirketine odaklanan yerli teknoloji sepet fonudur.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Yerli hisse yoğun yapısıyla %0 stopaj avantajına sahiptir; Türkiye’nin dijitalleşme ve savunma teknolojisi ihracatından büyüyen şirketlere toplu ortaklık sağlar.',
+        patience: '2 – 4 Yıl (Sektörel odak nedeniyle genel endeksten daha hareketlidir)',
+        howToBuy: 'Bankanın Borsa İstanbul hisse ekranından ZPT10 koduyla seans içinde alınıp satılır.',
+        riskLevel: 4
+      },
+      'fon-tematik-surdurulebilirlik-zsr25': {
+        analogy: 'Çevre, enerji verimliliği ve kurumsal yönetim standartlarını karşılayan 25 büyük ve şeffaf Türk şirketini kapsayan hisse yoğun borsa fonudur.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Alım-satım kazancı %0 stopajlıdır; uluslararası yabancı fonların Türkiye’ye girerken ilk tercih ettiği kurumsal yönetimi güçlü şirketlerden oluşur.',
+        patience: '1 – 4 Yıl',
+        howToBuy: 'Banka yatırım hesabının Borsa ekranından ZSR25 koduyla anlık olarak alınıp satılır.',
+        riskLevel: 3
+      },
+      'fon-tematik-yari-iletken-soxx': {
+        analogy: 'Yapay zeka, telefon, otomobil ve savunma sistemlerinin kalbi olan küresel çip fabrikalarını (NVIDIA, Broadcom, AMD, TSMC ekosistemini) toplayan yarı iletken fonudur.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Tek bir çip şirketi seçme riskini tüm yarı iletken endüstrisine yayar; Dolar bazlı küresel büyüme sağlar ancak sektörel oynaklığı yüksektir (yurt dışı ETF, beyana tabi).',
+        patience: '3 – 5+ Yıl',
+        howToBuy: 'Yurt dışı piyasa hesabından SOXX koduyla veya TEFAS Yarı İletken / Teknoloji Fonları üzerinden alınır.',
+        riskLevel: 4
+      },
+      'fon-degisken-isglk': {
+        analogy: 'İş Portföy tarafından katılım finans ilkelerine uygun biçimde yönetilen, portföyünde fiziki altın ve faizsiz kira sertifikaları taşıyan BIST katılım altın fonudur.',
+        diffLabel: 'Faizli Araçlardan Farkı (Katılım İlkesi):',
+        diffFromInterest: 'Faizli enstrüman kullanmadan altın fiyat hareketini Borsa İstanbul hesabına taşır; BYF statüsünde olduğu için satış kârından %17,5 stopaj kesilir.',
+        patience: '6 Ay – 3 Yıl',
+        howToBuy: 'Banka ve aracı kurumların Hisse / BYF alım ekranından ISGLK koduyla seans saatlerinde alınır.',
+        riskLevel: 2
+      },
+      'bes-emeklilik': {
+        analogy: 'Senin yatırdığın her 1.000 ₺ için devletin de sözleşme hesabına ek +300 ₺ (%30 devlet katkısı, yıllık üst limite kadar) eklediği uzun vadeli emeklilik birikim sistemidir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'BES tek başına faiz değildir; içindeki fonu sen seçersin! Parayı sadece sabit getiride bırakmayıp Altın, Katılım veya Hisse BES fonlarına dağıtırsan %30 devlet katkısı + düşük emeklilik stopajı (%5) dev fark yaratır.',
+        patience: 'Uzun Vade: 3 – 10 Yıl ve 56 Yaş (Erken çıkışta devlet katkısının bir kısmı ve %15 stopaj kesilir)',
+        howToBuy: 'Tüm banka ve emeklilik şirketlerinin mobil uygulamasından BES/Katılım BES başlatılıp BEFAS üzerinden yılda 12 kez fon dağılımı değiştirilebilir.',
+        riskLevel: 2
+      },
+      'gayrimenkul-konut-tcmb': {
+        analogy: 'TCMB’nin Türkiye genelindeki gerçek konut satış ve ekspertiz raporlarından derlediği resmi ortalama ev fiyatı göstergesidir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Faizde anapara erirken fiziki konut hem barınma/kira geliri üretir hem inşaat maliyetleriyle değerlenir; tapuda 5 yıl dolduktan sonra konut satış kazancı vergisi %0’dır.',
+        patience: '3 – 10 Yıl (Tapu harcı, bakım ve satış süresi nedeniyle uzun vadeli varlıktır)',
+        howToBuy: 'Endeks göstergesidir; konut peşinatı biriktirirken küçük tutarlarla gayrimenkul sepetine katılmak için OPTGY fonu kullanılabilir.',
+        riskLevel: 3
+      },
+      'gayrimenkul-konut-ekgyo': {
+        analogy: 'TOKİ iştiraki olan Türkiye’nin en büyük arsa ve markalı konut geliştiricisine, daire alacak milyonların olmadan borsadan pay bazında ortak olmaktır.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Tapu harcı, emlakçı komisyonu ve kiracı sorunu olmadan gayrimenkul projelerine ortak eder; BIST GYO payı olduğu için satış kazancı stopajı %0’dır ve konut kredi faizleri düştüğünde canlanır.',
+        patience: '1 – 4 Yıl (Konut kredisi faiz döngülerine çok duyarlıdır)',
+        howToBuy: 'Bankanın Hisse Senedi ekranından EKGYO koduyla 1 pay fiyatına alınıp satılır.',
+        riskLevel: 3
+      },
+      'gayrimenkul-ticari-rygyo': {
+        analogy: 'E-ticaret, perakende ve sanayi devlerinin ürünlerini sakladığı milyonlarca metrekarelik modern lojistik depolara ortak olup kurumsal kira gelirinden pay almaktır.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Konut kira sınırlamalarından etkilenmeyen kurumsal depo kiraları üretir ve depo arsaları enflasyonla değerlenir; BIST GYO hissesi olarak alım-satım stopajı %0’dır.',
+        patience: '2 – 5 Yıl',
+        howToBuy: 'Borsa İstanbul hisse alım ekranından RYGYO koduyla seans saatlerinde alınır.',
+        riskLevel: 3
+      },
+      'gayrimenkul-ticari-isgyo': {
+        analogy: 'İstanbul’daki İş Kuleleri, kurumsal ofis binaları ve ticari alışveriş merkezlerinden oluşan prestijli gayrimenkul portföyünün kira ve değer artışına ortak olmaktır.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Ticari ofis ve AVM kiraları her yıl enflasyona uyarlanır; %0 stopaj avantajıyla küçük birikimleri kurumsal ticari mülklere bağlama imkanı verir.',
+        patience: '2 – 5 Yıl',
+        howToBuy: 'Bankanın Borsa / Hisse Senedi menüsünden ISGYO koduyla kolayca alınır.',
+        riskLevel: 3
+      },
+      'gayrimenkul-arazi-algyo': {
+        analogy: 'Fethiye Hillside gibi döviz geliri üreten üst segment turizm tesislerine, otellere ve kıymetli arsa portföyüne borsadan ortak olmaktır.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Turizm kira gelirleri ağırlıkla döviz bazlı olduğu için hem emlak değerlemesi hem kur kalkanı özelliği taşır; GYO payı olarak satış kazancı stopajı %0’dır.',
+        patience: '2 – 5 Yıl',
+        howToBuy: 'Borsa İstanbul hisse senedi ekranından ALGYO koduyla 1 lot dahi alınabilir.',
+        riskLevel: 3
+      },
+      'gayrimenkul-gyo-fonu-optgy': {
+        analogy: 'Tek bir GYO seçmek yerine konut, AVM, ofis ve lojistik alanında faaliyet gösteren tüm büyük gayrimenkul yatırım ortaklıklarını tek fonda toplayan emlak sepetidir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Hisse senedi yoğun BYF statüsünde olduğu için alım-satım stopajı %0’dır; her ay maaştan artan küçük tutarlarla bile gayrimenkul biriktirmeyi mümkün kılar.',
+        patience: '1 – 4 Yıl',
+        howToBuy: 'Bankanın Borsa / Hisse menüsünden OPTGY koduyla anlık fiyatla alınıp satılır.',
+        riskLevel: 3
+      },
+      'kripto-btc': {
+        analogy: 'Toplam arzı matematiksel olarak 21 milyon adetle sınırlandırılmış, hiçbir merkez bankasının çoğaltamadığı küresel dijital kıtlık varlığıdır.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Sabit getiri veya nakit akışı yoktur; 4 yıllık yarılanma (halving) ve küresel likidite döngülerinde çok yüksek getiri sunabildiği gibi %50+ sert düşüşler de yaşatabilir (%5-%10 sepet sınırı önerilir).',
+        patience: 'En az 3 – 4 Yıl (Tam bir likidite döngüsü boyunca panik satışı yapmadan bekleyebilenler için)',
+        howToBuy: 'SPK listesinde yer alan yerli kripto varlık platformlarından 7/24 TL havalesiyle küçük tutarlarla alınır.',
+        riskLevel: 5
+      },
+      'kripto-eth': {
+        analogy: 'Merkeziyetsiz finans uygulamalarının, dijital sözleşmelerin ve tokenize varlıkların üzerinde çalıştığı programlanabilir blokzincir altyapı ağıdır.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Bitcoin’e göre teknoloji platformu niteliği taşır ama fiyat dalgalanması daha serttir; krediyle veya acil ihtiyaç parasıyla kesinlikle girilmemelidir.',
+        patience: '2 – 4 Yıl (Yüksek volatilite toleransı gerektirir)',
+        howToBuy: 'SPK denetimindeki kripto varlık alım-satım platformlarından 7/24 TL veya USDT paritesiyle alınır.',
+        riskLevel: 5
+      },
+      'kripto-sol': {
+        analogy: 'Saniyede binlerce işlemi çok düşük ücretle gerçekleştiren yüksek hızlı blokzincir ağıdır; kripto piyasasının en oynak ve spekülatif büyüme katmanlarından biridir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Boğa dönemlerinde çok hızlı katlanabildiği gibi ayı dönemlerinde %70-%80 geri çekilebilir; portföyün yalnızca gözden çıkarılabilecek çok küçük bir uç dilimiyle değerlendirilir.',
+        patience: '2 – 4 Yıl (Çok Yüksek Risk)',
+        howToBuy: 'Yerli lisanslı kripto platformlarından 7/24 küçük tutarlarla işlem görür.',
+        riskLevel: 5
+      },
+      'girisim-hubvc': {
+        analogy: 'Henüz borsaya açılmamış erken aşama yazılım, siber güvenlik ve teknoloji girişimlerine (startup’lara) melek yatırımcı gibi küçük paylarla ortak eden girişim sermayesi ortaklığıdır.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'BIST GSYO payı olarak satış kazancı stopajı %0’dır; girişimlerin bir kısmı başarısız olabilirken içlerinden çıkan başarılı bir teknoloji çıkışı (exit) portföyü büyütebilir.',
+        patience: '3 – 5+ Yıl (Girişimlerin olgunlaşıp satılması yıllar sürer; günlük fiyat hareketleri serttir)',
+        howToBuy: 'Bankanın Borsa İstanbul hisse ekranından HUBVC koduyla küçük portföy ağırlığıyla alınır.',
+        riskLevel: 4
+      },
+      'girisim-isgsy': {
+        analogy: 'İş Bankası Grubu uzmanlığıyla büyüme potansiyeli yüksek orta ölçekli şirketlere ortak olup onları büyütüp satarak değer üreten köklü girişim sermayesi şirketidir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Alım-satım stopajı %0’dır; bireysel yatırımcının tek başına ulaşamayacağı özel sektör şirket ortaklıklarına kurumsal yönetimle katılma fırsatı verir.',
+        patience: '2 – 5 Yıl (Şirket satın alma ve çıkış dönemlerine bağlı kazanç üretir)',
+        howToBuy: 'Borsa İstanbul hisse senedi ekranından ISGSY koduyla alınıp satılır.',
+        riskLevel: 4
+      },
+      'girisim-vertu': {
+        analogy: 'Yenilenebilir enerji, yazılım, gıda ve maden alanlarındaki büyüme şirketlerine yatırım yapıp olgunlaştığında halka arz ederek kâr yazan girişim sermayesi ortaklığıdır.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'GSYO statüsüyle borsa satış kazancında %0 stopaj uygulanır; iştiraklerinin halka arz ve değerleme dönemlerinde güçlü özvarlık sıçramaları yakalayabilir.',
+        patience: '2 – 5 Yıl',
+        howToBuy: 'Banka yatırım hesabının Hisse Senedi bölümünden VERTU koduyla alınır.',
+        riskLevel: 4
+      },
+      'girisim-gozde': {
+        analogy: 'Perakende, ambalaj, sanayi ve hızlı tüketim sektörlerindeki büyük ölçekli şirketlere (Şok Marketler, Polinas, Kümaş vb. geçmiş/mevcut portföy mantığıyla) yatırım yapan özel sermaye şirketidir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Borsa satış kazancı %0 stopajlıdır; genellikle elindeki şirketlerin toplam özvarlık değerine göre borsada iskontolu işlem görebildiği dönemler uzun vadeli fırsat yaratır.',
+        patience: '2 – 5 Yıl',
+        howToBuy: 'Borsa İstanbul ekranından GOZDE hisse koduyla 1 lot bile alınabilir.',
+        riskLevel: 4
+      },
+      'koleksiyon-luks-lvmh': {
+        analogy: 'Louis Vuitton, Dior, Tiffany, Sephora gibi asırlık prestij markalarını çatısı altında toplayan, küresel zengin kesime satış yaptığı için fiyatlama gücü çok yüksek dünya lüks devidir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Enflasyon artsa bile marka gücü sayesinde ürün fiyatlarını Dolar/Euro bazında rahatça artırabilir; yurt dışı hisse (ADR) olduğundan kazanç beyan sınırını aşarsa gelir vergisi beyanına tabidir.',
+        patience: '2 – 5 Yıl (Küresel tüketim ve Asya/Avrupa lüks talebine duyarlıdır)',
+        howToBuy: 'Uluslararası hisse erişimi olan aracı kurumlardan LVMUY (veya Avrupa borsasında MC) koduyla alınır.',
+        riskLevel: 3
+      },
+      'reel-perakende-bimas': {
+        analogy: 'Türkiye’nin her mahallesindeki binlerce indirim marketinin kasasından her gün milyonlarca işlemlik peşin nakit toplayan gıda perakende lideridir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Raf fiyatları enflasyonla anında güncellendiği için cirosunu enflasyona karşı doğal olarak korur ve düzenli temettü dağıtır; yerli hisse olarak satış stopajı %0’dır.',
+        patience: '1 – 4 Yıl (Defansif ve nakit üreten bilançosuyla sepet omurgasına uygundur)',
+        howToBuy: 'Herhangi bir bankanın Hisse Senedi ekranından BIMAS koduyla alınıp satılır.',
+        riskLevel: 3
+      },
+      'reel-perakende-mgros': {
+        analogy: 'Hem fiziki süpermarket zinciri hem de hızlı online gıda teslimatı (Migros Sanal Market / Hemen) ağıyla güçlü işletme sermayesi ve nakit akışı üreten perakende devidir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Müşteriden peşin tahsilat yapıp tedarikçiye vadeli ödediği için yüksek faiz ve enflasyon ortamında kasasındaki nakitten ekstra finansal gelir yazar; satış kazancı stopajı %0’dır.',
+        patience: '1 – 4 Yıl',
+        howToBuy: 'Borsa İstanbul hisse senedi ekranından MGROS koduyla kolayca alınır.',
+        riskLevel: 3
+      },
+      'reel-enerji-astor': {
+        analogy: 'Elektrik şebekelerinin ve yenilenebilir enerji santrallerinin kalbi olan dev yüksek gerilim trafolarını üretip onlarca ülkeye dövizle ihraç eden sanayi üreticisidir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Dünyada elektrik şebekeleri yenilendikçe döviz bazlı sipariş alır; BIST sanayi hissesi olarak alım-satım kazancı stopajı %0’dır.',
+        patience: '2 – 4 Yıl (İhracat ve enerji altyapı yatırım döngüsüyle büyür)',
+        howToBuy: 'Bankanın Borsa / Hisse Senedi bölümünden ASTOR koduyla seans saatlerinde alınır.',
+        riskLevel: 3
+      },
+      'reel-enerji-cwene': {
+        analogy: 'Fabrika çatılarına ve arazi santrallerine güneş enerjisi paneli üreten ve anahtar teslim güneş santrali kuran yenilenebilir enerji sanayi şirketidir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Satış kazancı stopajı %0’dır; ancak güneş paneli fiyatları ve sanayicinin krediye erişimi dönemsel dalgalandığı için mevduata kıyasla sabır ve seçicilik gerektirir.',
+        patience: '2 – 5 Yıl (Kapasite yatırımları tamamlandıkça bilançoya yansır)',
+        howToBuy: 'Borsa İstanbul hisse ekranından CWENE koduyla alınıp satılır.',
+        riskLevel: 4
+      },
+      'reel-enerji-smrtg': {
+        analogy: 'Güneş panelinin en kritik katma değerli parçası olan güneş hücresini (wafer/cell) yerli tesislerde üreten ve güneş santrali projeleri geliştiren enerji teknolojisi şirketidir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Alım-satım stopajı %0’dır; yatırım harcaması yoğun büyüme aşamasında olduğu için faizlerin yüksek olduğu dönemlerde dalgalanır, uzun vadeli enerji dönüşümüne oynar.',
+        patience: '2 – 5 Yıl',
+        howToBuy: 'Banka yatırım hesabının Borsa İstanbul ekranından SMRTG koduyla alınır.',
+        riskLevel: 4
+      },
+      'reel-yazilim-logo': {
+        analogy: 'Türkiye’deki yüz binlerce işletmenin her gün fatura kesmek, muhasebe tutmak ve bordro yönetmek için abone olduğu kurumsal yazılım (ERP/e-dönüşüm) lideridir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Ağır fabrika ve hammadde maliyeti olmadan yüksek brüt kâr marjıyla çalışır ve yıllık yazılım yenileme ücretlerini enflasyona göre günceller; satış stopajı %0’dır.',
+        patience: '2 – 4 Yıl',
+        howToBuy: 'Borsa İstanbul hisse senedi menüsünden LOGO koduyla alınıp satılır.',
+        riskLevel: 3
+      },
+      'reel-yazilim-miatk': {
+        analogy: 'Havalimanları ve kamu kurumları için biyometrik kimlik doğrulama, akıllı ulaşım, siber güvenlik ve savunma yazılımları geliştiren teknoloji şirketidir.',
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Yerli hisse olarak %0 stopajlıdır; ihale ve proje bazlı büyüdüğü için fiyat hareketleri sanayi hisselerine kıyasla çok daha sert iniş-çıkışlar gösterebilir.',
+        patience: '2 – 5 Yıl (Yüksek fiyat oynaklığına sahip teknoloji hissesi)',
+        howToBuy: 'Bankanın Hisse Senedi ekranından MIATK koduyla seans saatlerinde alınır.',
+        riskLevel: 4
       }
-      if (id === 'para-piyasasi-fonu') {
-        return {
-          analogy: 'Vadeli mevduatın "vadesi bozulmayan" akıllı kardeşidir. Paran her gün faiz kazanır; ara günde nakit çekersen bile birikmiş getirisi yanmaz.',
-          diffFromInterest: 'Vadeli mevduatta her 32 günde bir %17,5 vergi kesilip kalan para dönerken, Para Piyasası Fonunda satana kadar vergi kesilmez; brüt para bileşik büyür.',
-          patience: '1 Gün ve üzeri (Acil durum parası ve sepetin nakit tamponu için idealdir)',
-          howToBuy: 'Bankandaki "Yatırım Fonları" menüsünden kendi bankanın veya TEFAS’ın Para Piyasası Fonunu seçerek saniyeler içinde alabilirsin.',
-          riskLevel: 1
-        };
-      }
-      if (id === 'dibs-tahvil' || id === 'kira-sertifikasi-sukuk') {
-        return {
-          analogy: 'Banka yerine doğrudan T.C. Hazine ve Maliye Bakanlığı’na borç verip (veya kamu kira sertifikasına ortak olup) sabit getiri almaktır.',
-          diffFromInterest: 'Vadeli mevduatta %17,5 stopaj kesilirken, 31 Aralık 2026’ya kadar alınan Hazine Devlet Tahvili ve Hazine Kira Sertifikalarında stopaj vergisi %0’dır!',
-          patience: '6 Ay – 2 Yıl (Vadeden önce satılırsa piyasa faizine göre fiyatı dalgalanabilir)',
-          howToBuy: 'Bankaların Yatırım -> Hazine Bonosu / Devlet Tahvili veya Kira Sertifikası (Sukuk) menüsünden alınır.',
-          riskLevel: 2
-        };
-      }
-      if (id === 'bes-emeklilik') {
-        return {
-          analogy: 'Yatırdığın her 1.000 ₺ için devletin de senin hesabına ek +300 ₺ (%30 devlet katkısı) koyduğu uzun vadeli kumbara sistemidir.',
-          diffFromInterest: 'Sadece para piyasası fonunda bırakırsan enflasyona ezilebilir; BES içindeki fon tercihini Altın ve Hisse fonlarıyla çeşitlendirirsen %30 devlet katkısı dev fark yaratır.',
-          patience: 'Uzun Vade (Hak kazanmak için en az 3-10 yıl; emeklilikte stopaj %5’e düşer)',
-          howToBuy: 'Tüm banka ve emeklilik şirketlerinin mobil uygulamasından BES sözleşmesi başlatıp yılda 12 kez fon dağılımı değiştirilebilir.',
-          riskLevel: 2
-        };
-      }
-      if (id === 'altin-fonu-zgold' || id === 'altin-fonu-gldtr' || id === 'fon-degisken-isglk' || id === 'gumus-fonu-gmstr') {
-        return {
-          analogy: 'Kuyumcuda çalınma riski veya yüksek banka makası olmadan, Borsa İstanbul üzerinden tek tıkla altın veya gümüşe yatırım yapan borsa fonudur.',
-          diffFromInterest: 'Önemli Vergi Detayı: Fiziki altın ve Darphane Altın Sertifikasında (ALTIN.S1) vergi %0 iken, altın/gümüş yatırım fonu ve BYF’lerinde satış kârından %17,5 stopaj kesilir.',
-          patience: 'En az 6 Ay – 3+ Yıl',
-          howToBuy: 'Bankanın Borsa / Hisse Senedi ekranından ZGOLD, GLDTR, ISGLK veya GMSTR koduyla seans saatlerinde alınıp satılır.',
-          riskLevel: 2
-        };
-      }
-      if (id.includes('altin') || id.includes('ceyrek') || id.includes('cumhuriyet') || id.includes('bilezik') || id.includes('gumus')) {
-        const isS1 = id === 'altin-sertifikasi';
-        return {
-          analogy: 'Binlerce yıldır kimsenin karşılıksız basamadığı gerçek değer deposudur. Hem dünyada altın/gümüş değerlenince hem de Türkiye’de Dolar yükselince çifte koruma sağlar.',
-          diffFromInterest: 'Faizde ve altın fonlarında %17,5 stopaj varken; fiziki altında, gümüşte ve Darphane Altın Sertifikasında (ALTIN.S1) satış kârı stopajı %0’dır!',
-          patience: 'En az 6 Ay – 3+ Yıl (Kısa vadede dinlenebilir, uzun vadede kalkan görevi görür)',
-          howToBuy: isS1
-            ? 'Bankanın Borsa/Hisse menüsünden ALTIN.S1 koduyla kuyumcu makası ve kambiyo vergisi ödemeden tek tıkla alınıp satılır.'
-            : 'Kuyumcudan fiziki olarak veya banka üzerinden (bankada alımda binde 2 kambiyo vergisi vardır; gece makas açıkken işlem yapma) alınır.',
-          riskLevel: 2
-        };
-      }
-      if (id === 'eurobond-usdtr') {
-        return {
-          analogy: 'Bankaların döviz alım-satım makasına takılmadan, Borsa İstanbul üzerinden Dolar ve ABD Hazine bonolarına yatırım yapan borsa yatırım fonudur.',
-          diffFromInterest: 'TL faizde anaparan kur artışına karşı korumasızdır; burada Dolar/TL yükselişini yakalarsın ancak satış kârı üzerinden %17,5 fon stopajı kesilir.',
-          patience: '6 Ay – 2 Yıl',
-          howToBuy: 'Bankanın Borsa / Hisse Senedi ekranından USDTR koduyla seans içinde TL ile alınıp satılır.',
-          riskLevel: 2
-        };
-      }
-      if (id.startsWith('doviz-')) {
-        return {
-          analogy: 'Paranı Türk Lirası yerine yabancı para biriminde tutmaktır. Ancak unutma: ABD ve Avrupa’da da enflasyon olduğu için nakit döviz tek başına beklerse dünyada erir.',
-          diffFromInterest: 'Kur sıçramalarına karşı korur ve satışta stopaj %0’dır (bankadan alırken binde 2 kambiyo vergisi kesilir); fakat tek başına faiz veya şirket kârı üretmez.',
-          patience: 'Kısa/Orta Vade Kur Kalkanı',
-          howToBuy: 'Banka döviz hesabı (mesai saatleri içinde düşük makasla) veya döviz bürolarından alınır.',
-          riskLevel: 2
-        };
-      }
-      if (isForeignDecl || inst.isUsdAsset) {
-        return {
-          analogy: 'Sadece döviz alıp kasada bekletmek yerine; Apple, Microsoft, NVIDIA gibi dünya devlerine veya küresel emtia/tahvil sepetlerine Dolar bazında ortak olmaktır.',
-          diffFromInterest: 'Hem Dolar/TL arttığında hem de şirketler dünyada büyüdüğünde çift motorlu kazandırır. Vergi Kuralı: Bankada otomatik stopaj kesilmez; kazanç yıllık beyan sınırını aşarsa gelir vergisi beyannamesi verilir (Yİ-ÜFE endekslemesiyle enflasyon düşülür).',
-          patience: 'En az 1 – 5 Yıl (Borsalar bazı aylar dalgalanır; uzun vadeli ortaklar kazanır)',
-          howToBuy: 'Aracı kurumların yurt dışı borsa ekranından doğrudan veya beyanla uğraşmak istemezsen bankandaki TEFAS Yabancı Hisse Fonları üzerinden alınır.',
-          riskLevel: 3
-        };
-      }
-      if (id.startsWith('kripto-')) {
-        return {
-          analogy: 'Dijital çağın yüksek hızlı ve çok sert dalgalanan varlığıdır. Bir ayda %40 çıkabildiği gibi %40 da düşebilir.',
-          diffFromInterest: 'Faizin tam zıttıdır: sabit getiri garantisi yoktur. Sepetin tamamıyla değil, ancak üzülmeyeceğin küçük bir oranla (%5-%10 gibi) tutulmalıdır.',
-          patience: 'Yüksek Dalgalanma · En az 2-4 Yıl',
-          howToBuy: 'SPK lisanslı kripto varlık platformlarından 7/24 küçük tutarlarla alınıp satılabilir.',
-          riskLevel: 5
-        };
-      }
-      if (id === 'bist-100' || id === 'bist-30' || id === 'bist-banka' || id === 'viop-bist30-kontrat') {
-        return {
-          analogy: 'Türkiye’nin en büyük şirketlerinin genel gidişatını ölçen piyasa termometresidir (endeks göstergesidir).',
-          diffFromInterest: 'Endeksin kendisi doğrudan satın alınmaz; bunun yerine tek tıkla bu şirketlerin tamamını içeren %0 stopajlı Hisse Yoğun Borsa Fonları (APX30, ZPBDL, ZPLIB) alınır.',
-          patience: 'En az 1 – 3 Yıl',
-          howToBuy: 'Kasama Ekle butonuna bastığında sistem seni doğrudan bu endeksin satın alınabilir %0 vergili fon karşılığına yönlendirir.',
-          riskLevel: id === 'viop-bist30-kontrat' ? 5 : 3
-        };
-      }
-      if (inst.categoryId === 5) {
-        return {
-          analogy: id === 'gayrimenkul-konut-tcmb'
-            ? 'TCMB’nin Türkiye genelindeki gerçek tapu/ekspertiz verilerinden hesapladığı resmi konut fiyat ortalamasıdır.'
-            : 'Milyonlarca liran olmadan da AVM’lerin, dev lojistik depoların veya konut projelerinin kira ve değer artışına küçük paylarla ortak olmaktır.',
-          diffFromInterest: id === 'gayrimenkul-konut-tcmb'
-            ? 'Fiziki konut en az 5 yıl elde tutulduktan sonra satılırsa değer artış kazancı vergisi %0’dır; küçük birikimler için ise GYO fonları (OPTGY) alternatif olur.'
-            : 'Borsadaki GYO hisselerinde ve GYO hisse yoğun fonlarında (OPTGY) alım-satım kazancı stopajı %0’dır; tapu harcı ve kiracı derdi yoktur.',
-          patience: '1 – 5 Yıl',
-          howToBuy: id === 'gayrimenkul-konut-tcmb'
-            ? 'Küçük tutarlarla konut/gayrimenkul sepetine katılmak için OPTGY fonu veya GYO payları kullanılabilir.'
-            : 'Bankanın Hisse Senedi / Borsa bölümünden 1 pay bile alınabilir.',
-          riskLevel: 3
-        };
+    };
+
+    function getPlainLifeGuide(inst) {
+      const id = inst?.id || '';
+      if (BESPOKE_ASSET_GUIDES[id]) {
+        return BESPOKE_ASSET_GUIDES[id];
       }
       return {
-        analogy: 'Türkiye’de her gün önünden geçtiğin marketlerin, fabrikaların, enerji santrallerinin ve havayollarının kasasına ortak olmaktır. Enflasyon arttıkça şirket sattığı ürünün fiyatını artırır.',
-        diffFromInterest: 'Yerli hisse senetlerinde ve Hisse Senedi Yoğun Fonlarda (ZPBDL, APX30, Z30KP vb.) alım-satım stopajı %0’dır! Faizde %17,5 vergi öderken, iyi şirket ortaklığında vergisiz büyürsün.',
-        patience: 'En az 1 – 3 Yıl (Günlük fiyat oynamalarına bakılmaz, şirketin kârına ortak olunur)',
-        howToBuy: 'Herhangi bir bankanın Yatırım / Borsa menüsünden fon koduyla veya hisse koduyla kolayca alınır.',
+        analogy: `${getAssetMeta(inst).title} varlığı, birikimi tek tip mevduat yerine reel değer üreten piyasa araçlarına dağıtmak için kullanılır.`,
+        diffLabel: 'Banka Faizinden Farkı:',
+        diffFromInterest: 'Anaparanın sabit kalması yerine varlık fiyatlaması ve kendi vergi rejimine göre getiri üretir.',
+        patience: '1 – 3 Yıl',
+        howToBuy: 'Banka veya aracı kurum yatırım menüsünden ilgili işlem koduyla alınır.',
         riskLevel: 3
       };
     }
@@ -2313,16 +2800,30 @@
 
     function getAssetSubCategory(inst) {
       if (!inst) return '';
-      if (inst.isRateInstrument) return 'Faiz & Sabit Getiri';
-      if (inst.id === 'eurobond-usdtr') return 'Dolar Borsa Fonu';
-      if (inst.id.startsWith('doviz-')) return 'Döviz';
-      if (inst.id.startsWith('eurobond-')) return 'Döviz Tahvili';
-      if (inst.categoryId === 2 || inst.id === 'fon-degisken-isglk') return 'Altın & Değerli Maden';
-      if (inst.id.startsWith('kripto-')) return 'Dijital Varlık';
-      if (inst.isUsdAsset) return 'Dünya Şirketleri';
-      if (inst.categoryId === 4) return 'Sepet Fon';
-      if (inst.categoryId === 5) return 'Gayrimenkul';
-      return 'Türk Şirketleri';
+      const id = inst.id || '';
+      if (id === 'kira-sertifikasi-sukuk') return 'Katılım & Kira Sertifikası (Faizsiz)';
+      if (id === 'katilim-hesabi') return 'Katılım Kâr Payı Hesabı (Faizsiz)';
+      if (id === 'dibs-tahvil') return 'Hazine Devlet Tahvili (DİBS)';
+      if (id === 'para-piyasasi-fonu') return 'Günlük Para Piyasası Fonu';
+      if (id === 'bes-emeklilik') return 'Bireysel Emeklilik (%30 Katkılı)';
+      if (inst.isRateInstrument) return 'Banka Vadeli Mevduat (Faiz)';
+      if (id === 'altin-fonu-zgold' || id === 'fon-degisken-isglk') return 'Katılım Altın Fonu (Faizsiz)';
+      if (id === 'fon-katilim-z30kp') return 'Katılım Hisse Fonu (Faizsiz)';
+      if (id === 'eurobond-usdtr') return 'Dolar & ABD Hazine Borsa Fonu';
+      if (id === 'eurobond-emb') return 'Döviz Tahvili (Eurobond ETF)';
+      if (id.startsWith('doviz-')) return 'Döviz (Yabancı Para)';
+      if (id === 'emtia-petrol-bno' || id === 'emtia-tarim-dba') return 'Enerji & Tarım Emtiası';
+      if (id === 'ons-platin' || id === 'ons-paladyum') return 'Endüstriyel Değerli Metal';
+      if (inst.categoryId === 2) return 'Altın & Değerli Maden';
+      if (id === 'viop-bist30-kontrat') return 'Kaldıraçlı Vadeli Kontrat (VİOP)';
+      if (id === 'bist-100' || id === 'bist-30' || id === 'bist-banka') return 'Borsa Endeks Göstergesi';
+      if (id.startsWith('girisim-')) return 'Girişim Sermayesi (GSYO)';
+      if (id === 'koleksiyon-luks-lvmh') return 'Küresel Lüks Tüketim Hissesi';
+      if (id.startsWith('kripto-')) return 'Dijital Kripto Varlık';
+      if (inst.isUsdAsset) return 'Dünya Şirketleri & Küresel Fon';
+      if (inst.categoryId === 4) return 'Yerli Hisse Yoğun Sepet Fon';
+      if (inst.categoryId === 5) return 'Gayrimenkul & GYO';
+      return 'Türk Şirketleri (BIST)';
     }
 
     /* =========================================================================
@@ -2439,13 +2940,17 @@
     function fmtAssetPrice(val, unitLabel = '', isUsdAsset = false, isRate = false) {
       const n = Number(val);
       if (!Number.isFinite(n)) return '—';
-      if (isRate || String(unitLabel).includes('%')) {
+      const u = String(unitLabel || '');
+      if (isRate || u.includes('%')) {
+        if (u.includes('Bileşik')) return '%' + fmtNum(n, 1) + ' Bileşik';
+        if (u.includes('Kira')) return '%' + fmtNum(n, 1) + ' Kira/yıl';
+        if (u.includes('Kâr Payı')) return '%' + fmtNum(n, 1) + ' Kâr/yıl';
         return '%' + fmtNum(n, 1) + '/yıl';
       }
-      if (isUsdAsset || String(unitLabel).startsWith('USD')) {
+      if (isUsdAsset || u.startsWith('USD')) {
         return '$' + fmtNum(n, n < 10 ? 3 : 2);
       }
-      if (String(unitLabel).includes('Puan')) {
+      if (u.includes('Puan')) {
         return fmtNum(n, 0);
       }
       if (n >= 1000000) return fmtNum(n / 1e6, 2) + ' Mn ₺';
@@ -2459,7 +2964,7 @@
     window.__AETHER_CONN_MODE__ = 'INIT';
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=6.1', { updateViaCache: 'none' }).then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=6.2', { updateViaCache: 'none' }).then((reg) => {
           reg.update().catch(() => {});
         }).catch(() => {});
       });
@@ -2504,9 +3009,18 @@
       const ZERO_TAX_BOND_IDS = new Set(['dibs-tahvil', 'kira-sertifikasi-sukuk']);
 
       for (const inst of data.instruments) {
-        // Önceki localStorage önbelleklerindeki eski vergi/kategori kayıtlarını anında onar
+        // Önceki localStorage önbelleklerindeki eski vergi, bileşik mod ve birim kayıtlarını anında onar
         if (WITHHOLDING_175_IDS.has(inst.id)) inst.taxRatePct = 17.5;
         if (ZERO_TAX_BOND_IDS.has(inst.id)) inst.taxRatePct = 0;
+        if (inst.id === 'dibs-tahvil') {
+          inst.compoundingMode = 'annual_compounded';
+          inst.unitLabel = 'Yıllık Bileşik Faiz %';
+        } else if (inst.id === 'kira-sertifikasi-sukuk') {
+          inst.compoundingMode = 'bond_coupon';
+          inst.unitLabel = 'Yıllık Basit Kira %';
+        } else if (inst.id === 'katilim-hesabi') {
+          inst.unitLabel = 'Yıllık Brüt Kâr Payı %';
+        }
         if (inst.id === 'fon-degisken-isglk') {
           inst.categoryId = 2;
           inst.isPartial3Y = true;
@@ -2942,9 +3456,10 @@
        ========================================================================= */
     function getCompoundingModeForInst(inst) {
       if (!inst) return 'rollover32';
-      if (inst.compoundingMode) return inst.compoundingMode;
+      if (inst.id === 'dibs-tahvil') return 'annual_compounded';
+      if (inst.id === 'kira-sertifikasi-sukuk') return 'bond_coupon';
       if (inst.id === 'para-piyasasi-fonu' || inst.id === 'bes-emeklilik') return 'daily_deferred';
-      if (inst.id === 'dibs-tahvil' || inst.id === 'kira-sertifikasi-sukuk') return 'bond_coupon';
+      if (inst.compoundingMode) return inst.compoundingMode;
       return 'rollover32';
     }
 
@@ -2958,6 +3473,27 @@
       const rY3_3 = r;
       const rY5_1 = 0.175 * spreadRatio;
       const rY5_2 = 0.145 * spreadRatio;
+
+      if (mode === 'annual_compounded') {
+        const yrFactor = (rComp, taxFrac) => {
+          const semiGross = Math.pow(1 + Math.max(0, rComp), 0.5) - 1;
+          const semiNet = semiGross * (1 - taxFrac);
+          return Math.pow(1 + semiNet, 2);
+        };
+        const factorDaysComp = (rComp, d, taxFrac) => Math.pow(yrFactor(rComp, taxFrac), d / 365);
+        if (days <= 365) {
+          return +((factorDaysComp(r, days, tau) - 1) * 100).toFixed(2);
+        }
+        const c1 = (yrFactor(r, tau) - 1) * 100;
+        const c3 = (yrFactor(rY3_1, tau) * yrFactor(rY3_2, tau) * yrFactor(rY3_3, tau) - 1) * 100;
+        if (days <= 1095) {
+          const t = (days - 365) / (1095 - 365);
+          return +(c1 + (c3 - c1) * t).toFixed(2);
+        }
+        const c5 = (yrFactor(rY5_1, tau) * yrFactor(rY5_2, tau) * yrFactor(rY3_1, tau) * yrFactor(rY3_2, tau) * yrFactor(rY3_3, tau) - 1) * 100;
+        const t = Math.min(1, (days - 1095) / (1825 - 1095));
+        return +(c3 + (c5 - c3) * t).toFixed(2);
+      }
 
       if (mode === 'daily_deferred') {
         const effYr = (rAnn) => Math.pow(1 + rAnn / 365, 365);
@@ -4063,6 +4599,902 @@
     }
 
     /* =========================================================================
+       OTOMATİK KUPON, DEĞİŞKEN FAİZ (TLREF), TÜFE ENDEKSLİ, SUKUK & VADE GÜNÜ MOTORU
+       Farklı gün sayılarını, sabit/değişken/TÜFE yapılarını ve basit vs bileşik farkını
+       kullanıcıya tek bir el hesabı bırakmadan otomatik hesaplar.
+       ========================================================================= */
+    let autoCalcAmount = 500000;
+    let autoCalcDays = 364;
+    let autoCalcReinvest = true;
+    let autoCalcRegime = 'curve'; // 'curve' | 'disinflation' | 'shock'
+    let autoCalcSelectedKey = 'fixed_dibs';
+
+    let drawerAutoState = {
+      instId: '',
+      days: 364,
+      struct: 'fixed_coupon',
+      reinvest: true
+    };
+
+    function computeRateYieldBreakdown(inst) {
+      const mode = getCompoundingModeForInst(inst);
+      const rawRate = inst.isCustomizableRate ? customDepositRate : (Number(inst.currentPrice) || 36.0);
+      const taxRate = Number(inst.taxRatePct) || 0;
+      const wantNet = currentTaxMode === 'net' && taxRate > 0;
+      const tau = wantNet ? taxRate / 100 : 0;
+
+      let simpleGross1YPct = rawRate;
+      let simpleNet1YPct = rawRate * (1 - tau);
+      let compoundNet1YPct = computeFixedIncomeReturnPct(rawRate, 365, mode, taxRate, wantNet);
+
+      if (mode === 'annual_compounded') {
+        // TR02Y halihazırda yıllık bileşik getiridir; 6 aylık kupon karşılığından yıllık basit kupon oranı türetilir
+        const semiGross = Math.pow(1 + Math.max(0, rawRate / 100), 0.5) - 1;
+        simpleGross1YPct = +(2 * semiGross * 100).toFixed(2);
+        simpleNet1YPct = +(2 * semiGross * (1 - tau) * 100).toFixed(2);
+      } else {
+        simpleGross1YPct = +rawRate.toFixed(2);
+        simpleNet1YPct = +(rawRate * (1 - tau)).toFixed(2);
+      }
+
+      const cpiNow = Number(marketData?.macro?.cpiYoy) || 29.77;
+      const realSimple1YPct = +((((1 + simpleNet1YPct / 100) / (1 + cpiNow / 100)) - 1) * 100).toFixed(2);
+      const realCompound1YPct = +((((1 + compoundNet1YPct / 100) / (1 + cpiNow / 100)) - 1) * 100).toFixed(2);
+
+      return {
+        mode,
+        rawRate,
+        taxRate,
+        simpleGross1YPct,
+        simpleNet1YPct,
+        compoundNet1YPct,
+        cpiNow,
+        realSimple1YPct,
+        realCompound1YPct
+      };
+    }
+
+    // Tam gün valörlü, kupon takvimli, dürasyonlu ve değişken eğri destekli otomatik nakit akışı motoru
+    function computeSingleStructureCashflow(opts) {
+      const P = Math.max(100, Number(opts.principalTL) || 500000);
+      const D = Math.max(1, Math.min(3650, Math.round(Number(opts.totalDays) || 364)));
+      const regime = opts.regime || 'curve';
+      const isPart = Boolean(opts.isParticipation);
+
+      const m = marketData?.macro || {};
+      const policy = Number(m.tcmbPolicyRate) || 36.0;
+      const upper = Number(m.tcmbUpperRate) || customDepositRate || 39.0;
+      const tr02yComp = Number(m.tr02y) || 36.27;
+      const tr10yComp = Number(m.tr10y) || 33.07;
+      const cpiNow = Number(m.cpiYoy) || 29.77;
+
+      const simple2Y = 2 * (Math.pow(1 + tr02yComp / 100, 0.5) - 1) * 100;
+      const simple10Y = 2 * (Math.pow(1 + tr10yComp / 100, 0.5) - 1) * 100;
+
+      const expInfAnn = regime === 'disinflation'
+        ? Math.max(12, +(cpiNow - 8.0).toFixed(2))
+        : regime === 'shock'
+          ? +(cpiNow + 15.0).toFixed(2)
+          : cpiNow;
+      const periodInfFactor = Math.pow(1 + expInfAnn / 100, D / 365);
+
+      const struct = opts.structure || 'fixed_coupon';
+      const taxPct = opts.taxRatePct != null ? Number(opts.taxRatePct) : 0;
+      const tau = Math.max(0, taxPct / 100);
+
+      // Gelecek kupon dönemleri için arbitrajsız getiri eğrisi (Term Structure Implied Forward) patikası
+      const impliedQtrSimple2Y = 4 * (Math.pow(1 + tr02yComp / 100, 0.25) - 1) * 100;
+      const impliedQtrSimple10Y = 4 * (Math.pow(1 + tr10yComp / 100, 0.25) - 1) * 100;
+      const refInit = Number(opts.baseRatePct) > 0 ? Number(opts.baseRatePct) : (policy + 0.5);
+      const impliedEnd2Y = Math.max(18, 2 * impliedQtrSimple2Y - refInit);
+
+      const getForwardSimpleRate = (startDay, baseRef) => {
+        if (startDay <= 5) return baseRef;
+        const yrs = startDay / 365;
+        if (regime === 'disinflation') {
+          return Math.max(14, +(baseRef - 9.5 * Math.min(1.6, yrs)).toFixed(2));
+        }
+        if (regime === 'shock') {
+          return +(baseRef + 8.5 * Math.min(1.5, yrs)).toFixed(2);
+        }
+        if (yrs <= 2) {
+          const w = yrs / 2;
+          return +(baseRef * (1 - w) + impliedEnd2Y * w).toFixed(2);
+        }
+        const w10 = Math.min(1, (yrs - 2) / 6);
+        return +(impliedEnd2Y * (1 - w10) + impliedQtrSimple10Y * w10).toFixed(2);
+      };
+
+      const schedule = [];
+      let simpleTotalNetGain = 0;
+      let compoundBalance = P;
+      let totalGrossGainSimple = 0;
+      let couponDays = opts.couponDays || 182;
+      let modDurationYrs = 0;
+      let cleanPricePlus5Pct = 0;
+      let cleanPriceMinus5Pct = 0;
+      let headlineRateLabel = '';
+      let mechanismNote = '';
+
+      if (struct === 'daily_ppf') {
+        const baseR = Number(opts.baseRatePct) || upper;
+        const grossFactor = Math.pow(1 + (baseR / 100) / 365, D);
+        const grossGain = P * (grossFactor - 1);
+        const netGain = grossGain * (1 - tau);
+        simpleTotalNetGain = netGain;
+        compoundBalance = P + netGain;
+        totalGrossGainSimple = grossGain;
+        modDurationYrs = +(1 / 365).toFixed(2);
+        headlineRateLabel = `Günlük Baz %${fmtNum(baseR, 1)} · Satışta -%${fmtNum(taxPct, 1)} Stopaj`;
+        mechanismNote = `Her gün bileşik büyür; ara günde bozdursan da getiri yanmaz, %${fmtNum(taxPct, 1)} stopaj yalnızca sattığın gün tek sefer kesilir.`;
+        schedule.push({
+          day: D,
+          label: `${D}. Gün (Satış Anı)`,
+          rateUsedPct: baseR,
+          netCashSimpleTL: netGain,
+          principalReturnedTL: P,
+          isStub: false,
+          isLocked: false
+        });
+      } else if (struct === 'single_term') {
+        const baseR = Number(opts.baseRatePct) || upper;
+        const grossGain = P * (baseR / 100) * (D / 365);
+        const netGain = grossGain * (1 - tau);
+        simpleTotalNetGain = netGain;
+        compoundBalance = P + netGain;
+        totalGrossGainSimple = grossGain;
+        modDurationYrs = 0;
+        headlineRateLabel = `Tek Vade Brüt %${fmtNum(baseR, 1)} · Stopaj -%${fmtNum(taxPct, 1)}`;
+        mechanismNote = isPart
+          ? `${D} günlük tek katılma havuzu; vade sonunda gerçekleşen kâr payından tek sefer %${fmtNum(taxPct, 1)} stopaj kesilir.`
+          : `${D} gün boyunca tek vadede bağlanır; stopaj vade sonunda 1 kez kesilir ancak ara günde bozulursa vade yanar.`;
+        schedule.push({
+          day: D,
+          label: `${D}. Gün (Vade Sonu)`,
+          rateUsedPct: baseR,
+          netCashSimpleTL: netGain,
+          principalReturnedTL: P,
+          isStub: false,
+          isLocked: true
+        });
+      } else if (struct === 'rollover_deposit') {
+        const baseR = Number(opts.baseRatePct) || upper;
+        couponDays = 32;
+        const fullRolls = Math.floor(D / 32);
+        const remDays = D - fullRolls * 32;
+        const steps = [];
+        for (let i = 0; i < fullRolls; i++) steps.push({ start: i * 32, len: 32, end: (i + 1) * 32, stub: false });
+        if (remDays > 0 || steps.length === 0) {
+          const len = steps.length === 0 ? D : remDays;
+          steps.push({ start: D - len, len, end: D, stub: steps.length > 0 });
+        }
+        for (let i = 0; i < steps.length; i++) {
+          const st = steps[i];
+          const rUsed = getForwardSimpleRate(st.start, baseR);
+          const gSimp = P * (rUsed / 100) * (st.len / 365);
+          const nSimp = gSimp * (1 - tau);
+          simpleTotalNetGain += nSimp;
+          totalGrossGainSimple += gSimp;
+          const nComp = compoundBalance * (rUsed / 100) * (st.len / 365) * (1 - tau);
+          compoundBalance += nComp;
+          if (steps.length <= 6 || i === 0 || i === steps.length - 1 || i === Math.floor(steps.length / 2)) {
+            schedule.push({
+              day: st.end,
+              label: `${st.end}. Gün${st.stub ? ` (${st.len}G Kıst)` : ` (${i + 1}. Dönüş)`}`,
+              rateUsedPct: rUsed,
+              netCashSimpleTL: nSimp,
+              netCashCompTL: nComp,
+              principalReturnedTL: i === steps.length - 1 ? P : 0,
+              isStub: st.stub,
+              isLocked: i === 0,
+              omittedMiddle: steps.length > 6 && i === Math.floor(steps.length / 2) ? (steps.length - 3) : 0
+            });
+          }
+        }
+        headlineRateLabel = isPart
+          ? `32G Katılım Brüt %${fmtNum(baseR, 1)} · Stopaj -%${fmtNum(taxPct, 1)}`
+          : `32G Vadeli Brüt %${fmtNum(baseR, 1)} · Stopaj -%${fmtNum(taxPct, 1)}`;
+        mechanismNote = isPart
+          ? `Her 32 günde kâr payından %${fmtNum(taxPct, 1)} stopaj kesilir; kâr payı çekilirse basit, havuzda bırakılırsa bileşik büyür.`
+          : `Her 32 günde brüt faizden %${fmtNum(taxPct, 1)} stopaj kesilir; faizi harcarsan anapara sabit kalır, eklersen bileşik döner.`;
+      } else if (struct === 'zero_coupon') {
+        const compYieldPct = Number(opts.compYieldPct) || tr02yComp;
+        const grossFactor = Math.pow(1 + compYieldPct / 100, D / 365);
+        const grossGain = P * (grossFactor - 1);
+        const netGain = grossGain * (1 - tau);
+        simpleTotalNetGain = netGain;
+        compoundBalance = P + netGain;
+        totalGrossGainSimple = grossGain;
+        const T = D / 365;
+        const y = compYieldPct / 100;
+        modDurationYrs = +(T / (1 + y)).toFixed(2);
+        cleanPricePlus5Pct = +(((Math.pow(1 + y, T) / Math.pow(1 + y + 0.05, T)) - 1) * 100).toFixed(2);
+        cleanPriceMinus5Pct = +(((Math.pow(1 + y, T) / Math.pow(1 + Math.max(0.01, y - 0.05), T)) - 1) * 100).toFixed(2);
+        const discPrice100k = 100000 / grossFactor;
+        headlineRateLabel = `Bileşik %${fmtNum(compYieldPct, 1)} · %${fmtNum(taxPct, 0)} Stopaj`;
+        mechanismNote = isPart
+          ? `Ara kira ödemesi yoktur; ${D}. günde tek seferde ödenir (100.000 ₺ nominal sertifika bugün ${fmtTL(discPrice100k, 0)} bedelle alınır).`
+          : `Ara kupon ödemesi yoktur; ${D}. günde tek seferde itfa olur (100.000 ₺ nominal bono bugün iskontolu ${fmtTL(discPrice100k, 0)} fiyattan alınır).`;
+        schedule.push({
+          day: D,
+          label: `${D}. Gün (Tek İtfa Ödemesi)`,
+          rateUsedPct: compYieldPct,
+          netCashSimpleTL: netGain,
+          principalReturnedTL: P,
+          isStub: false,
+          isLocked: true
+        });
+      } else if (struct === 'cpi_linked') {
+        couponDays = opts.couponDays || 182;
+        const realMarginPct = Number(opts.realMarginPct) || 3.0;
+        const rReal = realMarginPct / 100;
+        const infAnn = expInfAnn / 100;
+        const fullN = Math.floor(D / couponDays);
+        const rem = D - fullN * couponDays;
+        const steps = [];
+        for (let i = 0; i < fullN; i++) steps.push({ len: couponDays, end: (i + 1) * couponDays, stub: false });
+        if (rem > 0 || steps.length === 0) {
+          const len = steps.length === 0 ? D : rem;
+          steps.push({ len, end: D, stub: steps.length > 0 });
+        }
+        // TÜFE endeksli tahvil/sukuk: Anapara enflasyonla endekslenir + reel kupon ödenir
+        let indexedPrincipal = P;
+        let cashCouponsReceived = 0;
+        for (let i = 0; i < steps.length; i++) {
+          const st = steps[i];
+          const stepInf = Math.pow(1 + infAnn, st.len / 365);
+          indexedPrincipal = indexedPrincipal * stepInf;
+          const realCouponCash = indexedPrincipal * rReal * (st.len / 365) * (1 - tau);
+          cashCouponsReceived += realCouponCash;
+          schedule.push({
+            day: st.end,
+            label: `${st.end}. Gün (${i + 1}. Reel ${isPart ? 'Kira' : 'Kupon'})`,
+            rateUsedPct: +(((1 + infAnn) * (1 + rReal) - 1) * 100).toFixed(2),
+            netCashSimpleTL: realCouponCash,
+            principalReturnedTL: i === steps.length - 1 ? indexedPrincipal : 0,
+            isStub: st.stub,
+            isLocked: false
+          });
+        }
+        const principalUpliftNet = (indexedPrincipal - P) * (1 - tau);
+        simpleTotalNetGain = cashCouponsReceived + principalUpliftNet;
+        const compGrossFactor = Math.pow((1 + infAnn) * (1 + rReal), D / 365);
+        compoundBalance = P + P * (compGrossFactor - 1) * (1 - tau);
+        totalGrossGainSimple = simpleTotalNetGain / Math.max(0.01, 1 - tau);
+        modDurationYrs = +(Math.min(D / 365, 1.4)).toFixed(2);
+        headlineRateLabel = `TÜFE (%${fmtNum(expInfAnn, 1)}) + %${fmtNum(realMarginPct, 1)} Reel · %${fmtNum(taxPct, 0)} Stopaj`;
+        mechanismNote = `Anapara ve ${isPart ? 'kira' : 'kupon'} ödemeleri gerçekleşen TÜFE enflasyonuyla otomatik büyür; enflasyon %45’e sıçrasa bile reel alım gücün erimez.`;
+      } else if (struct === 'floating_tlref') {
+        couponDays = opts.couponDays || 91;
+        const baseRef = Number(opts.baseRatePct) || (policy + 0.5);
+        const fullN = Math.floor(D / couponDays);
+        const rem = D - fullN * couponDays;
+        const steps = [];
+        for (let i = 0; i < fullN; i++) steps.push({ start: i * couponDays, len: couponDays, end: (i + 1) * couponDays, stub: false });
+        if (rem > 0 || steps.length === 0) {
+          const len = steps.length === 0 ? D : rem;
+          steps.push({ start: D - len, len, end: D, stub: steps.length > 0 });
+        }
+        for (let i = 0; i < steps.length; i++) {
+          const st = steps[i];
+          const rUsed = getForwardSimpleRate(st.start, baseRef);
+          const gSimp = P * (rUsed / 100) * (st.len / 365);
+          const nSimp = gSimp * (1 - tau);
+          simpleTotalNetGain += nSimp;
+          totalGrossGainSimple += gSimp;
+          const nComp = compoundBalance * (rUsed / 100) * (st.len / 365) * (1 - tau);
+          compoundBalance += nComp;
+          schedule.push({
+            day: st.end,
+            label: `${st.end}. Gün (${i === 0 ? '1. Kesin Ödeme' : `${i + 1}. Değişken Ödeme`}${st.stub ? ' · Kıst' : ''})`,
+            rateUsedPct: rUsed,
+            netCashSimpleTL: nSimp,
+            netCashCompTL: nComp,
+            principalReturnedTL: i === steps.length - 1 ? P : 0,
+            isStub: st.stub,
+            isLocked: i === 0
+          });
+        }
+        modDurationYrs = +(Math.min(D, couponDays) / 365).toFixed(2);
+        headlineRateLabel = `İlk Dönem %${fmtNum(baseRef, 1)} (${couponDays}G Yenilemeli) · %${fmtNum(taxPct, 0)} Stopaj`;
+        mechanismNote = `İlk ${Math.min(D, couponDays)} günlük ödeme bugünkü orandan kesinleşmiştir; sonraki ödemeler piyasa oranına göre her ${couponDays} günde otomatik güncellenir (Dürasyon ~${fmtNum(modDurationYrs, 2)} yıl; faiz artışında anapara fiyatı düşmez).`;
+      } else {
+        // 'fixed_coupon': Sabit Kuponlu Tahvil (DİBS) veya Sabit Kira Sertifikası (Sukuk)
+        couponDays = opts.couponDays || 182;
+        let simpleAnnRatePct;
+        let yCompForPricing;
+        if (opts.rateIsCompounded) {
+          const yComp = (Number(opts.baseRatePct) || tr02yComp) / 100;
+          yCompForPricing = yComp;
+          const perCouponGross = Math.pow(1 + yComp, couponDays / 365) - 1;
+          simpleAnnRatePct = +(perCouponGross * (365 / couponDays) * 100).toFixed(2);
+        } else {
+          simpleAnnRatePct = Number(opts.baseRatePct) || (policy + 0.5);
+          const perCouponGross = (simpleAnnRatePct / 100) * (couponDays / 365);
+          yCompForPricing = Math.pow(1 + perCouponGross, 365 / couponDays) - 1;
+        }
+
+        const fullN = Math.floor(D / couponDays);
+        const rem = D - fullN * couponDays;
+        const steps = [];
+        for (let i = 0; i < fullN; i++) steps.push({ len: couponDays, end: (i + 1) * couponDays, stub: false });
+        if (rem > 0 || steps.length === 0) {
+          const len = steps.length === 0 ? D : rem;
+          steps.push({ len, end: D, stub: steps.length > 0 });
+        }
+
+        for (let i = 0; i < steps.length; i++) {
+          const st = steps[i];
+          const gSimp = P * (simpleAnnRatePct / 100) * (st.len / 365);
+          const nSimp = gSimp * (1 - tau);
+          simpleTotalNetGain += nSimp;
+          totalGrossGainSimple += gSimp;
+          const nComp = compoundBalance * (simpleAnnRatePct / 100) * (st.len / 365) * (1 - tau);
+          compoundBalance += nComp;
+          schedule.push({
+            day: st.end,
+            label: `${st.end}. Gün (${i + 1}. Sabit ${isPart ? 'Kira' : 'Kupon'}${st.stub ? ' · Kıst' : ''})`,
+            rateUsedPct: simpleAnnRatePct,
+            netCashSimpleTL: nSimp,
+            netCashCompTL: nComp,
+            principalReturnedTL: i === steps.length - 1 ? P : 0,
+            isStub: st.stub,
+            isLocked: true
+          });
+        }
+
+        // Tam Nakit Akışı İskontolaması (DCF) ile Kesin Dürasyon ve Erken Satış Fiyat Hassasiyeti
+        const priceBondAtCompYield = (yTest) => {
+          let pv = 0;
+          for (let i = 0; i < steps.length; i++) {
+            const st = steps[i];
+            const cf = P * (simpleAnnRatePct / 100) * (st.len / 365) + (i === steps.length - 1 ? P : 0);
+            pv += cf / Math.pow(1 + Math.max(0.005, yTest), st.end / 365);
+          }
+          return pv;
+        };
+        const pvBase = priceBondAtCompYield(yCompForPricing);
+        const pvUp1 = priceBondAtCompYield(yCompForPricing + 0.01);
+        const pvDn1 = priceBondAtCompYield(Math.max(0.005, yCompForPricing - 0.01));
+        modDurationYrs = pvBase > 0 ? +(((pvDn1 - pvUp1) / (2 * 0.01 * pvBase))).toFixed(2) : 0;
+        cleanPricePlus5Pct = pvBase > 0 ? +(((priceBondAtCompYield(yCompForPricing + 0.05) / pvBase) - 1) * 100).toFixed(2) : 0;
+        cleanPriceMinus5Pct = pvBase > 0 ? +(((priceBondAtCompYield(Math.max(0.01, yCompForPricing - 0.05)) / pvBase) - 1) * 100).toFixed(2) : 0;
+
+        headlineRateLabel = isPart
+          ? `Basit Kira %${fmtNum(simpleAnnRatePct, 1)} (Bileşik %${fmtNum(yCompForPricing * 100, 1)}) · %${fmtNum(taxPct, 0)} Stopaj`
+          : `Basit Kupon %${fmtNum(simpleAnnRatePct, 1)} (Bileşik %${fmtNum(yCompForPricing * 100, 1)}) · %${fmtNum(taxPct, 0)} Stopaj`;
+        mechanismNote = isPart
+          ? `Her ${couponDays} günde bir kamu varlık kira ödemesi yatar. Kiraları harcarsan basit, yeniden Sukuk’a yatırırsan bileşik getiri oluşur.`
+          : `Her ${couponDays} günde bir sabit kupon faizi yatar. Dürasyon ~${fmtNum(modDurationYrs, 2)} yıl: vadeden önce satarsan piyasa faizi +5p çıktığında anapara fiyatı ${fmtPct(cleanPricePlus5Pct, 1)} değişir, faiz -5p düştüğünde ${fmtPct(cleanPriceMinus5Pct, 1)} değer kazanır.`;
+      }
+
+      const simpleEndTL = P + simpleTotalNetGain;
+      const compoundEndTL = compoundBalance;
+      const compoundNetGain = compoundEndTL - P;
+      const simpleNetPct = +((simpleTotalNetGain / P) * 100).toFixed(2);
+      const compoundNetPct = +((compoundNetGain / P) * 100).toFixed(2);
+      const chosenEndTL = opts.reinvest ? compoundEndTL : simpleEndTL;
+      const chosenGainTL = chosenEndTL - P;
+      const chosenNetPct = opts.reinvest ? compoundNetPct : simpleNetPct;
+      const realChosenPct = +((((1 + chosenNetPct / 100) / periodInfFactor) - 1) * 100).toFixed(2);
+      const realSimplePct = +((((1 + simpleNetPct / 100) / periodInfFactor) - 1) * 100).toFixed(2);
+      const realCompoundPct = +((((1 + compoundNetPct / 100) / periodInfFactor) - 1) * 100).toFixed(2);
+      const taxCutSimpleTL = Math.max(0, totalGrossGainSimple - simpleTotalNetGain);
+
+      return {
+        principalTL: P,
+        totalDays: D,
+        structure: struct,
+        isParticipation: isPart,
+        taxRatePct: taxPct,
+        taxCutSimpleTL,
+        headlineRateLabel,
+        mechanismNote,
+        simpleTotalNetGain,
+        simpleEndTL,
+        simpleNetPct,
+        compoundNetGain,
+        compoundEndTL,
+        compoundNetPct,
+        reinvestExtraTL: Math.max(0, compoundEndTL - simpleEndTL),
+        chosenEndTL,
+        chosenGainTL,
+        chosenNetPct,
+        expInfAnn,
+        realChosenPct,
+        realSimplePct,
+        realCompoundPct,
+        modDurationYrs,
+        cleanPricePlus5Pct,
+        cleanPriceMinus5Pct,
+        schedule
+      };
+    }
+
+    function computeAllAutoStructures(principalTL, totalDays, reinvest, regime) {
+      const m = marketData?.macro || {};
+      const policy = Number(m.tcmbPolicyRate) || 36.0;
+      const upper = Number(m.tcmbUpperRate) || customDepositRate || 39.0;
+      const tr02y = Number(m.tr02y) || 36.27;
+
+      return [
+        {
+          key: 'fixed_dibs',
+          badge: '%0 Vergi · Sabit',
+          badgeCls: 'pos',
+          title: 'Sabit Kuponlu Devlet Tahvili (DİBS)',
+          sub: '182 günde bir sabit kupon · 2Y gösterge oranıyla',
+          res: computeSingleStructureCashflow({
+            structure: 'fixed_coupon',
+            principalTL,
+            totalDays,
+            couponDays: 182,
+            baseRatePct: tr02y,
+            rateIsCompounded: true,
+            taxRatePct: 0,
+            reinvest,
+            regime,
+            isParticipation: false
+          })
+        },
+        {
+          key: 'floating_frn',
+          badge: '%0 Vergi · TLREF',
+          badgeCls: 'info',
+          title: 'Değişken Faizli Tahvil (TLREF)',
+          sub: '91 günde bir piyasa oranına göre otomatik güncellenen kupon',
+          res: computeSingleStructureCashflow({
+            structure: 'floating_tlref',
+            principalTL,
+            totalDays,
+            couponDays: 91,
+            baseRatePct: policy + 0.5,
+            taxRatePct: 0,
+            reinvest,
+            regime,
+            isParticipation: false
+          })
+        },
+        {
+          key: 'sukuk_lease',
+          badge: 'Faizsiz · %0 Vergi',
+          badgeCls: 'pos',
+          title: 'Hazine Kira Sertifikası (Sukuk)',
+          sub: '182 günde bir kamu varlık kira ödemesi (katılım esaslı)',
+          res: computeSingleStructureCashflow({
+            structure: 'fixed_coupon',
+            principalTL,
+            totalDays,
+            couponDays: 182,
+            baseRatePct: policy + 0.5,
+            rateIsCompounded: false,
+            taxRatePct: 0,
+            reinvest,
+            regime,
+            isParticipation: true
+          })
+        },
+        {
+          key: 'cpi_linked',
+          badge: 'TÜFE + %3 · %0 Vergi',
+          badgeCls: 'pos',
+          title: 'TÜFE Endeksli Tahvil / Sukuk',
+          sub: 'Gerçekleşen TÜFE enflasyonu + %3,0 yıllık reel getiri marjı',
+          res: computeSingleStructureCashflow({
+            structure: 'cpi_linked',
+            principalTL,
+            totalDays,
+            couponDays: 182,
+            realMarginPct: 3.0,
+            taxRatePct: 0,
+            reinvest,
+            regime,
+            isParticipation: false
+          })
+        },
+        {
+          key: 'zero_discount',
+          badge: 'Kuponsuz · %0 Vergi',
+          badgeCls: 'muted',
+          title: 'İskontolu Bono / Kuponsuz Sukuk',
+          sub: 'Ara ödeme yok; seçilen vade gününde tek toplu ödeme',
+          res: computeSingleStructureCashflow({
+            structure: 'zero_coupon',
+            principalTL,
+            totalDays,
+            compYieldPct: tr02y,
+            taxRatePct: 0,
+            reinvest,
+            regime,
+            isParticipation: false
+          })
+        },
+        {
+          key: 'bank_rollover',
+          badge: 'Stopaj -%17,5',
+          badgeCls: 'warn',
+          title: '32G Yenilemeli Banka Mevduatı',
+          sub: 'Her 32 günde bir %17,5 stopaj kesilerek dönen mevduat',
+          res: computeSingleStructureCashflow({
+            structure: 'rollover_deposit',
+            principalTL,
+            totalDays,
+            baseRatePct: upper,
+            taxRatePct: 17.5,
+            reinvest,
+            regime,
+            isParticipation: false
+          })
+        }
+      ];
+    }
+
+    let __autoCouponRaf = null;
+    function onAutoCouponCustomInput() {
+      const pInp = document.getElementById('autoCalcPrinInp');
+      const dInp = document.getElementById('autoCalcDaysInp');
+      if (pInp) {
+        const pv = parseFloat(pInp.value);
+        if (Number.isFinite(pv) && pv >= 100) autoCalcAmount = pv;
+      }
+      if (dInp) {
+        const dv = parseInt(dInp.value, 10);
+        if (Number.isFinite(dv) && dv >= 1 && dv <= 3650) autoCalcDays = dv;
+      }
+      if (__autoCouponRaf) cancelAnimationFrame(__autoCouponRaf);
+      __autoCouponRaf = requestAnimationFrame(() => renderAutoCouponResultsOnly());
+    }
+
+    function setAutoCouponQuickAmount(val) {
+      autoCalcAmount = val;
+      const inp = document.getElementById('autoCalcPrinInp');
+      if (inp) inp.value = val;
+      renderAutoCouponPane();
+    }
+
+    function setAutoCouponQuickDays(days) {
+      autoCalcDays = days;
+      const inp = document.getElementById('autoCalcDaysInp');
+      if (inp) inp.value = days;
+      renderAutoCouponPane();
+    }
+
+    function renderAutoCouponPane() {
+      const box = document.getElementById('autoCouponEngineBox');
+      if (!box || !marketData) return;
+
+      const amounts = [
+        { v: 100000, l: '100 Bin ₺' },
+        { v: 250000, l: '250 Bin ₺' },
+        { v: 500000, l: '500 Bin ₺' },
+        { v: 1000000, l: '1 Milyon ₺' },
+        { v: 2500000, l: '2,5 Milyon ₺' }
+      ];
+      const dayPresets = [
+        { d: 32, l: '32 Gün' },
+        { d: 46, l: '46 Gün' },
+        { d: 91, l: '91 Gün (3A)' },
+        { d: 182, l: '182 Gün (6A)' },
+        { d: 273, l: '273 Gün (9A)' },
+        { d: 364, l: '364 Gün (1Y)' },
+        { d: 546, l: '546 Gün (1,5Y)' },
+        { d: 728, l: '728 Gün (2Y)' }
+      ];
+
+      box.innerHTML = `
+        <div style="margin-bottom:12px;">
+          <h2 class="sec-title">Otomatik Kupon, Değişken Oran &amp; Vade Hesaplayıcı</h2>
+          <p class="dim" style="font-size:12px;margin-top:2px;">
+            Sabit kuponlu, değişken faizli (TLREF), TÜFE endeksli, faizsiz Sukuk ve farklı vade günlerinde hesaba ne yatacağını tek ekranda otomatik hesaplar.
+          </p>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-bottom:10px;">
+          <div>
+            <label style="display:block;font-size:11.5px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">1. Yatırılan Tutar (₺)</label>
+            <input type="number" id="autoCalcPrinInp" class="inp mono" min="1000" step="50000" value="${Math.round(autoCalcAmount)}" oninput="onAutoCouponCustomInput()" />
+            <div class="chip-rail" style="margin-top:6px;">
+              ${amounts.map(a => `<button class="chip ${Math.abs(autoCalcAmount - a.v) < 5 ? 'active' : ''}" style="height:28px;font-size:11.5px;padding:0 10px;" onclick="setAutoCouponQuickAmount(${a.v})">${a.l}</button>`).join('')}
+            </div>
+          </div>
+
+          <div>
+            <label style="display:block;font-size:11.5px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">2. Tam Vade Günü (İstediğin Günü Yaz veya Seç)</label>
+            <input type="number" id="autoCalcDaysInp" class="inp mono" min="1" max="3650" value="${autoCalcDays}" oninput="onAutoCouponCustomInput()" />
+            <div class="chip-rail" style="margin-top:6px;">
+              ${dayPresets.map(p => `<button class="chip ${autoCalcDays === p.d ? 'active' : ''}" style="height:28px;font-size:11.5px;padding:0 10px;" onclick="setAutoCouponQuickDays(${p.d})">${p.l}</button>`).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:14px;">
+          <div>
+            <div style="font-size:11.5px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">3. Ara Kupon / Kira Ödemesi Tercihi</div>
+            <div class="seg-bar">
+              <button class="seg-item ${!autoCalcReinvest ? 'active' : ''}" onclick="autoCalcReinvest=false;renderAutoCouponPane();">Nakit Çek (Basit)</button>
+              <button class="seg-item ${autoCalcReinvest ? 'active' : ''}" onclick="autoCalcReinvest=true;renderAutoCouponPane();">Yeniden Yatır (Bileşik)</button>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size:11.5px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">4. Değişken Faiz &amp; Gelecek Enflasyon Senaryosu</div>
+            <div class="seg-bar">
+              <button class="seg-item ${autoCalcRegime === 'disinflation' ? 'active' : ''}" onclick="autoCalcRegime='disinflation';renderAutoCouponPane();">Düşüş (-8p)</button>
+              <button class="seg-item ${autoCalcRegime === 'curve' ? 'active' : ''}" onclick="autoCalcRegime='curve';renderAutoCouponPane();">Baz Eğri (Oto)</button>
+              <button class="seg-item ${autoCalcRegime === 'shock' ? 'active' : ''}" onclick="autoCalcRegime='shock';renderAutoCouponPane();">Yükseliş (+8p)</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="autoCouponDynamicOut"></div>
+      `;
+
+      renderAutoCouponResultsOnly();
+    }
+
+    function renderAutoCouponResultsOnly() {
+      const out = document.getElementById('autoCouponDynamicOut');
+      if (!out || !marketData) return;
+
+      const items = computeAllAutoStructures(autoCalcAmount, autoCalcDays, autoCalcReinvest, autoCalcRegime);
+      const bestItem = [...items].sort((a, b) => b.res.chosenEndTL - a.res.chosenEndTL)[0];
+      const bankItem = items.find(x => x.key === 'bank_rollover') || items[items.length - 1];
+      const selectedItem = items.find(x => x.key === autoCalcSelectedKey) || items[0];
+      const advOverBankTL = bestItem.res.chosenEndTL - bankItem.res.chosenEndTL;
+
+      out.innerHTML = `
+        <div class="verdict-banner" style="margin-bottom:12px;">
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--pos-bright);">
+              ${autoCalcDays} GÜN SONUNDA EN YÜKSEK NET ELE GEÇEN (${autoCalcReinvest ? 'BİLEŞİK' : 'BASİT NAKİT'})
+            </div>
+            <div class="num-tab" style="font-size:20px;font-weight:800;color:#fff;margin-top:2px;">
+              ${escapeHtml(bestItem.title)}: ${fmtTL(bestItem.res.chosenEndTL, 0)} <span class="pos" style="font-size:14px;">(+${fmtTL(bestItem.res.chosenGainTL, 0)})</span>
+            </div>
+            <div class="muted num-tab" style="font-size:12px;margin-top:3px;">
+              %17,5 stopajlı banka vadelisine kıyasla <strong>${advOverBankTL >= 0 ? '+' : ''}${fmtTL(advOverBankTL, 0)}</strong> net fark · Beklenen enflasyon (%${fmtNum(bestItem.res.expInfAnn, 1)}) sonrası alım gücü: <strong class="${pctCls(bestItem.res.realChosenPct)}">${fmtPct(bestItem.res.realChosenPct, 1)}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:8px;">
+          Ödeme takvimini ve erken çıkış hassasiyetini görmek istediğin araca dokun:
+        </div>
+
+        <div class="auto-struct-grid">
+          ${items.map(it => {
+            const r = it.res;
+            const isSel = it.key === selectedItem.key;
+            return `
+              <div class="auto-struct-card ${isSel ? 'active' : ''}" onclick="autoCalcSelectedKey='${it.key}';renderAutoCouponResultsOnly();">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:4px;">
+                  <span style="font-size:13px;font-weight:700;color:#fff;line-height:1.25;min-width:0;">${escapeHtml(it.title)}</span>
+                  <span class="chg-pill ${it.badgeCls}" style="font-size:10px;padding:1.5px 6px;flex-shrink:0;">${escapeHtml(it.badge)}</span>
+                </div>
+                <div class="dim" style="font-size:11px;margin-bottom:7px;">${escapeHtml(it.sub)}</div>
+
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px;">
+                  <div>
+                    <div class="dim" style="font-size:10.5px;">Vade Sonu Toplam (${autoCalcDays}G)</div>
+                    <div class="num-tab" style="font-size:19px;font-weight:800;color:#fff;">${fmtTL(r.chosenEndTL, 0)}</div>
+                  </div>
+                  <div style="text-align:right;">
+                    <div class="num-tab pos" style="font-size:13.5px;font-weight:700;">+${fmtTL(r.chosenGainTL, 0)} (${fmtPct(r.chosenNetPct, 1)})</div>
+                    <div class="num-tab dim" style="font-size:11px;">Reel Alım Gücü: <strong class="${pctCls(r.realChosenPct)}">${fmtPct(r.realChosenPct, 1)}</strong></div>
+                  </div>
+                </div>
+
+                <div class="num-tab" style="padding-top:6px;border-top:1px solid var(--border-hairline);display:flex;justify-content:space-between;gap:6px;font-size:11px;color:var(--text-secondary);">
+                  <span>Basit: <strong>${fmtPct(r.simpleNetPct, 1)}</strong> (+${fmtCompactTL(r.simpleTotalNetGain)})</span>
+                  <span>Bileşik: <strong class="pos">${fmtPct(r.compoundNetPct, 1)}</strong></span>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <!-- SEÇİLİ ARACIN ADIM ADIM OTOMATİK ÖDEME TAKVİMİ VE DÜRASYON ÖZETİ -->
+        <div class="surface" style="background:var(--bg-input);box-shadow:none;padding:12px 13px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:#fff;">${escapeHtml(selectedItem.title)} — Otomatik Ödeme Takvimi</div>
+              <div class="dim num-tab" style="font-size:11.5px;">${escapeHtml(selectedItem.res.headlineRateLabel)}</div>
+            </div>
+            ${selectedItem.res.reinvestExtraTL > 50 ? `
+              <span class="chg-pill pos" style="font-size:11px;">Yeniden Yatırım Farkı: +${fmtTL(selectedItem.res.reinvestExtraTL, 0)}</span>
+            ` : ''}
+          </div>
+
+          <p class="muted" style="font-size:12px;line-height:1.45;margin-bottom:10px;">
+            ${escapeHtml(selectedItem.res.mechanismNote)}
+          </p>
+
+          <div style="border:1px solid var(--border-hairline);border-radius:11px;overflow:hidden;background:rgba(9,11,18,0.55);">
+            <div class="auto-sched-row" style="background:rgba(255,255,255,0.03);font-size:11px;font-weight:700;color:var(--text-muted);">
+              <div>Vade Günü</div>
+              <div>Ödeme Detayı &amp; Oran</div>
+              <div class="r-right">Net Nakit Akışı</div>
+            </div>
+            ${selectedItem.res.schedule.map(s => {
+              const cashVal = autoCalcReinvest && s.netCashCompTL != null ? s.netCashCompTL : s.netCashSimpleTL;
+              return `
+                ${s.omittedMiddle ? `
+                  <div class="auto-sched-row dim" style="font-size:11px;text-align:center;">
+                    <div>…</div>
+                    <div>Aradaki ${s.omittedMiddle} vade dönüşü otomatik hesaplandı</div>
+                    <div class="r-right">—</div>
+                  </div>
+                ` : ''}
+                <div class="auto-sched-row num-tab">
+                  <div style="font-weight:700;color:#fff;">${s.day}. Gün</div>
+                  <div style="min-width:0;">
+                    <div style="color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(s.label)}</div>
+                    <div class="dim" style="font-size:10.5px;">Yıllık Baz %${fmtNum(s.rateUsedPct, 1)}${s.isLocked ? ' · Oran Sabit/Kesin' : ' · Eğri Tahmini'}</div>
+                  </div>
+                  <div class="r-right">
+                    <div class="pos" style="font-weight:700;">+${fmtTL(cashVal, 0)}</div>
+                    ${s.principalReturnedTL > 0 ? `<div class="dim" style="font-size:10.5px;">+${fmtCompactTL(s.principalReturnedTL)} Anapara</div>` : ''}
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // Varlık çekmecesi içindeki anlık sabit/değişken/vade günü otomatik hesaplayıcı
+    function getDefaultDrawerAutoConfig(inst) {
+      const id = inst?.id || '';
+      if (id === 'dibs-tahvil') {
+        return {
+          days: 728,
+          struct: 'fixed_coupon',
+          modes: [
+            { k: 'fixed_coupon', l: 'Sabit Kuponlu (2Y)' },
+            { k: 'floating_tlref', l: 'Değişken (TLREF)' },
+            { k: 'cpi_linked', l: 'TÜFE Endeksli' },
+            { k: 'zero_coupon', l: 'İskontolu Bono' }
+          ],
+          dayChips: [91, 182, 364, 546, 728]
+        };
+      }
+      if (id === 'kira-sertifikasi-sukuk') {
+        return {
+          days: 364,
+          struct: 'fixed_coupon',
+          modes: [
+            { k: 'fixed_coupon', l: 'Sabit Kira (Sukuk)' },
+            { k: 'floating_tlref', l: 'Değişken Kira' },
+            { k: 'cpi_linked', l: 'TÜFE Endeksli Kira' },
+            { k: 'zero_coupon', l: 'Kuponsuz Sukuk' }
+          ],
+          dayChips: [91, 182, 273, 364, 728]
+        };
+      }
+      if (id === 'katilim-hesabi') {
+        return {
+          days: 32,
+          struct: 'rollover_deposit',
+          modes: [
+            { k: 'rollover_deposit', l: '32G Yenilemeli Katılım' },
+            { k: 'single_term', l: 'Tek Vade Katılım' }
+          ],
+          dayChips: [32, 46, 91, 181, 365]
+        };
+      }
+      if (id === 'para-piyasasi-fonu' || id === 'bes-emeklilik') {
+        return {
+          days: id === 'bes-emeklilik' ? 365 : 91,
+          struct: 'daily_ppf',
+          modes: [{ k: 'daily_ppf', l: 'Günlük Bileşik (Vergi Ertelemeli)' }],
+          dayChips: [32, 91, 182, 365, 728]
+        };
+      }
+      return {
+        days: 32,
+        struct: 'rollover_deposit',
+        modes: [
+          { k: 'rollover_deposit', l: '32G Yenilemeli Vadeli' },
+          { k: 'single_term', l: 'Tek Vade Bağlama' }
+        ],
+        dayChips: [32, 46, 92, 181, 365]
+      };
+    }
+
+    function updateDrawerAutoCalc(patch = {}) {
+      Object.assign(drawerAutoState, patch);
+      const mount = document.getElementById('drawerAutoCalcMount');
+      const inst = instById.get(drawerAutoState.instId);
+      if (mount && inst) {
+        mount.innerHTML = buildDrawerAutoCalcInnerHtml(inst);
+      }
+    }
+
+    function buildDrawerAutoCalcInnerHtml(inst) {
+      const cfg = getDefaultDrawerAutoConfig(inst);
+      const isPart = PARTICIPATION_ASSET_IDS.has(inst.id);
+      const rawRate = inst.isCustomizableRate ? customDepositRate : (Number(inst.currentPrice) || 36.0);
+      const taxPct = Number(inst.taxRatePct) || 0;
+      const D = Math.max(1, Math.min(3650, Math.round(Number(drawerAutoState.days) || cfg.days)));
+      const struct = drawerAutoState.struct || cfg.struct;
+
+      const res = computeSingleStructureCashflow({
+        structure: struct,
+        principalTL: currentPrincipal,
+        totalDays: D,
+        couponDays: struct === 'floating_tlref' ? 91 : 182,
+        baseRatePct: struct === 'floating_tlref' ? ((Number(marketData?.macro?.tcmbPolicyRate) || 36) + 0.5) : rawRate,
+        compYieldPct: inst.id === 'dibs-tahvil' ? rawRate : (rawRate + 2.5),
+        rateIsCompounded: inst.id === 'dibs-tahvil' && struct === 'fixed_coupon',
+        realMarginPct: 3.0,
+        taxRatePct: taxPct,
+        reinvest: drawerAutoState.reinvest,
+        regime: 'curve',
+        isParticipation: isPart
+      });
+
+      const besGovBonusTL = inst.id === 'bes-emeklilik' ? Math.min(currentPrincipal * 0.30, 118908) : 0;
+      const payWord = isPart ? 'Kira / Kâr Payı' : 'Kupon / Faiz';
+
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--pos-bright);text-transform:uppercase;letter-spacing:0.04em;">
+              Otomatik Vade &amp; ${payWord} Hesaplayıcı (${fmtCompactTL(currentPrincipal)})
+            </div>
+            <div class="dim" style="font-size:11.5px;">Yapıyı ve günü seç; ele geçecek net tutarı sistem otomatik hesaplasın</div>
+          </div>
+          <button class="link-btn" style="padding:2px 0;font-size:11.5px;" onclick="closeSheet();autoCalcDays=${D};autoCalcAmount=${currentPrincipal};switchTab('sepet');setToolSubTab('coupon');">
+            6 Yapıyı Yan Yana Gör →
+          </button>
+        </div>
+
+        ${cfg.modes.length > 1 ? `
+          <div class="chip-rail" style="margin-bottom:8px;">
+            ${cfg.modes.map(m => `
+              <button class="chip ${struct === m.k ? 'active' : ''}" style="height:28px;font-size:11.5px;padding:0 10px;" onclick="updateDrawerAutoCalc({struct:'${m.k}'})">${escapeHtml(m.l)}</button>
+            `).join('')}
+          </div>
+        ` : ''}
+
+        <div style="display:grid;grid-template-columns:repeat(${cfg.dayChips.length},minmax(0,1fr)) 72px;gap:5px;align-items:center;margin-bottom:10px;">
+          ${cfg.dayChips.map(d => `
+            <button class="chip ${D === d ? 'active' : ''}" style="height:28px;font-size:11px;padding:0;justify-content:center;width:100%;" onclick="updateDrawerAutoCalc({days:${d}})">${d}G</button>
+          `).join('')}
+          <input type="number" class="inp mono" title="Özel Vade Günü" placeholder="Gün" style="width:100%;height:28px;padding:0 6px;font-size:12px;text-align:center;" min="1" max="3650" value="${D}" onchange="updateDrawerAutoCalc({days:parseInt(this.value,10)||32})" />
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:8px;">
+          <div style="background:rgba(9,11,18,0.65);border:1px solid var(--border-hairline);border-radius:11px;padding:9px 10px;">
+            <div class="dim" style="font-size:10.5px;">${payWord} Harcanırsa (Basit)</div>
+            <div class="num-tab" style="font-size:15px;font-weight:800;color:#fff;margin-top:2px;">${fmtTL(res.simpleEndTL, 0)}</div>
+            <div class="num-tab pos" style="font-size:11px;margin-top:1px;">+${fmtTL(res.simpleTotalNetGain, 0)} (${fmtPct(res.simpleNetPct, 2)})</div>
+          </div>
+          <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.32);border-radius:11px;padding:9px 10px;">
+            <div style="font-size:10.5px;color:#34d399;font-weight:700;">Yeniden Yatırılırsa (Bileşik)</div>
+            <div class="num-tab" style="font-size:15px;font-weight:800;color:#fff;margin-top:2px;">${fmtTL(res.compoundEndTL, 0)}</div>
+            <div class="num-tab pos" style="font-size:11px;margin-top:1px;">+${fmtTL(res.compoundNetGain, 0)} (${fmtPct(res.compoundNetPct, 2)})</div>
+          </div>
+        </div>
+
+        ${besGovBonusTL > 0 ? `
+          <div class="num-tab" style="font-size:11.5px;color:#34d399;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:9px;padding:7px 10px;margin-bottom:8px;">
+            + Devlet Katkısı Avantajı (%30, yıllık üst limite tabi): <strong>+${fmtTL(besGovBonusTL, 0)}</strong> ek sözleşme katkısı (hak ediş süresine bağlı).
+          </div>
+        ` : ''}
+
+        <div class="num-tab" style="font-size:11.5px;color:var(--text-secondary);line-height:1.45;">
+          ${res.schedule.length > 0 && res.schedule.length <= 5
+            ? `<div style="margin-bottom:4px;"><strong style="color:#fff;">Ödeme Akışı:</strong> ${res.schedule.map(s => `${s.day}. Gün <span class="pos">+${fmtCompactTL(s.netCashSimpleTL)}</span>`).join(' · ')} + Vade Sonu Anapara</div>`
+            : ''
+          }
+          <div>${escapeHtml(res.mechanismNote)}</div>
+        </div>
+      `;
+    }
+
+    /* =========================================================================
        SEKME 2: FAİZ VS SEPET TEK TUŞ KARŞILAŞTIRMA & GÜNLÜK HAYAT MOTORU
        ========================================================================= */
     function setToolSubTab(mode) {
@@ -4071,6 +5503,8 @@
         b.classList.toggle('active', b.dataset.tool === mode);
       });
       document.getElementById('toolDuelPane').style.display = mode === 'duel' ? 'block' : 'none';
+      const cpPane = document.getElementById('toolCouponPane');
+      if (cpPane) cpPane.style.display = mode === 'coupon' ? 'block' : 'none';
       document.getElementById('toolComparePane').style.display = mode === 'compare' ? 'block' : 'none';
       renderToolsView();
     }
@@ -4387,6 +5821,8 @@
       if (toolSubTab === 'duel') {
         renderDuelControlsOnly();
         renderDuelDynamicResults();
+      } else if (toolSubTab === 'coupon') {
+        renderAutoCouponPane();
       } else {
         renderCompareView();
         renderCalculator();
@@ -4591,7 +6027,7 @@
       { key: '3', label: 'Dünya & Türkiye Borsası' },
       { key: '4', label: 'Sepet Fonlar' },
       { key: '5', label: 'Gayrimenkul' },
-      { key: '1', label: 'Faiz & Döviz' },
+      { key: '1', label: 'Sabit Getiri, Katılım & Döviz' },
       { key: '6', label: 'Dijital / Girişim' }
     ];
 
@@ -5337,10 +6773,15 @@
     }
 
     function classifyHoldingGroup(h, inst) {
-      if (h.isRate) return 'Nakit & Faiz';
+      if (h.isRate || inst?.isRateInstrument) {
+        const idCheck = inst?.id || h.id || '';
+        if (PARTICIPATION_ASSET_IDS.has(idCheck)) return 'Katılım & Kira';
+        return 'Nakit & Sabit Getiri';
+      }
       if (h.kind === 'bist') return 'Türk Şirketleri';
       if (!inst) return 'Diğer';
       if (inst.id.startsWith('doviz-') || inst.id.startsWith('eurobond-')) return 'Döviz & Tahvil';
+      if (inst.id === 'emtia-petrol-bno' || inst.id === 'emtia-tarim-dba') return 'Emtia';
       if (inst.categoryId === 2) return 'Altın & Maden';
       if (inst.id.startsWith('kripto-')) return 'Dijital Varlık';
       if (inst.isUsdAsset) return 'Dünya Şirketleri';
@@ -5518,7 +6959,7 @@
       const totalDayPct = totalValTL > 0 ? (totalDayTL / Math.max(1, totalValTL - totalDayTL)) * 100 : 0;
       const totalValUSD = usdTry > 0 ? totalValTL / usdTry : 0;
       const interestWeightPct = totalValTL > 0
-        ? (evaluated.filter(r => r.group === 'Nakit & Faiz').reduce((s, r) => s + r.valueTL, 0) / totalValTL) * 100
+        ? (evaluated.filter(r => r.group === 'Nakit & Sabit Getiri' || r.group === 'Katılım & Kira').reduce((s, r) => s + r.valueTL, 0) / totalValTL) * 100
         : 0;
 
       const grpMap = {};
@@ -5817,6 +7258,39 @@
           </div>
         </div>
 
+        ${(item.isRate || r.inst?.isRateInstrument) ? (() => {
+          const mDays = Math.max(1, Number(item.maturityDays) || (item.id === 'dibs-tahvil' ? 728 : item.id === 'kira-sertifikasi-sukuk' ? 364 : 32));
+          const rStruct = item.rateStruct || (item.id === 'dibs-tahvil' || item.id === 'kira-sertifikasi-sukuk' ? 'fixed_coupon' : item.id === 'para-piyasasi-fonu' || item.id === 'bes-emeklilik' ? 'daily_ppf' : 'rollover_deposit');
+          const rVal = Number(item.unitCost) || Number(r.inst?.currentPrice) || 36;
+          const isPart = PARTICIPATION_ASSET_IDS.has(item.id);
+          const autoM = computeSingleStructureCashflow({
+            structure: rStruct,
+            principalTL: Number(item.qty) || 0,
+            totalDays: mDays,
+            couponDays: rStruct === 'floating_tlref' ? 91 : 182,
+            baseRatePct: rVal,
+            compYieldPct: rVal,
+            rateIsCompounded: item.id === 'dibs-tahvil' && rStruct === 'fixed_coupon',
+            taxRatePct: Number(r.inst?.taxRatePct) || 0,
+            reinvest: true,
+            regime: 'curve',
+            isParticipation: isPart
+          });
+          const remD = Math.max(0, mDays - (Number(item.daysElapsed) || 0));
+          return `
+            <div class="stat-box num-tab" style="margin-bottom:12px;border-color:rgba(16,185,129,0.28);background:rgba(16,185,129,0.06);font-size:12px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="muted">Vade Sonu (${mDays}G · Kalan ${remD}G) Bileşik:</span>
+                <strong class="pos" style="font-size:14px;">${fmtTL(autoM.compoundEndTL, 0, true)}</strong>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:3px;font-size:11px;">
+                <span class="dim">${isPart ? 'Kira/Kâr Nakit Çekilirse (Basit):' : 'Kupon/Faiz Çekilirse (Basit):'}</span>
+                <span>${fmtTL(autoM.simpleEndTL, 0, true)} (+${fmtCompactTL(autoM.simpleTotalNetGain, true)})</span>
+              </div>
+            </div>
+          `;
+        })() : ''}
+
         <div style="display:flex;flex-direction:column;gap:8px;">
           <button class="btn-primary" style="width:100%;height:40px;" onclick="openPfEditSheet('${r.h.uid}')">Miktarı veya Alış Fiyatını Düzenle</button>
           <button class="btn-secondary" style="width:100%;height:40px;" onclick="${detailCall}">Bu Aracın Rehber Kartını Aç</button>
@@ -5879,12 +7353,15 @@
       const initQty = editItem ? editItem.qty : (ref ? (ref.isRate || pfEntryByAmount ? 100000 : (ref.price > 10000 ? 1 : 100)) : '');
       const initCost = editItem ? editItem.unitCost : (ref ? (ref.isRate ? ref.price.toFixed(2) : (ref.price < 10 ? ref.price.toFixed(4) : ref.price.toFixed(2))) : '');
       const initDays = editItem?.daysElapsed || 0;
+      const isPartRef = ref ? PARTICIPATION_ASSET_IDS.has(ref.id) : false;
+      const defaultMatDays = editItem?.maturityDays || (ref?.id === 'dibs-tahvil' ? 728 : ref?.id === 'kira-sertifikasi-sukuk' ? 364 : ref?.id === 'bes-emeklilik' ? 365 : 32);
+      const defaultRateStruct = editItem?.rateStruct || (ref?.id === 'dibs-tahvil' || ref?.id === 'kira-sertifikasi-sukuk' ? 'fixed_coupon' : ref?.id === 'para-piyasasi-fonu' || ref?.id === 'bes-emeklilik' ? 'daily_ppf' : 'rollover_deposit');
 
       openSheetWithHtml(`
         <div class="sheet-head">
           <div>
             <h3 style="font-size:16.5px;font-weight:700;color:#fff;">${pfEditingUid ? 'Varlığı Düzenle' : 'Kasama Varlık Ekle'}</h3>
-            <p class="dim" style="font-size:12px;margin-top:1px;">Altın, fon, mevduat, ABD fonu veya Türk şirketi seç</p>
+            <p class="dim" style="font-size:12px;margin-top:1px;">Altın, fon, tahvil/sukuk, ABD fonu veya Türk şirketi seç</p>
           </div>
           <button class="icon-btn" onclick="closeSheet()"><svg class="ico" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
         </div>
@@ -5892,7 +7369,7 @@
         ${!pfEditingUid ? `
           <div class="search-box" style="margin-bottom:8px;">
             <svg class="search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="search" id="sheetPfSearch" class="inp" placeholder="Ara: Gram Altın, S&amp;P 500, THYAO…" value="${ref ? escapeHtml(ref.name) : ''}" oninput="updateSheetPfResults(this.value)" />
+            <input type="search" id="sheetPfSearch" class="inp" placeholder="Ara: Gram Altın, Sukuk, Tahvil, S&amp;P 500, THYAO…" value="${ref ? escapeHtml(ref.name) : ''}" oninput="updateSheetPfResults(this.value)" />
           </div>
           <div id="sheetPfResults" style="max-height:175px;overflow-y:auto;border:1px solid var(--border-hairline);border-radius:10px;background:var(--bg-input);margin-bottom:12px;"></div>
         ` : ''}
@@ -5914,21 +7391,38 @@
             </div>
             <div>
               <label style="display:block;font-size:11.5px;color:var(--text-secondary);margin-bottom:4px;">
-                ${ref?.isRate ? 'Yıllık Brüt Faiz (%)' : (ref?.isUsd ? 'Birim Alış Fiyatı ($)' : 'Birim Alış Fiyatı (₺)')}
+                ${ref?.isRate ? (isPartRef ? 'Yıllık Kira / Kâr Payı (%)' : 'Yıllık Getiri / Oran (%)') : (ref?.isUsd ? 'Birim Alış Fiyatı ($)' : 'Birim Alış Fiyatı (₺)')}
               </label>
               <input type="number" id="sheetPfCost" class="inp mono" step="any" min="0" value="${initCost}" oninput="updateSheetPfPreview()" />
             </div>
           </div>
 
           ${ref?.isRate ? `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+              <div>
+                <label style="display:block;font-size:11.5px;color:var(--text-secondary);margin-bottom:4px;">Getiri Yapısı (Oto Hesap)</label>
+                <select id="sheetPfRateStruct" class="sel" onchange="updateSheetPfPreview()">
+                  <option value="fixed_coupon" ${defaultRateStruct === 'fixed_coupon' ? 'selected' : ''}>${isPartRef ? 'Sabit Kira (6 Ayda Bir)' : 'Sabit Kuponlu (6 Ayda Bir)'}</option>
+                  <option value="floating_tlref" ${defaultRateStruct === 'floating_tlref' ? 'selected' : ''}>${isPartRef ? 'Değişken Kira (3 Ayda Bir)' : 'Değişken Faizli - TLREF (3 Aylık)'}</option>
+                  <option value="cpi_linked" ${defaultRateStruct === 'cpi_linked' ? 'selected' : ''}>TÜFE Endeksli (Enflasyon + Reel)</option>
+                  <option value="zero_coupon" ${defaultRateStruct === 'zero_coupon' ? 'selected' : ''}>${isPartRef ? 'Kuponsuz Sukuk (Tek Ödeme)' : 'İskontolu Bono (Tek Ödeme)'}</option>
+                  <option value="rollover_deposit" ${defaultRateStruct === 'rollover_deposit' ? 'selected' : ''}>${isPartRef ? '32G Yenilemeli Katılım' : '32G Yenilemeli Vadeli'}</option>
+                  <option value="daily_ppf" ${defaultRateStruct === 'daily_ppf' ? 'selected' : ''}>Günlük Bileşik Fon</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;font-size:11.5px;color:var(--text-secondary);margin-bottom:4px;">Toplam Vade Günü</label>
+                <input type="number" id="sheetPfMatDays" class="inp mono" min="1" max="3650" value="${defaultMatDays}" oninput="updateSheetPfPreview()" />
+              </div>
+            </div>
             <div style="margin-bottom:12px;">
-              <label style="display:block;font-size:11.5px;color:var(--text-secondary);margin-bottom:4px;">Kaç Gündür Vadede? (İsteğe Bağlı)</label>
-              <input type="number" id="sheetPfDays" class="inp mono" min="0" max="1825" value="${initDays}" />
+              <label style="display:block;font-size:11.5px;color:var(--text-secondary);margin-bottom:4px;">Bugüne Kadar Geçen Gün (Kıst Hesap İçin)</label>
+              <input type="number" id="sheetPfDays" class="inp mono" min="0" max="3650" value="${initDays}" oninput="updateSheetPfPreview()" />
             </div>
           ` : ''}
 
-          <div class="stat-box" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;font-size:12.5px;">
-            <span class="muted">Güncel Karşılığı:</span>
+          <div class="stat-box" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;font-size:12.5px;">
+            <span class="muted">${ref?.isRate ? 'Vade Sonu Otomatik Net Tutar:' : 'Güncel Karşılığı:'}</span>
             <strong class="num-tab" style="color:#fff;font-size:14px;" id="sheetPfPreviewVal">—</strong>
           </div>
 
@@ -6005,7 +7499,24 @@
         return;
       }
       if (pfSelectedRef.isRate) {
-        el.textContent = fmtTL(qVal, 0);
+        const rVal = parseFloat(document.getElementById('sheetPfCost')?.value || '0') || pfSelectedRef.price || 36;
+        const mDays = Math.max(1, parseInt(document.getElementById('sheetPfMatDays')?.value || '32', 10) || 32);
+        const rStruct = document.getElementById('sheetPfRateStruct')?.value || 'fixed_coupon';
+        const isPart = PARTICIPATION_ASSET_IDS.has(pfSelectedRef.id);
+        const autoRes = computeSingleStructureCashflow({
+          structure: rStruct,
+          principalTL: qVal,
+          totalDays: mDays,
+          couponDays: rStruct === 'floating_tlref' ? 91 : 182,
+          baseRatePct: rVal,
+          compYieldPct: rVal,
+          rateIsCompounded: pfSelectedRef.id === 'dibs-tahvil' && rStruct === 'fixed_coupon',
+          taxRatePct: Number(pfSelectedRef.taxRatePct) || 0,
+          reinvest: true,
+          regime: 'curve',
+          isParticipation: isPart
+        });
+        el.innerHTML = `${fmtTL(autoRes.compoundEndTL, 0)} <span class="pos" style="font-size:12px;">(+${fmtCompactTL(autoRes.compoundNetGain)} · ${mDays}G)</span>`;
         return;
       }
       const unitTL = pfSelectedRef.isUsd ? pfSelectedRef.price * usdTry : pfSelectedRef.price;
@@ -6045,6 +7556,12 @@
       const daysElapsed = pfSelectedRef.isRate
         ? Math.max(0, parseInt(document.getElementById('sheetPfDays')?.value || '0', 10) || 0)
         : 0;
+      const maturityDays = pfSelectedRef.isRate
+        ? Math.max(1, parseInt(document.getElementById('sheetPfMatDays')?.value || '32', 10) || 32)
+        : 0;
+      const rateStruct = pfSelectedRef.isRate
+        ? (document.getElementById('sheetPfRateStruct')?.value || 'fixed_coupon')
+        : '';
 
       if (pfEditingUid) {
         const idx = userPortfolio.findIndex(x => x.uid === pfEditingUid);
@@ -6055,7 +7572,9 @@
             qty: finalQty,
             unitCost,
             entryUsdTry: prevEntryFx,
-            daysElapsed
+            daysElapsed,
+            maturityDays,
+            rateStruct
           };
         }
         isPortfolioSample = false;
@@ -6076,7 +7595,9 @@
             ...ex,
             qty: +totQty.toFixed(6),
             unitCost: +mergedCost.toFixed(4),
-            entryUsdTry: +mergedFx.toFixed(4)
+            entryUsdTry: +mergedFx.toFixed(4),
+            maturityDays: maturityDays || ex.maturityDays || 0,
+            rateStruct: rateStruct || ex.rateStruct || ''
           };
           showToast('Mevcut pozisyona ortalama maliyetle eklendi');
         } else {
@@ -6090,7 +7611,9 @@
             qty: finalQty,
             unitCost,
             entryUsdTry: usdTry,
-            daysElapsed
+            daysElapsed,
+            maturityDays,
+            rateStruct
           });
           showToast('Kasana eklendi');
         }
@@ -6158,6 +7681,55 @@
         `<span style="display:inline-block;width:14px;height:5px;border-radius:99px;background:${n <= guide.riskLevel ? (guide.riskLevel >= 4 ? '#f87171' : guide.riskLevel === 3 ? '#fbbf24' : '#34d399') : 'rgba(255,255,255,0.1)'};"></span>`
       ).join(' ');
 
+      const isRateInst = Boolean(inst.isRateInstrument);
+      const isPartInst = PARTICIPATION_ASSET_IDS.has(inst.id);
+      const rateBreakdown = isRateInst ? computeRateYieldBreakdown(inst) : null;
+
+      if (isRateInst) {
+        const defCfg = getDefaultDrawerAutoConfig(inst);
+        drawerAutoState = {
+          instId: inst.id,
+          days: defCfg.days,
+          struct: defCfg.struct,
+          reinvest: true
+        };
+      }
+
+      // Bugün bağlanan oranın gelecek 1 yıllık 3 farklı enflasyon senaryosundaki reel alım gücü sonucu
+      let forwardInflationHtml = '';
+      if (isRateInst && rateBreakdown) {
+        const cpiCur = rateBreakdown.cpiNow;
+        const scenarios = [
+          { lbl: 'Enflasyon Düşerse', inf: Math.max(12, +(cpiCur - 8).toFixed(1)) },
+          { lbl: 'Mevcut TÜFE Kalırsa', inf: +cpiCur.toFixed(1) },
+          { lbl: 'Enflasyon Çıkarsa', inf: +(cpiCur + 15).toFixed(1) }
+        ];
+        forwardInflationHtml = `
+          <div class="stat-box" style="margin-bottom:12px;">
+            <div style="font-size:11px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;">
+              Bugün Bağlarsan 1 Yıl Sonra Reel Alım Gücün Ne Olur?
+            </div>
+            <p class="dim" style="font-size:11.5px;line-height:1.4;margin-bottom:8px;">
+              Bugünkü orandan (${fmtAssetPrice(priceVal, inst.unitLabel, false, true)}) bağlanan paranın reel getirisi geçmişe değil, <strong>gelecek 1 yıldaki enflasyona</strong> bağlıdır:
+            </p>
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;">
+              ${scenarios.map(sc => {
+                const realSimp = ((((1 + rateBreakdown.simpleNet1YPct / 100) / (1 + sc.inf / 100)) - 1) * 100);
+                const realComp = ((((1 + rateBreakdown.compoundNet1YPct / 100) / (1 + sc.inf / 100)) - 1) * 100);
+                return `
+                  <div style="background:rgba(9,11,18,0.65);border:1px solid var(--border-hairline);border-radius:10px;padding:8px;">
+                    <div class="dim" style="font-size:10px;">${sc.lbl}</div>
+                    <div class="num-tab" style="font-size:11px;font-weight:700;color:#fff;margin:2px 0;">TÜFE %${fmtNum(sc.inf, 1)}</div>
+                    <div class="num-tab ${pctCls(realComp)}" style="font-size:13.5px;font-weight:800;">${fmtPct(realComp, 1)}</div>
+                    <div class="dim num-tab" style="font-size:9.5px;margin-top:1px;">Basit: ${fmtPct(realSimp, 1)}</div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }
+
       openSheetWithHtml(`
         <div class="sheet-head">
           <div class="row-main">
@@ -6180,48 +7752,80 @@
           <div style="font-size:11px;font-weight:700;color:var(--accent-bright);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">Günlük Hayattan Özeti</div>
           <p style="font-size:13px;color:#fff;line-height:1.5;margin-bottom:8px;">${escapeHtml(guide.analogy)}</p>
           <div style="font-size:12px;color:var(--text-secondary);line-height:1.48;padding-top:8px;border-top:1px solid var(--border-hairline);">
-            <strong style="color:#fbbf24;">Faizden Farkı:</strong> ${escapeHtml(guide.diffFromInterest)}
+            <strong style="color:#fbbf24;">${escapeHtml(guide.diffLabel || 'Banka Faizinden Farkı:')}</strong> ${escapeHtml(guide.diffFromInterest)}
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:9px;padding-top:8px;border-top:1px solid var(--border-hairline);font-size:11.5px;">
-            <span class="muted">Dalgalanma Düzeyi: ${riskDots}</span>
-            <span class="dim">${escapeHtml(guide.patience)}</span>
+            <span class="muted" style="flex-shrink:0;">Dalgalanma Düzeyi: ${riskDots}</span>
+            <span class="dim" style="min-width:0;">${escapeHtml(guide.patience)}</span>
           </div>
         </div>
 
-        <!-- 3 ÖZET KUTU -->
-        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px;">
-          <div class="stat-box" style="padding:10px;">
-            <div class="dim" style="font-size:10.5px;">Güncel Değer</div>
-            <div class="num-tab" style="font-size:15.5px;font-weight:800;color:#fff;margin-top:2px;">${fmtAssetPrice(priceVal, inst.unitLabel, inst.isUsdAsset, inst.isRateInstrument)}</div>
-            <div class="num-tab ${pctCls(cur.dayChg)}" style="font-size:11px;margin-top:2px;">Bugün ${fmtPct(cur.dayChg, 2)}</div>
+        <!-- 3 ÖZET KUTU (ORAN ARAÇLARINDA BASİT VS BİLEŞİK AYRIMI NET GÖSTERİLİR) -->
+        ${isRateInst && rateBreakdown ? `
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px;">
+            <div class="stat-box" style="padding:10px;">
+              <div class="dim" style="font-size:10.5px;">Güncel Oran</div>
+              <div class="num-tab" style="font-size:14.5px;font-weight:800;color:#fff;margin-top:2px;">${fmtAssetPrice(priceVal, inst.unitLabel, false, true)}</div>
+              <div class="dim num-tab" style="font-size:10.5px;margin-top:2px;">${escapeHtml(taxBadge.short)}</div>
+            </div>
+            <div class="stat-box" style="padding:10px;">
+              <div class="dim" style="font-size:10.5px;">1Y Basit Net</div>
+              <div class="num-tab pos" style="font-size:15px;font-weight:800;margin-top:2px;">${fmtPct(rateBreakdown.simpleNet1YPct, 1)}</div>
+              <div class="dim" style="font-size:10px;margin-top:2px;">${isPartInst ? 'Kira/kâr harcanırsa' : 'Kupon/faiz harcanırsa'}</div>
+            </div>
+            <div class="stat-box" style="padding:10px;border-color:rgba(16,185,129,0.32);">
+              <div style="font-size:10.5px;color:#34d399;font-weight:700;">1Y Bileşik Net</div>
+              <div class="num-tab pos" style="font-size:15px;font-weight:800;margin-top:2px;">${fmtPct(rateBreakdown.compoundNet1YPct, 1)}</div>
+              <div class="dim" style="font-size:10px;margin-top:2px;">Yeniden yatırılırsa</div>
+            </div>
           </div>
-          <div class="stat-box" style="padding:10px;">
-            <div class="dim" style="font-size:10.5px;">${STAGE_SHORT[activeStageIdx]} Alım Gücü</div>
-            <div class="num-tab ${cur.isPartial ? 'muted' : pctCls(cur.realPct)}" style="font-size:15.5px;font-weight:800;margin-top:2px;">${cur.isPartial ? `Yeni (&lt;${STAGE_SHORT[activeStageIdx]})` : fmtPct(cur.realPct, 1)}</div>
-            <div class="dim num-tab" style="font-size:10.5px;margin-top:2px;">${cur.isPartial ? 'Tam dönem yok' : `Net ${fmtPct(cur.tlNetPct, 1)}`}</div>
-          </div>
-          <div class="stat-box" style="padding:10px;">
-            <div class="dim" style="font-size:10.5px;">Faize Karşı Fark</div>
-            <div class="num-tab ${cur.isPartial ? 'muted' : pctCls(vsDepDiffPct)}" style="font-size:15.5px;font-weight:800;margin-top:2px;">${cur.isPartial ? '—' : fmtPct(vsDepDiffPct, 1)}</div>
-            <div class="dim num-tab" style="font-size:10.5px;margin-top:2px;">${STAGE_LABELS[activeStageIdx]}</div>
-          </div>
-        </div>
 
-        <!-- 1 YILLIK KRONOLOJİK EĞRİ (NOMİNAL NET YÖN İLE %100 TUTARLI RENK!) -->
-        <div class="stat-box" style="padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
-          <div>
-            <div class="dim" style="font-size:11px;">Son 1 Yıllık Seyir</div>
-            <div class="num-tab ${pctCls(allStages[4].tlNetPct)}" style="font-size:14px;font-weight:700;margin-top:2px;">1 Yıl Net ${fmtPct(allStages[4].tlNetPct, 1)}</div>
-            <div class="dim num-tab" style="font-size:11px;">Alım Gücü: <span class="${pctCls(allStages[4].realPct)}">${fmtPct(allStages[4].realPct, 1)}</span></div>
+          <!-- OTOMATİK VADE GÜNÜ & SABİT/DEĞİŞKEN NAKİT AKIŞI MOTORU -->
+          <div class="stat-box" style="margin-bottom:12px;background:linear-gradient(165deg,#131929 0%,#0e111b 100%);" id="drawerAutoCalcMount">
+            ${buildDrawerAutoCalcInnerHtml(inst)}
           </div>
-          ${buildAssetSparklineSvg(inst, 150, 40, allStages[4].tlNetPct)}
-        </div>
 
-        <!-- %100 EKRANA SIĞAN DÖNEM ÖZETİ -->
+          ${forwardInflationHtml}
+        ` : `
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px;">
+            <div class="stat-box" style="padding:10px;">
+              <div class="dim" style="font-size:10.5px;">Güncel Değer</div>
+              <div class="num-tab" style="font-size:15.5px;font-weight:800;color:#fff;margin-top:2px;">${fmtAssetPrice(priceVal, inst.unitLabel, inst.isUsdAsset, inst.isRateInstrument)}</div>
+              <div class="num-tab ${pctCls(cur.dayChg)}" style="font-size:11px;margin-top:2px;">Bugün ${fmtPct(cur.dayChg, 2)}</div>
+            </div>
+            <div class="stat-box" style="padding:10px;">
+              <div class="dim" style="font-size:10.5px;">${STAGE_SHORT[activeStageIdx]} Alım Gücü</div>
+              <div class="num-tab ${cur.isPartial ? 'muted' : pctCls(cur.realPct)}" style="font-size:15.5px;font-weight:800;margin-top:2px;">${cur.isPartial ? `Yeni (&lt;${STAGE_SHORT[activeStageIdx]})` : fmtPct(cur.realPct, 1)}</div>
+              <div class="dim num-tab" style="font-size:10.5px;margin-top:2px;">${cur.isPartial ? 'Tam dönem yok' : `Net ${fmtPct(cur.tlNetPct, 1)}`}</div>
+            </div>
+            <div class="stat-box" style="padding:10px;">
+              <div class="dim" style="font-size:10.5px;">Faize Karşı Fark</div>
+              <div class="num-tab ${cur.isPartial ? 'muted' : pctCls(vsDepDiffPct)}" style="font-size:15.5px;font-weight:800;margin-top:2px;">${cur.isPartial ? '—' : fmtPct(vsDepDiffPct, 1)}</div>
+              <div class="dim num-tab" style="font-size:10.5px;margin-top:2px;">${STAGE_LABELS[activeStageIdx]}</div>
+            </div>
+          </div>
+
+          <div class="stat-box" style="padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <div>
+              <div class="dim" style="font-size:11px;">Son 1 Yıllık Seyir</div>
+              <div class="num-tab ${pctCls(allStages[4].tlNetPct)}" style="font-size:14px;font-weight:700;margin-top:2px;">1 Yıl Net ${fmtPct(allStages[4].tlNetPct, 1)}</div>
+              <div class="dim num-tab" style="font-size:11px;">Alım Gücü: <span class="${pctCls(allStages[4].realPct)}">${fmtPct(allStages[4].realPct, 1)}</span></div>
+            </div>
+            ${buildAssetSparklineSvg(inst, 150, 40, allStages[4].tlNetPct)}
+          </div>
+        `}
+
+        <!-- %100 EKRANA SIĞAN DÖNEM ÖZETİ (ORAN ARAÇLARINDA TARİHSEL SİMÜLASYON UYARISI İLE!) -->
         <div class="surface" style="background:var(--bg-input);margin-bottom:12px;box-shadow:none;">
+          ${isRateInst ? `
+            <div style="padding:9px 12px;background:rgba(245,158,11,0.09);border-bottom:1px solid rgba(245,158,11,0.24);font-size:11.5px;line-height:1.45;">
+              <div style="font-weight:700;color:#fbbf24;margin-bottom:2px;">Geçmiş Dönem Simülasyonu (2021–2026 Tarihsel Oran &amp; Enflasyon)</div>
+              <div class="muted">Aşağıdaki 3 ve 5 yıllık satırlar, 2021–2023 düşük oran ve yüksek enflasyon döneminin geçmiş simülasyonudur; bugün bağlanan paranın gelecekteki getirisini göstermez.</div>
+            </div>
+          ` : ''}
           <div style="display:grid;grid-template-columns:1.1fr 1fr 1fr 1.15fr;gap:6px;padding:8px 12px;border-bottom:1px solid var(--border-hairline);font-size:11px;font-weight:600;color:var(--text-muted);">
-            <div>Süre</div>
-            <div class="r-right">Net Kazanç</div>
+            <div>${isRateInst ? 'Geçmiş Dönem' : 'Süre'}</div>
+            <div class="r-right">${isRateInst ? 'Bileşik Net' : 'Net Kazanç'}</div>
             <div class="r-right">Alım Gücü</div>
             <div class="r-right">${fmtCompactTL(currentPrincipal)} Ne Oldu?</div>
           </div>
@@ -6244,7 +7848,7 @@
 
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn-primary" style="flex:1;height:40px;" onclick="openPfAddSheet('inst','${inst.id}')">${INDEX_TO_INVESTABLE_FUND[inst.id] ? '+ Fon Karşılığını Kasama Ekle' : '+ Kasama Ekle'}</button>
-          <button class="btn-secondary" style="height:40px;" onclick="closeSheet();toggleCompareAsset('${inst.id}')">Faizle Yarıştır</button>
+          <button class="btn-secondary" style="height:40px;" onclick="closeSheet();toggleCompareAsset('${inst.id}')">Kıyaslama Motorunda Gör</button>
           ${inst.verifyUrl ? `<a href="${escapeHtml(inst.verifyUrl)}" target="_blank" rel="noopener noreferrer" class="btn-secondary" style="height:40px;text-decoration:none;">Canlı Kaynak ↗</a>` : ''}
         </div>
       `);
