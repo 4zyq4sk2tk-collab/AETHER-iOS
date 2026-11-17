@@ -1472,6 +1472,10 @@
       .mob-tab.active { color: var(--accent-bright); }
     }
 
+    @media (max-width: 410px) {
+      .sync-chip { padding: 0 8px; gap: 5px; font-size: 11px; }
+      #headerMemberBtn { max-width: 108px; overflow: hidden; text-overflow: ellipsis; }
+    }
     @media (max-width: 374px) {
       .list-row.asset-row-mob { grid-template-columns: minmax(0, 1fr) auto; }
       .mob-spark-col { display: none; }
@@ -1483,7 +1487,7 @@
   <!-- ÜST BAR -->
   <header class="app-header">
     <div class="header-inner">
-      <div class="brand" onclick="switchTab('kesfet')">
+      <div class="brand" onclick="switchTab('meydan')">
         <div class="brand-mark" aria-hidden="true">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 3 3 20h18L12 3Z"/><path d="M8.5 14h7"/>
@@ -1493,7 +1497,8 @@
       </div>
 
       <nav class="desktop-nav" aria-label="Ana Menü">
-        <button class="nav-btn active" data-tab="kesfet" onclick="switchTab('kesfet')">Pusula</button>
+        <button class="nav-btn active" data-tab="meydan" onclick="switchTab('meydan')">Meydan</button>
+        <button class="nav-btn" data-tab="kesfet" onclick="switchTab('kesfet')">Pusula</button>
         <button class="nav-btn" data-tab="sepet" onclick="switchTab('sepet')">Planla</button>
         <button class="nav-btn" data-tab="varliklar" onclick="switchTab('varliklar')">Araçlar <span class="nav-badge" id="navAssetCount">69</span></button>
         <button class="nav-btn" data-tab="bist" onclick="switchTab('bist')">Şirketler <span class="nav-badge" id="navBistCount">619</span></button>
@@ -1501,6 +1506,10 @@
       </nav>
 
       <div class="header-right">
+        <button class="sync-chip" id="headerMemberBtn" onclick="window.AetherExp && window.AetherExp.openMemberSwitcherSheet()" title="Ailede kim kullanıyor?">
+          <span style="width:7px;height:7px;border-radius:50%;background:#34d399;display:inline-block;"></span>
+          <span>Ben</span>
+        </button>
         <button class="sync-chip" id="syncBtn" onclick="manualRefreshPrices()" title="Canlı verileri yenile">
           <span class="sync-dot" id="syncDot"></span>
           <span id="lastUpdateText" class="num-tab">Hazırlanıyor…</span>
@@ -1514,8 +1523,19 @@
 
   <!-- ANA İÇERİK -->
   <main class="app-main">
+    <!-- ==================== SEKME 0: MEYDAN (GERÇEK ZAMANLI TÜRKİYE PİYASASI + SOKAK ZEKASI + AİLE ÇAY MASASI + İZ AYNASI) ==================== -->
+    <section id="tab-meydan" class="tab-panel active">
+      <div class="seg-bar" style="margin-bottom:12px;" id="meydanSubNav">
+        <button class="seg-item active" data-msub="today" onclick="window.AetherExp && window.AetherExp.setMeydanSubMode('today')">Bugün</button>
+        <button class="seg-item" data-msub="chains" onclick="window.AetherExp && window.AetherExp.setMeydanSubMode('chains')">Zincirler</button>
+        <button class="seg-item" data-msub="family" onclick="window.AetherExp && window.AetherExp.setMeydanSubMode('family')">Aile Masası</button>
+        <button class="seg-item" data-msub="mirror" onclick="window.AetherExp && window.AetherExp.setMeydanSubMode('mirror')">İzim &amp; Aynam</button>
+      </div>
+      <div id="meydanRootMount"></div>
+    </section>
+
     <!-- ==================== SEKME 1: PUSULA (AKILLI SERMAYE DÖNGÜSÜ + SÜRÜDEN ÖNCE GÖR + 30SN HİKAYELER) ==================== -->
-    <section id="tab-kesfet" class="tab-panel active">
+    <section id="tab-kesfet" class="tab-panel">
       <div class="sec-bar" style="margin-bottom:6px;">
         <h2 class="sec-title">30 Saniyede Özeti İzle</h2>
         <span class="dim" style="font-size:11.5px;">Dokun ve öğren</span>
@@ -1723,6 +1743,10 @@
 
     <!-- ==================== SEKME 3: YATIRIM ARAÇLARINI TANI (69 ARAÇ, SIFIR JARGON) ==================== -->
     <section id="tab-varliklar" class="tab-panel">
+      <div class="seg-bar mob-only" style="margin-bottom:8px;">
+        <button class="seg-item active" onclick="switchTab('varliklar')">69 Yatırım Aracı</button>
+        <button class="seg-item" onclick="switchTab('bist')">619 Türk Şirketi</button>
+      </div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;">
         <div style="display:flex;gap:8px;align-items:center;">
           <div class="search-box">
@@ -1749,6 +1773,10 @@
 
     <!-- ==================== SEKME 4: ŞİRKETLER (621 BIST ŞİRKETİ SADE KARNESİ) ==================== -->
     <section id="tab-bist" class="tab-panel">
+      <div class="seg-bar mob-only" style="margin-bottom:8px;">
+        <button class="seg-item" onclick="switchTab('varliklar')">69 Yatırım Aracı</button>
+        <button class="seg-item active" onclick="switchTab('bist')">619 Türk Şirketi</button>
+      </div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;">
         <div style="display:flex;gap:8px;align-items:center;">
           <div class="search-box">
@@ -1802,7 +1830,11 @@
 
   <!-- MOBİL ALT SEKME ÇUBUĞU -->
   <nav class="mobile-tabbar" aria-label="Alt Menü">
-    <button class="mob-tab active" data-tab="kesfet" onclick="switchTab('kesfet')">
+    <button class="mob-tab active" data-tab="meydan" onclick="switchTab('meydan')">
+      <svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="4"/></svg>
+      <span>Meydan</span>
+    </button>
+    <button class="mob-tab" data-tab="kesfet" onclick="switchTab('kesfet')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
       <span>Pusula</span>
     </button>
@@ -1812,11 +1844,7 @@
     </button>
     <button class="mob-tab" data-tab="varliklar" onclick="switchTab('varliklar')">
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-      <span>Araçlar</span>
-    </button>
-    <button class="mob-tab" data-tab="bist" onclick="switchTab('bist')">
-      <svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01"/><path d="M9 13v.01"/><path d="M9 17v.01"/></svg>
-      <span>Şirketler</span>
+      <span>Keşfet</span>
     </button>
     <button class="mob-tab" data-tab="portfoy" onclick="switchTab('portfoy')">
       <svg viewBox="0 0 24 24"><path d="M21 12V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5Z"/><path d="M16 12h5"/></svg>
@@ -1838,16 +1866,16 @@
 
   <script>
     /* =========================================================================
-       AETHER v6.0 — ENFLASYONA KARŞI AKILLI SEPET, 30-SN HİKAYELER VE
+       AETHER v8.0 — GERÇEK ZAMANLI TÜRKİYE PİYASASI, SOKAK ZEKASI VE AİLE KASASI
        YÜKSEK PERFORMANSLI (O(1) MEMOIZED, 60FPS) FİNANSAL KARAR MOTORU
        ========================================================================= */
 
     var marketData = null;
-    let instById = new Map();
+    var instById = new Map();
     let dataRevision = 0;
     let metricsMemo = new Map();
 
-    let activeTab = 'kesfet';
+    var activeTab = 'meydan';
     let piyasaLeaderMode = 'win';
     let pfSubTab = 'holdings';
     let toolSubTab = 'freedom';
@@ -1889,8 +1917,8 @@
     // Kasam (Portföy) Durumu
     const PF_STORAGE_KEY = 'aether_user_portfolio_v2';
     const SEEN_STORIES_KEY = 'aether_seen_stories_v1';
-    let userPortfolio = [];
-    let isPortfolioSample = false;
+    var userPortfolio = [];
+    var isPortfolioSample = false;
     let pfPrivacyHidden = false;
     let pfSelectedRef = null;
     let pfEntryByAmount = false;
@@ -3023,7 +3051,7 @@
     window.__AETHER_CONN_MODE__ = 'INIT';
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=7.0', { updateViaCache: 'none' }).then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=8.0', { updateViaCache: 'none' }).then((reg) => {
           reg.update().catch(() => {});
         }).catch(() => {});
       });
@@ -4348,8 +4376,12 @@
       document.querySelectorAll('.tab-panel').forEach(el => {
         el.classList.toggle('active', el.id === 'tab-' + tabId);
       });
-      document.querySelectorAll('.nav-btn, .mob-tab').forEach(btn => {
+      document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tabId);
+      });
+      document.querySelectorAll('.mob-tab').forEach(btn => {
+        const isUnifiedKesfet = btn.dataset.tab === 'varliklar' && (tabId === 'varliklar' || tabId === 'bist');
+        btn.classList.toggle('active', btn.dataset.tab === tabId || isUnifiedKesfet);
       });
       window.scrollTo({ top: 0, behavior: 'instant' });
       renderActiveView();
@@ -4391,7 +4423,9 @@
     function renderActiveView() {
       if (!marketData) return;
       renderPeriodBars();
-      if (activeTab === 'kesfet') renderKesfetView();
+      if (activeTab === 'meydan') {
+        if (window.AetherExp) window.AetherExp.renderMeydanView();
+      } else if (activeTab === 'kesfet') renderKesfetView();
       else if (activeTab === 'sepet') renderToolsView();
       else if (activeTab === 'varliklar') renderVarliklarView();
       else if (activeTab === 'bist') renderBistView();
@@ -8649,11 +8683,20 @@
       }, 120);
     });
 
-    // Başlat ve arka planda sessizce canlı veriyi tazele
+  </script>
+  <script src="aether-experience-engine.js"></script>
+  <script>
+    // Başlat ve biz içeride deneyim kazanırken arka planda sessizce canlı veriyi + bültenleri tazele
     loadMarketData(false);
     setInterval(() => {
-      if (!document.hidden) syncStandaloneMobileLivePrices();
-    }, 90000);
+      if (!document.hidden) {
+        if (location.protocol.startsWith('http') && !location.hostname.endsWith('github.io')) {
+          loadMarketData(false);
+        } else {
+          syncStandaloneMobileLivePrices();
+        }
+      }
+    }, 60000);
   </script>
 </body>
 </html>

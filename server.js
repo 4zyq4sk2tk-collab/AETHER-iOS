@@ -1996,11 +1996,89 @@ async function persistBundleAtomically(jsonStr) {
   }
 }
 
+let cachedRealWorldFeed = [];
+let lastRealWorldFeedTs = 0;
+
+function decodeXmlEntities(str) {
+  return String(str || '')
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .trim();
+}
+
+async function fetchLiveTurkishRealWorldFeed() {
+  const now = Date.now();
+  if (cachedRealWorldFeed.length > 0 && now - lastRealWorldFeedTs < 180000) {
+    return cachedRealWorldFeed;
+  }
+  const feeds = [
+    { cat: 'kap_bist', url: 'https://news.google.com/rss/search?q=KAP+bildirimi+OR+Borsa+Istanbul+bilan%C3%A7o+OR+temett%C3%BC+OR+SPK+halka+arz&hl=tr&gl=TR&ceid=TR:tr' },
+    { cat: 'makro_resmi', url: 'https://news.google.com/rss/search?q=Resmi+Gazete+vergi+stopaj+OR+Merkez+Bankas%C4%B1+faiz+OR+T%C3%9C%C4%B0K+enflasyon&hl=tr&gl=TR&ceid=TR:tr' },
+    { cat: 'hammadde_dunya', url: 'https://news.google.com/rss/search?q=Brent+petrol+OR+ons+alt%C4%B1n+OR+bu%C4%9Fday+fiyatlar%C4%B1+OR+do%C4%9Falgaz+enerji&hl=tr&gl=TR&ceid=TR:tr' }
+  ];
+
+  const collected = [];
+  const seenTitles = new Set();
+
+  await Promise.all(feeds.map(async (f) => {
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 3600);
+      const res = await fetch(f.url, {
+        signal: ctrl.signal,
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AetherLiveEngine/8.0)' }
+      });
+      clearTimeout(t);
+      if (!res.ok) return;
+      const xml = await res.text();
+      const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+      let m;
+      let count = 0;
+      while ((m = itemRegex.exec(xml)) !== null && count < 6) {
+        const block = m[1];
+        const rawTitle = (block.match(/<title>([\s\S]*?)<\/title>/) || [])[1] || '';
+        const rawPub = (block.match(/<pubDate>([\s\S]*?)<\/pubDate>/) || [])[1] || '';
+        const rawSource = (block.match(/<source[^>]*>([\s\S]*?)<\/source>/) || [])[1] || '';
+        let cleanTitle = decodeXmlEntities(rawTitle);
+        const dashIdx = cleanTitle.lastIndexOf(' - ');
+        const source = decodeXmlEntities(rawSource) || (dashIdx > 20 ? cleanTitle.slice(dashIdx + 3) : 'Piyasa Akışı');
+        if (dashIdx > 20) cleanTitle = cleanTitle.slice(0, dashIdx).trim();
+        if (!cleanTitle || seenTitles.has(cleanTitle)) continue;
+        seenTitles.add(cleanTitle);
+        const pubMs = Date.parse(rawPub) || now;
+        collected.push({
+          cat: f.cat,
+          title: cleanTitle,
+          source,
+          pubMs,
+          isoTime: new Date(pubMs).toISOString()
+        });
+        count++;
+      }
+    } catch (_) {}
+  }));
+
+  if (collected.length > 0) {
+    collected.sort((a, b) => b.pubMs - a.pubMs);
+    cachedRealWorldFeed = collected.slice(0, 14);
+    lastRealWorldFeedTs = now;
+  }
+  return cachedRealWorldFeed;
+}
+
 async function refreshMarketDataset() {
   if (inflightRefreshPromise) return inflightRefreshPromise;
   inflightRefreshPromise = (async () => {
     try {
-      const fresh = await buildFullDataset();
+      const [fresh, realFeed] = await Promise.all([
+        buildFullDataset(),
+        fetchLiveTurkishRealWorldFeed().catch(() => cachedRealWorldFeed)
+      ]);
+      fresh.liveRealWorldFeed = Array.isArray(realFeed) ? realFeed : [];
       const jsonStr = JSON.stringify(fresh);
       const rawBuf = Buffer.from(jsonStr, 'utf8');
       const gzBuf = await gzipAsync(rawBuf, { level: zlib.constants.Z_BEST_SPEED });
@@ -2117,7 +2195,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, If-None-Match'
     });
     res.end();
@@ -2125,6 +2203,86 @@ const server = http.createServer(async (req, res) => {
   }
 
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+
+  // Aile İçi Ortak Portföy, Kâr/Zarar ve Oyun Gelişim Merkezi (/api/family-hub)
+  if (url.pathname === '/api/family-hub') {
+    const hubFile = path.join(__dirname, 'family-hub.json');
+    const readHub = async () => {
+      try {
+        if (fs.existsSync(hubFile)) {
+          const raw = await fsp.readFile(hubFile, 'utf8');
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object' && Array.isArray(parsed.members)) return parsed;
+        }
+      } catch (_) {}
+      return { updatedAt: Date.now(), members: [] };
+    };
+
+    if (req.method === 'GET') {
+      const hub = await readHub();
+      const bodyBuf = Buffer.from(JSON.stringify(hub), 'utf8');
+      res.writeHead(200, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Content-Length': bodyBuf.length,
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control': 'no-store'
+      });
+      res.end(bodyBuf);
+      return;
+    }
+
+    if (req.method === 'POST') {
+      try {
+        const chunks = [];
+        let totalBytes = 0;
+        for await (const chunk of req) {
+          totalBytes += chunk.length;
+          if (totalBytes > 512 * 1024) throw new Error('Payload too large');
+          chunks.push(chunk);
+        }
+        const incoming = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
+        const current = await readHub();
+        const byId = new Map();
+        for (const m of (current.members || [])) {
+          if (m && m.id) byId.set(String(m.id), m);
+        }
+        const incList = Array.isArray(incoming.members)
+          ? incoming.members
+          : (incoming.member && incoming.member.id ? [incoming.member] : []);
+
+        for (const m of incList) {
+          if (!m || !m.id) continue;
+          const id = String(m.id).slice(0, 48);
+          if (m._deleted) {
+            byId.delete(id);
+            continue;
+          }
+          const prev = byId.get(id);
+          if (!prev || (Number(m.updatedAt) || 0) >= (Number(prev.updatedAt) || 0)) {
+            byId.set(id, { ...prev, ...m, id, updatedAt: Number(m.updatedAt) || Date.now() });
+          }
+        }
+
+        const merged = {
+          updatedAt: Date.now(),
+          members: Array.from(byId.values()).slice(0, 24)
+        };
+        await fsp.writeFile(hubFile, JSON.stringify(merged, null, 2), 'utf8');
+        const outBuf = Buffer.from(JSON.stringify(merged), 'utf8');
+        res.writeHead(200, {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Content-Length': outBuf.length,
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'no-store'
+        });
+        res.end(outBuf);
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': '*' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+      return;
+    }
+  }
 
   if (url.pathname === '/api/market-data') {
     try {
@@ -2175,6 +2333,7 @@ const server = http.createServer(async (req, res) => {
   // Statik iOS / PWA / Veri Paketi Dosyaları
   const staticMap = {
     '/aether-data-bundle.js': { file: 'aether-data-bundle.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
+    '/aether-experience-engine.js': { file: 'aether-experience-engine.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
     '/manifest.json': { file: 'manifest.json', mime: 'application/manifest+json; charset=utf-8', cc: 'no-cache' },
     '/sw.js': { file: 'sw.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
     '/apple-touch-icon.svg': { file: 'apple-touch-icon.svg', mime: 'image/svg+xml', cc: 'public, max-age=3600' },
@@ -2263,13 +2422,14 @@ const server = http.createServer(async (req, res) => {
     try {
       const htmlRaw = await fsp.readFile(path.join(__dirname, 'index.html'), 'utf8');
       const bp = path.join(__dirname, 'aether-data-bundle.js');
+      const expPath = path.join(__dirname, 'aether-experience-engine.js');
       const bundleRaw = fs.existsSync(bp)
         ? await fsp.readFile(bp, 'utf8')
         : (cachedJsonBuf ? 'window.__AETHER_EMBEDDED_DATA__ = ' + cachedJsonBuf.toString('utf8') + ';' : '');
-      const standaloneHtml = htmlRaw.replace(
-        '<script src="aether-data-bundle.js"></script>',
-        `<script>${bundleRaw}</script>`
-      );
+      const expRaw = fs.existsSync(expPath) ? await fsp.readFile(expPath, 'utf8') : '';
+      const standaloneHtml = htmlRaw
+        .replace('<script src="aether-data-bundle.js"></script>', `<script>${bundleRaw}</script>`)
+        .replace('<script src="aether-experience-engine.js"></script>', `<script>${expRaw}</script>`);
       const outBuf = clientAcceptsGzip(req)
         ? await gzipAsync(Buffer.from(standaloneHtml, 'utf8'), { level: zlib.constants.Z_BEST_SPEED })
         : Buffer.from(standaloneHtml, 'utf8');
@@ -2310,7 +2470,19 @@ const server = http.createServer(async (req, res) => {
 server.keepAliveTimeout = 65000;
 server.headersTimeout = 66000;
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`AETHER Yüksek Ölçekli Veri Sunucusu çalışıyor:`);
-  console.log(`- Bilgisayardan: http://localhost:${PORT}`);
-});
+if (process.argv.includes('--bundle-only')) {
+  refreshMarketDataset()
+    .then(() => {
+      console.log('AETHER aether-data-bundle.js arka plan güncellemesi tamamlandı.');
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error('Bundle refresh hatası:', err.message);
+      process.exit(1);
+    });
+} else {
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`AETHER Yüksek Ölçekli Veri Sunucusu çalışıyor:`);
+    console.log(`- Bilgisayardan: http://localhost:${PORT}`);
+  });
+}

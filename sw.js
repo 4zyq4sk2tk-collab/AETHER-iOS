@@ -1,8 +1,9 @@
-const CACHE_NAME = 'aether-ios-standalone-v10';
+const CACHE_NAME = 'aether-ios-standalone-v11';
 const CORE_ASSETS = [
   './',
   './index.html',
   './aether-data-bundle.js',
+  './aether-experience-engine.js',
   './manifest.json',
   './apple-touch-icon.png',
   './apple-touch-icon.svg'

@@ -1,0 +1,41 @@
+name: AETHER Autonomous Live Market & Scenario Updater
+
+on:
+  schedule:
+    - cron: '15 */4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-live-bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Refresh Embedded Market & Game Scenario Bundle
+        run: |
+          node server.js --bundle-only
+          mkdir -p www
+          cp -f aether-data-bundle.js www/aether-data-bundle.js || true
+
+      - name: Commit Updated Live Data Bundle for GitHub Pages Hot-Sync
+        run: |
+          git config user.name "AETHER Live Engine"
+          git config user.email "actions@github.com"
+          if ! git diff --quiet aether-data-bundle.js; then
+            git add aether-data-bundle.js
+            git commit -m "chore(live-data): arka plan canli piyasa ve oyun verisi guncellemesi"
+            git pull --rebase origin main
+            git push origin main
+          else
+            echo "Veri paketinde degisiklik yok."
+          fi
