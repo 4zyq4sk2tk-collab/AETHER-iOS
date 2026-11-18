@@ -16,7 +16,7 @@
       <key>Label</key>
       <string>AETHER</string>
       <key>PayloadDescription</key>
-      <string>AETHER — Enflasyona Karşı Akıllı Sepet ve Yatırım Rehberi</string>
+      <string>AETHER — 1.000.000 ₺ Gerçek Yatırım Meydanı ve Canlı Lig</string>
       <key>PayloadDisplayName</key>
       <string>AETHER iOS Uygulaması</string>
       <key>PayloadIdentifier</key>
@@ -26,7 +26,7 @@
       <key>PayloadUUID</key>
       <string>556F026D-7AD7-4665-B85F-B5C8A49F9EE9</string>
       <key>PayloadVersion</key>
-      <integer>4</integer>
+      <integer>5</integer>
       <key>Precomposed</key>
       <true/>
       <key>URL</key>
@@ -48,6 +48,6 @@
   <key>PayloadUUID</key>
   <string>9A4E1120-7AD7-4665-B85F-B5C8A49F9ED5</string>
   <key>PayloadVersion</key>
-  <integer>4</integer>
+  <integer>5</integer>
 </dict>
 </plist>

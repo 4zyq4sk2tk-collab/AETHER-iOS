@@ -231,12 +231,13 @@
     let bistCanMatchNow = false;
     let bistCancelLocked = false;
 
-    if (isBizDay) {
-      const contEnd = isHalfDay ? (12 * 60 + 30) : (18 * 60);
-      const closeCollectEnd = isHalfDay ? (12 * 60 + 35) : (18 * 60 + 5);
-      const closeMatchEnd = isHalfDay ? (12 * 60 + 38) : (18 * 60 + 8);
-      const closeKfEnd = isHalfDay ? (12 * 60 + 40) : (18 * 60 + 10);
+    const contEnd = isHalfDay ? (12 * 60 + 30) : (18 * 60);
+    const closeLockStart = isHalfDay ? (12 * 60 + 31) : (18 * 60 + 1);
+    const closeCollectEnd = isHalfDay ? (12 * 60 + 35) : (18 * 60 + 5);
+    const closeMatchEnd = isHalfDay ? (12 * 60 + 38) : (18 * 60 + 8);
+    const closeKfEnd = isHalfDay ? (12 * 60 + 40) : (18 * 60 + 10);
 
+    if (isBizDay) {
       if (m >= 9 * 60 + 40 && m < 9 * 60 + 55) {
         bistPhase = 'OPEN_COLLECT';
         bistCancelLocked = m >= 9 * 60 + 50;
@@ -253,30 +254,46 @@
         bistLabel = isHalfDay ? '10:00–12:30 Yarım Gün Seansı Açık' : '10:00–18:00 Borsa İstanbul Açık';
       } else if (m >= contEnd && m < closeCollectEnd) {
         bistPhase = 'CLOSE_COLLECT';
-        bistLabel = '18:00–18:05 Kapanış Seansı Emir Toplama';
+        bistCancelLocked = m >= closeLockStart;
+        if (isHalfDay) {
+          bistLabel = bistCancelLocked
+            ? '12:31–12:35 Yarım Gün Kapanış Emir Toplama (İptal Kısıtlı)'
+            : '12:30–12:35 Yarım Gün Kapanış Emir Toplama';
+        } else {
+          bistLabel = bistCancelLocked
+            ? '18:01–18:05 Kapanış Seansı Emir Toplama (İptal Kısıtlı)'
+            : '18:00–18:05 Kapanış Seansı Emir Toplama';
+        }
       } else if (m >= closeCollectEnd && m < closeMatchEnd) {
         bistPhase = 'CLOSE_MATCH';
         bistCancelLocked = true;
-        bistLabel = '18:05–18:08 Kapanış Tek Fiyat Eşleşmesi';
+        bistLabel = isHalfDay
+          ? '12:35–12:38 Yarım Gün Kapanış Tek Fiyat Eşleşmesi'
+          : '18:05–18:08 Kapanış Tek Fiyat Eşleşmesi';
       } else if (m >= closeMatchEnd && m < closeKfEnd) {
         bistPhase = 'CLOSE_MARJ';
         bistCanMatchNow = true;
-        bistLabel = '18:08–18:10 Kapanış Fiyatından İşlem';
+        bistLabel = isHalfDay
+          ? '12:38–12:40 Yarım Gün Kapanış Fiyatından İşlem'
+          : '18:08–18:10 Kapanış Fiyatından İşlem';
       }
     }
 
-    // VİOP Gündüz (09:30–18:15) + Akşam Seansı (19:00–23:00) + 15:00 Margin Call
+    // VİOP Gündüz (09:30–18:15; Arife 09:30–12:40) + Akşam Seansı (19:00–23:00) + Margin Call
     let viopOpen = false;
     let viopEvening = false;
     let isMarginCallWindow = false;
-    let viopLabel = 'VİOP Kapalı';
+    let viopLabel = isHalfDay ? 'Arife Yarım Gün · VİOP 12:40 Kapandı' : 'VİOP Kapalı';
     if (isBizDay) {
-      if (m >= 9 * 60 + 30 && m < 18 * 60 + 15) {
+      const viopDayEnd = isHalfDay ? (12 * 60 + 40) : (18 * 60 + 15);
+      if (m >= 9 * 60 + 30 && m < viopDayEnd) {
         viopOpen = true;
-        isMarginCallWindow = (m >= 14 * 60 + 45 && m <= 15 * 60 + 15);
+        isMarginCallWindow = isHalfDay
+          ? (m >= 11 * 60 + 45 && m <= 12 * 60 + 15)
+          : (m >= 14 * 60 + 45 && m <= 15 * 60 + 15);
         viopLabel = isMarginCallWindow
-          ? 'VİOP Açık · 15:00 Teminat Çağrısı (Margin Call) Saati!'
-          : '09:30–18:15 VİOP Gündüz Seansı Açık';
+          ? `VİOP Açık · ${isHalfDay ? '12:00' : '15:00'} Teminat Çağrısı (Margin Call) Saati!`
+          : (isHalfDay ? '09:30–12:40 Arife VİOP Yarım Gün Açık' : '09:30–18:15 VİOP Gündüz Seansı Açık');
       } else if (!isHalfDay && m >= 19 * 60 && m < 23 * 60) {
         viopOpen = true;
         viopEvening = true;
@@ -292,16 +309,17 @@
       : (globalLondonOpen ? 'Avrupa (Londra) Seansı Açık' : (isWeekend ? 'Küresel Borsalar Hafta Sonu Kapalı · Kripto 7/24' : 'Küresel Vadeli İşlemler Açık'));
 
     // TEFAS 13:30 Valör Saati
-    const tefasBeforeCutoff = isBizDay && m >= 9 * 60 && m < 13 * 60 + 30;
-    const minsToTefas = tefasBeforeCutoff ? (13 * 60 + 30 - m) : 0;
+    const tefasCutoffMin = isHalfDay ? (11 * 60) : (13 * 60 + 30);
+    const tefasBeforeCutoff = isBizDay && m >= 9 * 60 && m < tefasCutoffMin;
+    const minsToTefas = tefasBeforeCutoff ? (tefasCutoffMin - m) : 0;
     const tefasLabel = tefasBeforeCutoff
-      ? `TEFAS Valör Açık (13:30'a ${minsToTefas} dk kaldı)`
-      : 'TEFAS 13:30 Geçildi (+1 İş Günü Valör)';
+      ? `TEFAS Valör Açık (${isHalfDay ? '11:00' : '13:30'}'a ${minsToTefas} dk kaldı)`
+      : `TEFAS ${isHalfDay ? '11:00' : '13:30'} Geçildi (+1 İş Günü Valör)`;
 
     // Kapalıçarşı vs Nöbetçi Döviz/Kuyumcu vs Mobil Banka Makası
-    const grandBazaarOpen = !isHoliday && p.weekday !== 0 && m >= 9 * 60 + 30 && m < 18 * 60 + 30;
+    const grandBazaarOpen = !isHoliday && p.weekday !== 0 && m >= 9 * 60 + 30 && m < (isHalfDay ? 13 * 60 + 30 : 18 * 60 + 30);
     const nobetciOpen = !isHoliday && m >= 10 * 60 && m < 22 * 60;
-    const bankDaytimeTight = isBizDay && m >= 9 * 60 + 30 && m < 17 * 60 + 30;
+    const bankDaytimeTight = isBizDay && m >= 9 * 60 + 30 && m < (isHalfDay ? 12 * 60 + 40 : 17 * 60 + 30);
     const bankSpreadPct = bankDaytimeTight ? 0.65 : 3.60;
     const nobetciSpreadPct = 1.45;
     const bazaarSpreadPct = 0.40;
@@ -309,7 +327,7 @@
     // Canlı Resmi Veri & Zil Pencereleri (Yüksek Frekanslı Senkronizasyon)
     const isHighVolatilityEventWindow =
       (isBizDay && m >= 9 * 60 + 55 && m <= 10 * 60 + 5) ||
-      (isBizDay && m >= 18 * 60 && m <= 18 * 60 + 10) ||
+      (isBizDay && m >= contEnd && m <= closeKfEnd) ||
       (isBizDay && p.weekday === 4 && m >= 13 * 60 + 58 && m <= 14 * 60 + 15) ||
       (p.day === 3 && m >= 9 * 60 + 59 && m <= 10 * 60 + 12);
 
@@ -2028,15 +2046,20 @@
     const nowMs = clock.ms;
     const side = String(params.side || 'BUY').toUpperCase();
 
-    // --- SIRADA BEKLEYEN EMRİ İPTAL ETME (09:50–10:00 ve 18:05–18:08 BIST İPTAL YASAĞI KONTROLLÜ) ---
+    // --- SIRADA BEKLEYEN EMRİ İPTAL ETME (09:50–10:00 ve 18:01–18:05 / 12:31–12:35 AKTİF BIST EŞLEŞME KİLİDİ) ---
     if (side === 'CANCEL_ORDER') {
       const idx = (member.pendingOrders || []).findIndex((o) => o.id === params.orderId);
       if (idx < 0) return { ok: false, reason: 'İptal edilecek bekleyen emir bulunamadı.' };
       const ord = member.pendingOrders[idx];
-      if ((ord.orderType === 'BIST_OPEN_AUCTION' || ord.orderType === 'BIST_CLOSE_AUCTION') && clock.bistCancelLocked) {
+      const isInCurrentLockedAuction =
+        (ord.orderType === 'BIST_OPEN_AUCTION' || ord.orderType === 'BIST_CLOSE_AUCTION') &&
+        clock.bistCancelLocked &&
+        Number(ord.executesAtMs) > nowMs &&
+        (Number(ord.executesAtMs) - nowMs) <= 15 * 60 * 1000;
+      if (isInCurrentLockedAuction) {
         return {
           ok: false,
-          reason: `Borsa İstanbul Kuralı (${clock.bistLabel}): Eşleşme penceresinde bekleyen emir iptal edilemez!`
+          reason: `Borsa İstanbul Kuralı (${clock.bistLabel}): Aktif eşleşme penceresindeki emir iptal edilemez!`
         };
       }
       member.pendingOrders.splice(idx, 1);
@@ -2269,7 +2292,10 @@
     // --- ALIM İŞLEMİ (BUY) ---
     if (side === 'BUY') {
       const amountTL = +(Number(params.amountTL) || 0).toFixed(2);
-      if (amountTL < 100) return { ok: false, reason: 'En az 100 ₺ tutarında emir girebilirsin.' };
+      const minRequiredTL = (asset.venue === 'BANK_RATE' || asset.venue === 'TEFAS') ? 100 : 10;
+      if (amountTL < minRequiredTL) {
+        return { ok: false, reason: `En az ${minRequiredTL} ₺ tutarında emir girebilirsin.` };
+      }
 
       const micro = inspectBoardMicrostructure(asset);
       const useMargin = Boolean(params.useMargin) && micro.marginAllowed && clock.bistCanMatchNow;
@@ -2769,10 +2795,18 @@
       }
 
       const micro = inspectBoardMicrostructure(asset);
-      const ratio = Math.min(1, Math.max(0.01, Number(params.sellRatio) || 1));
-      const sellQty = asset.subVenue === 'BIST_STOCK'
-        ? Math.min(Math.floor(availableQty), Math.max(1, Math.floor(availableQty * ratio)))
-        : +(availableQty * ratio).toFixed(6);
+      const explicitQty = Number(params.sellQty);
+      let sellQty = 0;
+      if (Number.isFinite(explicitQty) && explicitQty > 0) {
+        sellQty = asset.subVenue === 'BIST_STOCK'
+          ? Math.min(Math.floor(availableQty), Math.floor(explicitQty))
+          : Math.min(availableQty, +explicitQty.toFixed(6));
+      } else {
+        const ratio = Math.min(1, Math.max(0.01, Number(params.sellRatio) || 1));
+        sellQty = asset.subVenue === 'BIST_STOCK'
+          ? Math.min(Math.floor(availableQty), Math.max(1, Math.floor(availableQty * ratio)))
+          : +(availableQty * ratio).toFixed(6);
+      }
       if (sellQty <= 0) {
         return { ok: false, reason: 'Satılabilir lot miktarı yetersiz.' };
       }
@@ -3394,6 +3428,14 @@
       note: 'Portföy temiz 1.000.000 ₺ nakit ile yeniden başlatıldı.'
     }];
     target.footprints = [];
+    target.studiedDisclosures = {};
+    target.livedMilestones = {
+      executedRealOrder: false,
+      waitedSettlementOrValor: false,
+      inspectedCashScale: false,
+      wroteInvestmentThesis: false,
+      studiedNightDisclosure: false
+    };
     target.equityCurve = [{ ts: now, nw: DEFAULT_STARTING_CAPITAL_TL, base: DEFAULT_STARTING_CAPITAL_TL }];
     target.idleErosionLog = { lastCheckedMs: now, cumulativeInflationLossTL: 0, missedSukukNetTL: 0 };
     target.createdAt = now;
@@ -3405,18 +3447,15 @@
 
   function updateHouseholdBaseline(params = {}) {
     const m = getActiveMember();
-    if (params.name && String(params.name).trim().length >= 2) {
-      m.name = String(params.name).trim().slice(0, 28);
-      m.profileRegistered = true;
-    }
-    if (params.roleLabel) m.roleLabel = String(params.roleLabel).trim().slice(0, 32);
-    if (params.monthlyExpenseTL != null) m.monthlyExpenseTL = Math.max(5000, Number(params.monthlyExpenseTL) || 40000);
-    if (params.monthlySavingsTL != null) m.monthlySavingsTL = Math.max(0, Number(params.monthlySavingsTL) || 0);
-    if (params.salaryDay != null) m.salaryDay = Number(params.salaryDay) === 1 ? 1 : 15;
-    if (params.autoOvernightRepo != null) m.autoOvernightRepo = Boolean(params.autoOvernightRepo);
+    const wasRegisteredBefore = Boolean(m.profileRegistered);
+    let switchedRoom = false;
+
+    // 1) ÖNCE oda değişimini uygula (eski odaya yanlışlıkla yeni kayıt veya JOIN mesajı sızmasını 100% önler!)
     if (params.roomCode != null) {
       const cleanRoom = String(params.roomCode || DEFAULT_ROOM_CODE).trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '') || DEFAULT_ROOM_CODE;
       if (cleanRoom !== state.roomCode) {
+        switchedRoom = true;
+        clearTimeout(meshPublishTimer);
         const oldRoom = state.roomCode;
         const oldBase = `${MESH_NAMESPACE}/${oldRoom}`;
         state.roomCode = cleanRoom;
@@ -3430,27 +3469,68 @@
               c.ws.send(buildMqttUnsubscribePacket(`${oldBase}/event`, s()));
               c.ws.send(buildMqttUnsubscribePacket(`${oldBase}/banter_snapshot`, s()));
               c.ws.send(buildMqttUnsubscribePacket(`${oldBase}/sync_ping`, s()));
-              if (m.profileRegistered) {
+              if (wasRegisteredBefore) {
                 c.ws.send(buildMqttPublishPacket(`${oldBase}/member/${m.id}`, '', true));
               }
-              subscribeSocketToActiveRoom(c.ws);
             } catch (_) {}
           }
         }
-        if (m.profileRegistered && global.fetch && global.location?.protocol !== 'file:') {
+        if (wasRegisteredBefore && global.fetch && global.location?.protocol !== 'file:') {
           fetch('./api/family-hub', {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
             body: JSON.stringify({ roomCode: oldRoom, members: [{ id: m.id, _deleted: true }] })
           }).catch(() => {});
         }
-        startCloudMesh();
-        syncHttpFamilyHubAsync();
       }
     }
+
+    // 2) Kimlik ve bütçe alanlarını güncelle
+    if (params.name && String(params.name).trim().length >= 2) {
+      const cleanName = String(params.name).trim().slice(0, 28);
+      m.name = cleanName;
+      m.avatarColor = pickAvatarColor(m.id + cleanName);
+      m.deviceLabel = detectDeviceLabel();
+      m.profileRegistered = true;
+    }
+    if (params.roleLabel) m.roleLabel = String(params.roleLabel).trim().slice(0, 32);
+    if (params.monthlyExpenseTL != null) m.monthlyExpenseTL = Math.max(5000, Number(params.monthlyExpenseTL) || 40000);
+    if (params.monthlySavingsTL != null) m.monthlySavingsTL = Math.max(0, Number(params.monthlySavingsTL) || 0);
+    if (params.salaryDay != null) m.salaryDay = Number(params.salaryDay) === 1 ? 1 : 15;
+    if (params.autoOvernightRepo != null) m.autoOvernightRepo = Boolean(params.autoOvernightRepo);
+
+    let joinEv = null;
+    if (!wasRegisteredBefore && m.profileRegistered) {
+      joinEv = {
+        id: 'ev_join_' + m.id + '_' + Date.now().toString(36).slice(-4),
+        ts: Date.now(),
+        kind: 'JOIN',
+        authorId: m.id,
+        authorName: m.name,
+        targetName: '',
+        text: `${m.name} (${m.deviceLabel}) 1.000.000 ₺ başlangıç sermayesiyle Canlı Yatırımcı Ligine katıldı!`
+      };
+      state.banterFeed.unshift(joinEv);
+    }
+
     m.updatedAt = Date.now();
     m.rev = (Number(m.rev) || 1) + 1;
-    saveState(true, true);
+
+    if (switchedRoom) {
+      for (const c of meshClients.values()) {
+        if (c.connected && c.ws && c.ws.readyState === WebSocket.OPEN) {
+          try { subscribeSocketToActiveRoom(c.ws); } catch (_) {}
+        }
+      }
+      startCloudMesh();
+    }
+
+    saveState(true, false);
+    if (m.profileRegistered) {
+      publishMyInvestorToMesh(joinEv);
+    } else if (switchedRoom) {
+      syncHttpFamilyHubAsync();
+    }
     return { ok: true };
   }
 
@@ -3477,7 +3557,7 @@
   // --------------------------------------------------------------------------
   // 11. ARKA PLAN CANLI PİYASA SENKRONİZASYONU (CORS-FREE TEXT/PLAIN + iOS NATIVE)
   // --------------------------------------------------------------------------
-  function nativeBridgePostJson(url, bodyStr) {
+  function nativeBridgeHttpRequest(url, method = 'POST', bodyStr = null, headers = null) {
     const reqId = 'nf_' + Math.random().toString(36).slice(2, 10);
     return new Promise((resolve, reject) => {
       const t = setTimeout(() => {
@@ -3492,8 +3572,8 @@
         action: 'httpFetch',
         reqId,
         url,
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method,
+        headers: headers || (method === 'POST' ? { 'Content-Type': 'application/json' } : {}),
         body: bodyStr
       });
     });
@@ -3512,9 +3592,43 @@
       } catch (_) {}
     }
     if (global.webkit?.messageHandlers?.aetherBridge) {
-      return nativeBridgePostJson(url, bodyStr);
+      return nativeBridgeHttpRequest(url, 'POST', bodyStr, { 'Content-Type': 'application/json' });
     }
     throw new Error('HTTP request failed');
+  }
+
+  async function refreshNativeRssFeedIfAvailable() {
+    if (!global.webkit?.messageHandlers?.aetherBridge) return false;
+    try {
+      const rssUrl = 'https://news.google.com/rss/search?q=%22KAP%22+OR+%22Resmi+Gazete%22+OR+%22Borsa+%C4%B0stanbul%22+OR+%22TCMB%22&hl=tr&gl=TR&ceid=TR:tr';
+      const r = await nativeBridgeHttpRequest(rssUrl, 'GET', null, { Accept: 'application/rss+xml, text/xml' });
+      if (!r || !r.ok) return false;
+      const xml = await r.text();
+      const items = [];
+      const itemRegex = /<item>([\s\S]*?)<\/item>/gi;
+      let m;
+      while ((m = itemRegex.exec(xml)) !== null && items.length < 8) {
+        const block = m[1];
+        const rawTitle = (block.match(/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>/i)?.[1]
+          || block.match(/<title>([\s\S]*?)<\/title>/i)?.[1] || '')
+          .replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
+        const rawSource = (block.match(/<source[^>]*>([\s\S]*?)<\/source>/i)?.[1] || 'Canlı Haber').trim();
+        if (rawTitle.length > 12) {
+          const cleanTitle = rawTitle.replace(/\s+-\s+[^-]+$/, '').trim();
+          const up = cleanTitle.toLocaleUpperCase('tr-TR');
+          items.push({
+            cat: /KAP|BİLANÇO|TEMETTÜ|BORSA|HİSSE/.test(up) ? 'kap_bist' : 'resmi_makro',
+            title: cleanTitle,
+            source: rawSource
+          });
+        }
+      }
+      if (items.length > 0) {
+        marketData.liveRealWorldFeed = items;
+        return true;
+      }
+    } catch (_) {}
+    return false;
   }
 
   async function refreshLiveMarketData() {
@@ -3543,7 +3657,7 @@
 
     // Doğrudan Canlı TradingView Türkiye & Küresel Piyasa Taraması (0 Sunucuyla 4G/5G'de Çalışır!)
     try {
-      const [tvRes, glRes] = await Promise.all([
+      const [tvRes, glRes, rssUpdated] = await Promise.all([
         smartHttpPostJson('https://scanner.tradingview.com/turkey/scan', {
           filter: [{ left: 'type', operation: 'in_range', right: ['stock'] }],
           options: { lang: 'tr' },
@@ -3567,14 +3681,16 @@
               'BINANCE:BTCTRY', 'BINANCE:ETHTRY', 'BINANCE:SOLTRY',
               'AMEX:SPY', 'NASDAQ:QQQ', 'NASDAQ:NVDA', 'NASDAQ:AAPL', 'NASDAQ:MSFT',
               'AMEX:BNO', 'AMEX:DBA', 'ICEEUR:BRN1!', 'COMEX:HG1!', 'CBOT:ZW1!',
-              'FX_IDC:EURUSD', 'XETR:DAX'
+              'FX_IDC:EURUSD', 'XETR:DAX',
+              'ECONOMICS:TRIRYY', 'ECONOMICS:TRIRMM', 'ECONOMICS:TRPPIMM', 'ECONOMICS:TRINTR', 'TVC:TR02Y'
             ]
           },
           columns: ['close', 'change']
-        }).catch(() => null)
+        }).catch(() => null),
+        refreshNativeRssFeedIfAvailable().catch(() => false)
       ]);
 
-      let updatedAny = false;
+      let updatedAny = Boolean(rssUpdated);
 
       if (glRes && glRes.ok) {
         const glJson = await glRes.json();
@@ -3588,9 +3704,32 @@
         const usdTry = glMap['FX_IDC:USDTRY']?.close || marketData?.macro?.usdTry || 0;
         const usdChg = glMap['FX_IDC:USDTRY']?.chg || 0;
         const combineChg = (a, b) => +((((1 + (Number(a) || 0) / 100) * (1 + (Number(b) || 0) / 100)) - 1) * 100).toFixed(2);
-        if (usdTry > 0 && marketData?.macro) marketData.macro.usdTry = +usdTry.toFixed(4);
-        if (glMap['FX_IDC:EURTRY']?.close && marketData?.macro) marketData.macro.eurTry = +glMap['FX_IDC:EURTRY'].close.toFixed(4);
-        if (glMap['BIST:XU100']?.close && marketData?.macro) marketData.macro.bist100 = +glMap['BIST:XU100'].close.toFixed(2);
+        if (!marketData.macro) marketData.macro = {};
+        if (usdTry > 0) marketData.macro.usdTry = +usdTry.toFixed(4);
+        if (glMap['FX_IDC:EURTRY']?.close) marketData.macro.eurTry = +glMap['FX_IDC:EURTRY'].close.toFixed(4);
+        if (glMap['BIST:XU100']?.close) marketData.macro.bist100 = +glMap['BIST:XU100'].close.toFixed(2);
+
+        // Ayın 3'ü 10:00 TÜİK Enflasyonu & Perşembe 14:00 TCMB Politika Faizi Canlı Güncellemesi
+        if (glMap['ECONOMICS:TRIRYY']?.close > 0) {
+          marketData.macro.cpiYoy = +glMap['ECONOMICS:TRIRYY'].close.toFixed(2);
+          marketData.macro.tuikInflationYoY = marketData.macro.cpiYoy;
+        }
+        if (glMap['ECONOMICS:TRIRMM']?.close != null) {
+          marketData.macro.cpiMom = +glMap['ECONOMICS:TRIRMM'].close.toFixed(2);
+        }
+        if (glMap['ECONOMICS:TRINTR']?.close > 0) {
+          const newPolicy = +glMap['ECONOMICS:TRINTR'].close.toFixed(2);
+          const prevPolicy = Number(marketData.macro.tcmbPolicyRate) || newPolicy;
+          marketData.macro.tcmbPolicyRate = newPolicy;
+          if (Math.abs(newPolicy - prevPolicy) >= 0.25) {
+            const delta = newPolicy - prevPolicy;
+            for (const inst of (marketData.instruments || [])) {
+              if (inst.isRateInstrument && inst.currentPrice > 0) {
+                inst.currentPrice = Math.max(2, +(inst.currentPrice + delta * 0.85).toFixed(2));
+              }
+            }
+          }
+        }
 
         const mc = marketData?.kitchenIntelSummary?.openHorizon?.macroChains;
         if (mc) {

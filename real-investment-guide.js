@@ -386,6 +386,16 @@
   // --------------------------------------------------------------------------
   // 2. CANLI KAP, RESMİ GAZETE VE MAKRO HABER -> ETKİLENEN VARLIK EŞLEŞTİRİCİ
   // --------------------------------------------------------------------------
+  function hashNewsId(prefix, titleStr, sourceStr) {
+    const raw = `${String(titleStr || '').trim().toLocaleUpperCase('tr-TR')}|${String(sourceStr || '').trim()}`;
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < raw.length; i++) {
+      h ^= raw.charCodeAt(i);
+      h = Math.imul(h, 16777619) >>> 0;
+    }
+    return `${prefix}_${h.toString(36)}`;
+  }
+
   function getEnrichedLiveNewsFeed() {
     const K = global.AetherKernelV10;
     if (!K) return [];
@@ -394,9 +404,14 @@
     const horizonItems = md?.kitchenIntelSummary?.openHorizon?.items || [];
 
     const combined = [];
+    const seenIds = new Set();
 
     for (const n of rawFeed.slice(0, 8)) {
-      const t = String(n.title || '');
+      const t = String(n.title || '').trim();
+      if (!t) continue;
+      const nid = hashNewsId('nw', t, n.source);
+      if (seenIds.has(nid)) continue;
+      seenIds.add(nid);
       const tUp = t.toLocaleUpperCase('tr-TR');
       let linkedKeys = [];
       let streetImpact = 'Makro fiyatlama ve piyasa algısı üzerinde doğrudan etkili güncel gelişme.';
@@ -420,10 +435,12 @@
         linkedKeys = ['bist-100', 'gram-altin-spot', 'doviz-usd'];
       }
 
+      const isResmiGazete = /RESMİ GAZETE|TEBLİĞ|STOPAJ|CUMHURBAŞKANI KARARI/.test(tUp);
       combined.push({
-        id: 'nw_' + combined.length,
-        badge: n.cat === 'kap_bist' ? 'KAP & Borsa' : (n.cat === 'hammadde_dunya' ? 'Hammadde & Dünya' : 'Resmi & Makro'),
-        tone: n.cat === 'kap_bist' ? 'info' : 'warn',
+        id: nid,
+        badge: isResmiGazete ? 'Resmi Gazete' : (n.cat === 'kap_bist' ? 'KAP & Borsa' : (n.cat === 'hammadde_dunya' ? 'Hammadde & Dünya' : 'Resmi & Makro')),
+        tone: isResmiGazete ? 'danger' : (n.cat === 'kap_bist' ? 'info' : 'warn'),
+        isUrgentDisclosure: Boolean(isResmiGazete || n.cat === 'kap_bist'),
         title: t,
         source: n.source || 'Piyasa Akışı',
         streetImpact,
@@ -432,12 +449,18 @@
     }
 
     for (const h of horizonItems.slice(0, 6)) {
+      const ht = String(h.title || '').trim();
+      if (!ht) continue;
+      const hid = hashNewsId('hz', ht, h.pubDate);
+      if (seenIds.has(hid)) continue;
+      seenIds.add(hid);
       const tickers = (h.detectedTickers || []).filter((tk) => K.getAsset(tk));
       combined.push({
-        id: 'hz_' + combined.length,
+        id: hid,
         badge: String(h.badge || 'Mutfak İstihbaratı').replace(/^[^\wÇĞİÖŞÜçğıöşü]+/u, '').trim(),
         tone: h.direction === 'BEARISH_TRAP' ? 'danger' : (h.direction === 'BULLISH_CATALYST' ? 'good' : 'info'),
-        title: h.title,
+        isUrgentDisclosure: true,
+        title: ht,
         source: h.pubDate || 'KAP / Resmi Tarama',
         streetImpact: h.whyItMatters,
         linkedKeys: tickers.length > 0 ? tickers.map((tk) => K.getAsset(tk).key) : ['bist-100', 'kira-sertifikasi-sukuk']
@@ -586,6 +609,18 @@
   // --------------------------------------------------------------------------
   // 4. 7 GERÇEKÇİ KRİZ & FIRTINA TATBİKATI ("ORTALIK KARIŞTIĞINDA KİM SOĞUKKANLI?")
   // --------------------------------------------------------------------------
+  function isPreciousMetalAsset(a) {
+    if (!a) return false;
+    const id = String(a.id || '');
+    return a.subVenue === 'PHYSICAL_METAL' || a.subVenue === 'DARPHANE_S1' || id.includes('altin') || id.includes('gumus');
+  }
+
+  function isFxLinkedShieldAsset(a) {
+    if (!a) return false;
+    const id = String(a.id || '');
+    return id.startsWith('doviz-') || id === 'eurobond-usdtr' || id === 'eurobond-emb' || a.isForeignUsd || isPreciousMetalAsset(a);
+  }
+
   const CRISIS_SCENARIOS = [
     {
       id: 'NONE',
@@ -603,8 +638,8 @@
       computeAssetShockPct(a) {
         if (a.id === 'emtia-petrol-bno') return 35;
         if (a.ticker === 'TUPRS') return 14;
-        if (a.id.includes('altin') || a.id.includes('gumus')) return 11;
-        if (String(a.id).startsWith('doviz-')) return 6;
+        if (isPreciousMetalAsset(a)) return 11;
+        if (String(a.id).startsWith('doviz-') || a.id === 'eurobond-usdtr') return 6;
         if (['THYAO', 'PGSUS', 'TAVHL'].includes(a.ticker)) return -16;
         if (a.isRateInstrument) return 0;
         if (a.venue === 'CRYPTO_24_7') return -14;
@@ -621,7 +656,7 @@
       computeAssetShockPct(a) {
         if (['ASTOR', 'CWENE', 'SMRTG', 'ENJSA'].includes(a.ticker)) return 9;
         if (a.isRateInstrument) return 0;
-        if (a.id.includes('altin') || String(a.id).startsWith('doviz-')) return 5;
+        if (isPreciousMetalAsset(a) || String(a.id).startsWith('doviz-') || a.id === 'eurobond-usdtr') return 5;
         if (['EREGL', 'KRDMD', 'SASA', 'SISE'].includes(a.ticker)) return -13;
         if (a.venue === 'BIST') return -8;
         return -2;
@@ -638,6 +673,7 @@
         if (['BIMAS', 'MGROS', 'TABGD'].includes(a.ticker)) return 8;
         if (a.isRateInstrument) return 0;
         if (a.categoryName.includes('Enerji') && !['ASTOR'].includes(a.ticker)) return -11;
+        if (isPreciousMetalAsset(a)) return 4;
         if (a.venue === 'BIST') return -5;
         return 2;
       }
@@ -652,7 +688,7 @@
         if (a.isRateInstrument) return 1.5;
         if (a.categoryName.includes('Gayrimenkul') || ['EKGYO', 'RYGYO', 'ISGYO', 'SASA'].includes(a.ticker)) return -15;
         if (a.bistRow && (a.bistRow.totalDebtMillionTL || 0) > (a.bistRow.cashMillionTL || 0) * 3) return -13;
-        if (String(a.id).startsWith('doviz-') || a.id.includes('altin')) return -4.5;
+        if (String(a.id).startsWith('doviz-') || a.id === 'eurobond-usdtr' || isPreciousMetalAsset(a)) return -4.5;
         if (a.venue === 'BIST') return -6.5;
         return -2;
       }
@@ -664,7 +700,7 @@
       cashInflationShockPct: 16.0,
       desc: 'İç ve dış gerilimle döviz kurları +%22 sıçradı; döviz geliri olan ihracatçılar ve altın korurken boş TL nakdin alım gücü sert eridi.',
       computeAssetShockPct(a) {
-        if (String(a.id).startsWith('doviz-') || a.isForeignUsd || a.id.includes('altin') || a.id.includes('gumus') || a.venue === 'CRYPTO_24_7') return 21;
+        if (isFxLinkedShieldAsset(a) || a.venue === 'CRYPTO_24_7') return 21;
         if (['THYAO', 'FROTO', 'TOASO', 'TUPRS', 'ASELS', 'SISE', 'EREGL'].includes(a.ticker)) return 12;
         if (a.isRateInstrument) return 0;
         if (a.venue === 'BIST') return 3;
@@ -679,8 +715,10 @@
       desc: 'Dünya borsalarında sert satış dalgası: Kripto -%32, ABD teknoloji -%16, gelişen ülke borsaları -%11 çekildi; sabit getiri ve fiziki altın korudu.',
       computeAssetShockPct(a) {
         if (a.venue === 'CRYPTO_24_7') return -32;
-        if (a.isForeignUsd && a.id !== 'gram-altin-spot') return -16;
-        if (a.id === 'gram-altin-spot' || a.id === 'ceyrek-altin') return 6;
+        if (isPreciousMetalAsset(a) && a.subVenue !== 'DARPHANE_S1') return 6;
+        if (a.subVenue === 'DARPHANE_S1') return 3;
+        if (a.isForeignUsd) return -16;
+        if (String(a.id).startsWith('doviz-') || a.id === 'eurobond-usdtr') return 2.5;
         if (a.isRateInstrument) return 0;
         if (a.venue === 'BIST') return -11;
         return -5;
@@ -695,7 +733,7 @@
       computeAssetShockPct(a) {
         if (a.subVenue === 'DARPHANE_S1') return -Math.max(9, Math.round(global.AetherKernelV10?.getDarphanePremiumInfo()?.premiumPct || 12));
         if (a.isPumpAnomaly || a.isTms29Illusion || a.distributionTrap) return -24;
-        if (a.id === 'gram-altin-spot' || a.isRateInstrument) return 0.5;
+        if (isPreciousMetalAsset(a) || a.isRateInstrument) return 0.5;
         if (a.bistRow && (a.bistRow.ocfMillionTL || 0) > 250) return 1.5;
         if (a.venue === 'BIST') return -4;
         return 0;
@@ -711,6 +749,7 @@
 
     const snap = K.evaluateMemberPortfolio();
     let totalDeltaTL = 0;
+    let postBistCollateralTL = 0;
     const itemImpacts = [];
 
     for (const it of snap.spotItems) {
@@ -719,6 +758,9 @@
       const pct = sc.computeAssetShockPct(a);
       const dTL = Math.round(it.netValTL * (pct / 100));
       totalDeltaTL += dTL;
+      if (a.venue === 'BIST') {
+        postBistCollateralTL += Math.max(0, it.grossValTL * (1 + pct / 100));
+      }
       itemImpacts.push({ name: it.ticker || it.name, pct, deltaTL: dTL });
     }
     for (const tr of snap.tranches) {
@@ -737,7 +779,12 @@
       : postNetWorthTL;
     const realPurchasingDeltaTL = Math.round(realPostWorthTL - snap.totalNetWorthTL);
     const realPurchasingDeltaPct = +((realPurchasingDeltaTL / Math.max(1, snap.totalNetWorthTL)) * 100).toFixed(2);
-    const marginWiped = snap.marginDebtTL > 0 && (postNetWorthTL / Math.max(1, postNetWorthTL + snap.marginDebtTL)) < 0.35;
+    const postCollateralBase = Math.max(1, postBistCollateralTL + snap.cashTL + snap.unsettledTL);
+    const postCollateralEqRatio = (postCollateralBase - snap.marginDebtTL) / postCollateralBase;
+    const marginWiped = snap.marginDebtTL > 0 && (
+      postCollateralEqRatio < 0.35 ||
+      (postNetWorthTL / Math.max(1, postNetWorthTL + snap.marginDebtTL)) < 0.35
+    );
 
     return {
       scenario: sc,

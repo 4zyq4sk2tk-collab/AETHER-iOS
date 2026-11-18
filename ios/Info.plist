@@ -17,9 +17,9 @@
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
-  <string>14.0.0</string>
+  <string>14.1.0</string>
   <key>CFBundleVersion</key>
-  <string>1400</string>
+  <string>1410</string>
   <key>LSRequiresIPhoneOS</key>
   <true/>
   <key>MinimumOSVersion</key>
@@ -47,6 +47,11 @@
   <key>UISupportedInterfaceOrientations</key>
   <array>
     <string>UIInterfaceOrientationPortrait</string>
+  </array>
+  <key>UISupportedInterfaceOrientations~ipad</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+    <string>UIInterfaceOrientationPortraitUpsideDown</string>
     <string>UIInterfaceOrientationLandscapeLeft</string>
     <string>UIInterfaceOrientationLandscapeRight</string>
   </array>

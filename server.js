@@ -2148,7 +2148,7 @@ function pruneEmptyRoom(roomCode) {
   const clean = normalizeRoomCode(roomCode);
   if (clean === 'ORTAK-LIG') return;
   const r = hubRoomsMemory[clean];
-  if (r && Object.keys(r.members || {}).length === 0 && (r.banterFeed || []).length === 0) {
+  if (r && Object.keys(r.members || {}).length === 0) {
     delete hubRoomsMemory[clean];
   }
 }
@@ -2315,6 +2315,7 @@ function startServerCloudBridge() {
                       if (mergeMemberIntoRoom(room, JSON.parse(payload))) scheduleHubDiskSave();
                     } else if (segs[2] && hubRoomsMemory[roomCode]?.members?.[segs[2]]) {
                       delete hubRoomsMemory[roomCode].members[segs[2]];
+                      hubRoomsMemory[roomCode].banterFeed = (hubRoomsMemory[roomCode].banterFeed || []).filter((b) => b.authorId !== segs[2]);
                       pruneEmptyRoom(roomCode);
                       scheduleHubDiskSave();
                     }
@@ -2534,7 +2535,9 @@ const server = http.createServer(async (req, res) => {
           if (!m || !m.id) continue;
           if (m._deleted) {
             delete room.members[m.id];
+            room.banterFeed = (room.banterFeed || []).filter((b) => b.authorId !== m.id);
             serverBroadcastMqtt(`${SERVER_MESH_NS}/${code}/member/${m.id}`, '', true);
+            serverBroadcastMqtt(`${SERVER_MESH_NS}/${code}/banter_snapshot`, room.banterFeed.length > 0 ? { ts: Date.now(), items: room.banterFeed.slice(0, 30) } : '', true);
             changed = true;
             continue;
           }
@@ -2636,6 +2639,8 @@ const server = http.createServer(async (req, res) => {
     '/apple-touch-icon.svg': { file: 'apple-touch-icon.svg', mime: 'image/svg+xml', cc: 'public, max-age=3600' },
     '/apple-touch-icon.png': { file: 'apple-touch-icon.png', mime: 'image/png', cc: 'public, max-age=3600' },
     '/favicon.ico': { file: 'apple-touch-icon.png', mime: 'image/png', cc: 'public, max-age=3600' },
+    '/AETHER-iOS.ipa': { file: 'AETHER-iOS.ipa', mime: 'application/octet-stream', cc: 'no-cache', download: 'AETHER-iOS.ipa' },
+    '/download/AETHER-iOS.ipa': { file: 'AETHER-iOS.ipa', mime: 'application/octet-stream', cc: 'no-cache', download: 'AETHER-iOS.ipa' },
     '/download/AETHER-Sideload.ipa': { file: 'AETHER-Sideload.ipa', mime: 'application/octet-stream', cc: 'no-cache', download: 'AETHER-iOS.ipa' }
   };
   if (staticMap[url.pathname]) {
@@ -2667,7 +2672,7 @@ const server = http.createServer(async (req, res) => {
       <key>Label</key>
       <string>AETHER</string>
       <key>PayloadDescription</key>
-      <string>AETHER — Enflasyona Karşı Akıllı Sepet ve Yatırım Rehberi</string>
+      <string>AETHER — 1.000.000 ₺ Gerçek Yatırım Meydanı ve Canlı Lig</string>
       <key>PayloadDisplayName</key>
       <string>AETHER iOS Uygulaması</string>
       <key>PayloadIdentifier</key>

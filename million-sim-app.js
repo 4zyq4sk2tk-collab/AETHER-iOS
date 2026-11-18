@@ -43,10 +43,11 @@
   let selectedCrisisId = 'STRAIT_BLOCKADE';
   let leagueSortBy = 'NET_WORTH'; // NET_WORTH | PNL_PCT | MASTERY
   let starterGuideDismissed = false;
+  let preOpenBriefDismissed = false;
   let uiTheme = 'obsidian'; // obsidian | daylight
 
   // Alt Çekmece (Bottom Sheet) Durumu
-  let modalMode = null; // 'ASSET' | 'WELCOME' | 'PROFILE' | 'PEER_XRAY' | null
+  let modalMode = null; // 'ASSET' | 'WELCOME' | 'PROFILE' | 'PEER_XRAY' | 'INSTALL' | 'RESET_CONFIRM' | null
   let drawerAssetKey = null;
   let drawerSubTab = 'ORDER'; // ORDER | VAULT | LOGIC
   let drawerOrderSide = 'BUY'; // BUY | SELL
@@ -59,13 +60,30 @@
   let draftThesisNote = '';
   let draftOrderAmount = 100000;
   let draftSellRatio = 1;
+  let draftSellQty = null;
   let lastDrawerFeedback = null;
   let lastIpoFeedback = null;
   let lastPortfolioFeedback = null;
 
   let toastTimer = null;
   let lastKnownTradeFeedId = null;
+  let knownNewsFeedIds = new Set();
+  let newsTrackerReady = false;
+  let deferredPwaPrompt = null;
   let lastHeaderPhaseSig = '';
+
+  function isRunningAsInstalledApp() {
+    try {
+      return Boolean(
+        global.__AETHER_NATIVE_IOS_APP__ ||
+        global.navigator?.standalone === true ||
+        global.matchMedia?.('(display-mode: standalone)')?.matches ||
+        global.location?.protocol === 'file:'
+      );
+    } catch (_) {
+      return false;
+    }
+  }
 
   // --------------------------------------------------------------------------
   // 1. NATIVE iOS HAPTIC, TEMA, PAYLAŞIM & DYNAMIC ISLAND BİLDİRİM KÖPRÜSÜ
@@ -135,6 +153,10 @@
             body: String(body || ''),
             delaySec: Math.max(1, Number(delaySec) || 1)
           });
+          return;
+        }
+        if (typeof global.Notification !== 'undefined' && global.Notification.permission === 'granted' && global.document?.visibilityState === 'hidden') {
+          new global.Notification(String(title || 'AETHER'), { body: String(body || ''), icon: './apple-touch-icon.png' });
         }
       } catch (_) {}
     },
@@ -782,7 +804,13 @@
     const sukukAsset = K.getAsset('kira-sertifikasi-sukuk');
 
     const assets = getFilteredMarketAssets();
+    const clock = K.getTurkishClock();
+    const G = global.RealInvestmentGuide;
+    const liveFeed = G?.getEnrichedLiveNewsFeed ? G.getEnrichedLiveNewsFeed() : [];
+    const unreadNews = K.getUnreadDisclosureCount ? K.getUnreadDisclosureCount(liveFeed.map((x) => x.id)) : 0;
     const untouchedMillion = !me.livedMilestones?.executedRealOrder && snap.spotItems.length === 0 && snap.tranches.length === 0 && !starterGuideDismissed;
+    const showPreOpenBrief = !untouchedMillion && !clock.bistCanMatchNow && unreadNews > 0 && !preOpenBriefDismissed;
+    const showInstallChip = !isRunningAsInstalledApp();
 
     const tapeItems = [
       { key: 'gram-altin-spot', sym: 'GR ALTIN', val: Math.round(goldAsset?.priceTL || 6115).toLocaleString('tr-TR') + ' ₺', chg: goldAsset?.change1D || 0 },
@@ -829,6 +857,15 @@
         </section>
       ` : ''}
 
+      ${showPreOpenBrief ? `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--surface-2);border:1px solid rgba(245,158,11,0.38);border-radius:12px;padding:6px 10px;margin:2px 0 6px">
+          <button type="button" id="aeOpenPreBriefBtn" style="appearance:none;border:none;background:none;color:var(--ink-100);font-size:11.6px;font-weight:800;text-align:left;padding:0;cursor:pointer;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">
+            🌙 <span style="color:var(--gold-bright)">Sabah Zili Öncesi (${unreadNews} yeni):</span> ${esc(liveFeed[0]?.title || 'KAP & Resmi Gazete masasını incele')}
+          </button>
+          <button type="button" class="ae-clear-btn" id="aeDismissPreBriefBtn" style="position:static;transform:none;flex-shrink:0" aria-label="Kapat">×</button>
+        </div>
+      ` : ''}
+
       <!-- 2. ANINDA ARAMA VE GÖRÜNÜM/SIRALAMA KONTROLÜ -->
       <div class="ae-search-bar" style="margin:4px 0 6px">
         <div class="ae-search-wrap">
@@ -872,6 +909,7 @@
         <button type="button" class="ae-chip sub ${activeCategory === 'FX' ? 'active' : ''}" data-cat="FX">Döviz</button>
         <button type="button" class="ae-chip sub ${activeCategory === 'FUNDS' ? 'active' : ''}" data-cat="FUNDS">Fon & BYF</button>
         <button type="button" class="ae-chip sub ${activeCategory === 'GLOBAL_CRYPTO' ? 'active' : ''}" data-cat="GLOBAL_CRYPTO">ABD & Kripto</button>
+        ${showInstallChip ? `<button type="button" class="ae-chip" id="aeOpenInstallChipBtn" style="border-color:rgba(245,158,11,0.45);color:var(--gold-bright)">📲 Uygulamayı Kur</button>` : ''}
       </div>
 
       ${marketSortBy !== 'DEFAULT' ? `
@@ -894,6 +932,22 @@
       e.stopPropagation();
       starterGuideDismissed = true;
       renderMarketTab(host);
+    });
+
+    document.getElementById('aeOpenPreBriefBtn')?.addEventListener('click', () => {
+      compassSubTab = 'BRIEF';
+      switchTab('compass');
+    });
+
+    document.getElementById('aeDismissPreBriefBtn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      preOpenBriefDismissed = true;
+      renderMarketTab(host);
+    });
+
+    document.getElementById('aeOpenInstallChipBtn')?.addEventListener('click', () => {
+      AetherNative.haptic('light');
+      openInstallAppModal();
     });
 
     document.getElementById('aeViewToggleBtn')?.addEventListener('click', () => {
@@ -1740,10 +1794,7 @@
     document.getElementById('aeOpenProfFromMastery')?.addEventListener('click', openProfileModal);
     document.getElementById('msReset1MBtn')?.addEventListener('click', () => {
       AetherNative.haptic('warning');
-      K.resetMemberOneMillion();
-      AetherNative.toast('Portföyün temiz 1.000.000 ₺ ile sıfırlandı.', 'ok');
-      renderHeader();
-      renderMasteryTab(host);
+      openResetConfirmModal();
     });
   }
 
@@ -2013,9 +2064,23 @@
 
     const member = K.getActiveMember();
     const snap = K.evaluateMemberPortfolio(member);
+    const micro = K.inspectBoardMicrostructure(asset);
     const hasPos = Boolean(member.positions?.[asset.key]?.qty > 0);
     drawerOrderSide = (initialSide === 'SELL' && hasPos) ? 'SELL' : 'BUY';
-    draftOrderAmount = Math.min(100000, Math.max(1000, Math.floor(snap.cashTL * 0.25) || 25000));
+    draftSellQty = null;
+
+    const unsettledUsable = (asset.venue === 'BIST' && !micro.isBrutTakas)
+      ? (member.settlementQueue || []).filter((x) => x.usableForBist !== false).reduce((s, x) => s + Number(x.grossTL || 0), 0)
+      : 0;
+    const availCashPower = Math.max(0, Math.floor(snap.cashTL + unsettledUsable));
+    const minOrderTL = (asset.venue === 'BANK_RATE' || asset.venue === 'TEFAS') ? 100 : 10;
+    if (availCashPower <= 0) {
+      draftOrderAmount = 25000;
+    } else if (availCashPower < 1000) {
+      draftOrderAmount = Math.max(minOrderTL, availCashPower);
+    } else {
+      draftOrderAmount = Math.min(100000, Math.max(1000, Math.floor(availCashPower * 0.25)));
+    }
 
     if (drawerSubTab === 'VAULT' && (asset.bistRow || asset.subVenue === 'DARPHANE_S1')) {
       K.markInspectedCashScale();
@@ -2067,15 +2132,32 @@
       if (asset.subVenue === 'TERM_DEPOSIT') {
         stp = selectedMaturity > 365 ? 10 : (selectedMaturity > 180 ? 15 : 17.5);
         timingText = `${selectedMaturity} gün kilitli (Erken bozarsan yanar)`;
+      } else if (!clock.isBizDay && asset.subVenue === 'GOV_BOND') {
+        timingText = 'Tatil/Hafta sonu gişe kapalı';
       }
       const netR = asset.annualGrossRatePct * (1 - stp / 100);
       monthlyDripTL = Math.round((amt * (netR / 100)) / 12);
+    } else if (asset.venue === 'GLOBAL_USD') {
+      frictionTL = Math.round(amt * 0.0015);
+      timingText = clock.isWeekend
+        ? 'Hafta sonu kapalı (Pzt açılır)'
+        : (clock.globalNyOpen ? 'ABD Seansı Açık · Anında' : 'Küresel Kotasyon · Anında');
+      if (asset.id === 'eurobond-usdtr' || asset.id === 'eurobond-emb') {
+        monthlyDripTL = Math.round((amt * 0.055) / 12);
+      }
+    } else if (asset.venue === 'VIOP') {
+      frictionTL = Math.round(amt * 0.0010);
+      timingText = clock.viopOpen
+        ? (clock.viopEvening ? '19:00 Akşam Seansı · Anında' : 'VİOP Seansı · Anında')
+        : 'VİOP Kapalı (09:30 / 19:00)';
     } else {
-      frictionTL = Math.round(amt * 0.0012);
+      frictionTL = Math.round(amt * 0.0010);
+      timingText = '7/24 Kesintisiz · Anında';
     }
 
-    const existingVal = snap.spotItems.find((x) => x.assetKey === asset.key)?.netValTL || 0;
-    const newSingleSharePct = Math.min(100, Math.round(((existingVal + amt) / Math.max(1, snap.totalNetWorthTL)) * 100));
+    const existingSpotVal = snap.spotItems.find((x) => x.assetKey === asset.key)?.netValTL || 0;
+    const existingTrancheVal = snap.tranches.filter((t) => t.assetKey === asset.key).reduce((s, t) => s + (t.accruedNetValueTL || 0), 0);
+    const newSingleSharePct = Math.min(100, Math.round(((existingSpotVal + existingTrancheVal + amt) / Math.max(1, snap.totalNetWorthTL)) * 100));
 
     return { frictionTL, timingText, monthlyDripTL, newSingleSharePct };
   }
@@ -2228,7 +2310,16 @@
     const existingTranches = snap.tranches.filter((t) => t.assetKey === asset.key);
     const existingPending = (member.pendingOrders || []).filter((o) => o.assetKey === asset.key);
 
-    const maxBuyPower = Math.max(1000, Math.floor(snap.cashTL + (selectedUseMargin && micro.marginAllowed ? snap.totalNetWorthTL * 0.5 - snap.marginDebtTL : 0)));
+    const unsettledUsableForBist = (asset.venue === 'BIST' && !micro.isBrutTakas)
+      ? (member.settlementQueue || []).filter((x) => x.usableForBist !== false).reduce((s, x) => s + Number(x.grossTL || 0), 0)
+      : 0;
+    const usableCashTL = Math.max(0, +(snap.cashTL + unsettledUsableForBist).toFixed(2));
+    const minOrderTL = (asset.venue === 'BANK_RATE' || asset.venue === 'TEFAS') ? 100 : 10;
+    const rawMaxPower = Math.floor(usableCashTL + (selectedUseMargin && micro.marginAllowed ? Math.max(0, snap.totalNetWorthTL * 0.5 - snap.marginDebtTL) : 0));
+    const maxBuyPower = Math.max(minOrderTL, rawMaxPower);
+    const sliderMin = rawMaxPower > 0 && rawMaxPower < 1000 ? minOrderTL : 1000;
+    const sliderMax = Math.max(sliderMin + 100, rawMaxPower > 0 ? rawMaxPower : 10000);
+    const sliderStep = sliderMax <= 2000 ? 10 : (sliderMax <= 50000 ? 250 : (sliderMax <= 5000000 ? 1000 : Math.pow(10, Math.max(3, Math.floor(Math.log10(sliderMax)) - 3))));
     const chg = Number(asset.change1D) || 0;
 
     // 1-Satırlık Hızlı Kasa/Terazi Özeti (Her modda üstte görünür -> Kör bahis önleyici!)
@@ -2299,12 +2390,36 @@
       }
 
       if (drawerOrderSide === 'SELL' && existingPos && existingPos.qty > 0) {
-        const estGross = Math.round((existingSpotSnap?.netValTL || existingPos.qty * asset.priceTL) * draftSellRatio);
+        const queuedSellQty = existingPending
+          .filter((o) => o.side === 'SELL')
+          .reduce((s, o) => s + Number(o.qty || 0), 0);
+        const availQty = Math.max(0, +(existingPos.qty - queuedSellQty).toFixed(6));
+        const isIntLot = asset.subVenue === 'BIST_STOCK';
+        const effectiveSellQty = (draftSellQty != null && draftSellQty > 0)
+          ? (isIntLot ? Math.min(Math.floor(availQty), Math.max(1, Math.floor(draftSellQty))) : Math.min(availQty, +Number(draftSellQty).toFixed(6)))
+          : (isIntLot
+            ? Math.min(Math.floor(availQty), Math.max(1, Math.floor(availQty * draftSellRatio)))
+            : +(availQty * draftSellRatio).toFixed(6));
+        const effectivePct = availQty > 0 ? Math.min(100, Math.round((effectiveSellQty / availQty) * 100)) : 0;
+
+        let unitBidTL = asset.priceTL;
+        if (asset.venue === 'TWO_DOOR') {
+          const sp = selectedDoor === 'BAZAAR' ? clock.bazaarSpreadPct : (selectedDoor === 'NOBETCI' ? clock.nobetciSpreadPct : clock.bankSpreadPct);
+          unitBidTL = +(asset.priceTL * (1 - sp / 200)).toFixed(4);
+        }
+        const sellFeeRate = asset.venue === 'BIST' ? 0.00084 : (asset.venue === 'GLOBAL_USD' ? 0.0015 : ((asset.venue === 'CRYPTO_24_7' || asset.venue === 'VIOP') ? 0.0010 : 0));
+        const grossSaleTL = effectiveSellQty * unitBidTL;
+        const estStopajRatio = (asset.stopajPct > 0 && !asset.isRateInstrument && unitBidTL > existingPos.avgCostTL)
+          ? ((unitBidTL - existingPos.avgCostTL) / unitBidTL) * (asset.stopajPct / 100)
+          : 0;
+        const estGross = Math.max(0, Math.round(grossSaleTL * (1 - sellFeeRate - estStopajRatio)));
+        const showPartialRatios = !isIntLot || Math.floor(availQty) >= 2;
+
         tabContentHtml = `
           ${ !asset.isRateInstrument ? `
             <div class="ae-seg" style="margin-bottom:10px">
               <button type="button" class="ae-seg-btn" data-dside="BUY">Alım Yap</button>
-              <button type="button" class="ae-seg-btn active" data-dside="SELL" style="color:var(--red-ink)">Pozisyon Sat (${existingPos.qty} Adet)</button>
+              <button type="button" class="ae-seg-btn active" data-dside="SELL" style="color:var(--red-ink)">Pozisyon Sat (${availQty} Adet)</button>
             </div>
           ` : ''}
 
@@ -2312,24 +2427,35 @@
 
           <div class="ae-card" style="background:var(--surface-2)">
             <div style="display:flex;justify-content:space-between;font-size:12.4px;margin-bottom:8px">
-              <span>Elimdeki: <strong>${existingPos.qty} adet</strong> (Maliyet ${fmtUnitTL(existingPos.avgCostTL)})</span>
+              <span>Satılabilir: <strong>${availQty} ${isIntLot ? 'lot' : 'birim'}</strong> (Maliyet ${fmtUnitTL(existingPos.avgCostTL)})</span>
               <strong class="${(existingSpotSnap?.pnlNetTL || 0) >= 0 ? 'pos' : 'neg'}">${(existingSpotSnap?.pnlNetTL || 0) >= 0 ? '+' : ''}${fmtTL(existingSpotSnap?.pnlNetTL || 0)}</strong>
             </div>
 
-            <div class="ae-hscroll" style="margin-bottom:10px">
-              <button type="button" class="ae-chip ${draftSellRatio === 0.25 ? 'active' : ''}" data-sratio="0.25">%25 Sat</button>
-              <button type="button" class="ae-chip ${draftSellRatio === 0.5 ? 'active' : ''}" data-sratio="0.5">%50 Yarısı</button>
-              <button type="button" class="ae-chip ${draftSellRatio === 0.75 ? 'active' : ''}" data-sratio="0.75">%75 Sat</button>
-              <button type="button" class="ae-chip ${draftSellRatio === 1 ? 'active' : ''}" data-sratio="1">Tamamını Sat</button>
+            <div style="margin-bottom:8px">
+              <label style="display:block;font-size:11.3px;font-weight:800;color:var(--ink-400);margin-bottom:4px">Satılacak Miktar (${isIntLot ? 'Tam Lot' : 'Birim'}):</label>
+              <input id="aeSellQtyInp" class="ae-input" type="number" inputmode="decimal" min="${isIntLot ? 1 : 0.0001}" max="${availQty}" step="${isIntLot ? 1 : 'any'}" value="${effectiveSellQty}" style="font-weight:800;text-align:center" />
             </div>
 
-            <div style="font-size:11.8px;color:var(--ink-400);margin-bottom:10px">
-              Tahmini Net Tutar: <strong style="color:var(--ink-100)">~${fmtTL(estGross)}</strong> ·
+            ${showPartialRatios ? `
+              <div class="ae-hscroll" style="margin-bottom:10px">
+                ${(!isIntLot || Math.floor(availQty * 0.25) >= 1) ? `<button type="button" class="ae-chip ${draftSellQty == null && draftSellRatio === 0.25 ? 'active' : ''}" data-sratio="0.25">%25 Sat</button>` : ''}
+                ${(!isIntLot || Math.floor(availQty * 0.5) >= 1) ? `<button type="button" class="ae-chip ${draftSellQty == null && draftSellRatio === 0.5 ? 'active' : ''}" data-sratio="0.5">%50 Yarısı</button>` : ''}
+                ${(!isIntLot || Math.floor(availQty * 0.75) >= 1) ? `<button type="button" class="ae-chip ${draftSellQty == null && draftSellRatio === 0.75 ? 'active' : ''}" data-sratio="0.75">%75 Sat</button>` : ''}
+                <button type="button" class="ae-chip ${draftSellQty == null && draftSellRatio === 1 ? 'active' : ''}" data-sratio="1">Tamamını Sat (${availQty})</button>
+              </div>
+            ` : `
+              <div style="font-size:11.5px;color:var(--gold-bright);font-weight:700;margin-bottom:8px">
+                Borsa İstanbul paylarında en küçük işlem birimi 1 tam lottur.
+              </div>
+            `}
+
+            <div id="aeSellPreviewLine" style="font-size:11.8px;color:var(--ink-400);margin-bottom:10px">
+              Satılacak: <strong style="color:var(--ink-100)">${effectiveSellQty} ${isIntLot ? 'lot' : 'birim'} (%${effectivePct})</strong> · Tahmini Net Tutar: <strong style="color:var(--ink-100)">~${fmtTL(estGross)}</strong> ·
               ${asset.venue === 'BIST' ? 'BIST kuralıyla satış tutarı T+2 takas kum saatine girer (2 iş günü nakit çekilemez).' : 'Anında nakit kasana geçer.'}
             </div>
 
-            <button type="button" class="ms-btn sell-cta" style="width:100%;padding:13px;font-size:15px" id="aeConfirmSellBtn">
-              %${Math.round(draftSellRatio * 100)} Oranında Satış Emri Ver
+            <button type="button" class="ms-btn sell-cta" style="width:100%;padding:13px;font-size:15px" id="aeConfirmSellBtn" ${availQty <= 0 ? 'disabled' : ''}>
+              ${effectiveSellQty} ${isIntLot ? 'Lot' : 'Birim'} (%${effectivePct}) Satış Emri Ver
             </button>
           </div>
         `;
@@ -2348,21 +2474,26 @@
           ${marginHtml}
 
           <div class="ae-card" style="background:var(--surface-2);padding:13px">
-            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;flex-wrap:wrap;margin-bottom:6px">
               <span style="font-size:11.8px;font-weight:800;color:var(--ink-400)">Yatırım Tutarı (₺)</span>
-              <span style="font-size:11.4px;color:var(--ink-400)">Boş Nakit: <strong style="color:var(--ink-100)">${fmtTL(snap.cashTL)}</strong></span>
+              <span style="font-size:11.4px;color:var(--ink-400)">
+                ${unsettledUsableForBist > 0
+                  ? `BIST Alım Gücü: <strong style="color:var(--ink-100)">${fmtTL(usableCashTL)}</strong> <small>(T+2 dahil)</small>`
+                  : `Boş Nakit: <strong style="color:var(--ink-100)">${fmtTL(snap.cashTL)}</strong>`}
+              </span>
             </div>
 
-            <input id="msOrderAmountInp" class="ae-input" style="font-weight:900;font-size:20px !important;text-align:center;padding:10px" type="number" inputmode="numeric" min="100" step="1000" value="${draftOrderAmount}" />
+            <input id="msOrderAmountInp" class="ae-input" style="font-weight:900;font-size:20px !important;text-align:center;padding:10px" type="number" inputmode="numeric" min="${minOrderTL}" step="${sliderStep}" value="${draftOrderAmount}" />
 
-            <input id="aeAmountSlider" class="ae-slider" type="range" min="1000" max="${Math.max(10000, maxBuyPower)}" step="1000" value="${Math.min(maxBuyPower, draftOrderAmount)}" />
+            <input id="aeAmountSlider" class="ae-slider" type="range" min="${sliderMin}" max="${sliderMax}" step="${sliderStep}" value="${Math.min(sliderMax, Math.max(sliderMin, draftOrderAmount))}" />
 
             <div class="ae-hscroll" style="margin:6px 0 8px">
-              <button type="button" class="ae-chip sub" data-qamt="50000">50B ₺</button>
-              <button type="button" class="ae-chip sub" data-qamt="100000">100B ₺</button>
-              <button type="button" class="ae-chip sub" data-qamt="250000">250B ₺</button>
-              <button type="button" class="ae-chip sub" data-qamt="${Math.max(100, Math.floor(snap.cashTL * 0.5))}">%50 Nakit</button>
-              <button type="button" class="ae-chip sub" data-qamt="${Math.max(100, Math.floor(snap.cashTL))}">Tüm Nakit</button>
+              ${usableCashTL >= 50000 ? `<button type="button" class="ae-chip sub" data-qamt="50000">50B ₺</button>` : ''}
+              ${usableCashTL >= 100000 ? `<button type="button" class="ae-chip sub" data-qamt="100000">100B ₺</button>` : ''}
+              ${usableCashTL >= 250000 ? `<button type="button" class="ae-chip sub" data-qamt="250000">250B ₺</button>` : ''}
+              <button type="button" class="ae-chip sub" data-qamt="${Math.max(minOrderTL, Math.floor(usableCashTL * 0.25))}">%25 Güç</button>
+              <button type="button" class="ae-chip sub" data-qamt="${Math.max(minOrderTL, Math.floor(usableCashTL * 0.5))}">%50 Güç</button>
+              <button type="button" class="ae-chip sub" data-qamt="${Math.max(minOrderTL, Math.floor(usableCashTL))}">${unsettledUsableForBist > 0 ? 'Tüm Alım Gücü' : 'Tüm Nakit'}</button>
             </div>
 
             <div style="font-size:11.5px;font-weight:800;color:var(--ink-400);margin-bottom:5px">Karar Dayanağın (Ay Sonu Karnene İşlenir):</div>
@@ -2524,10 +2655,22 @@
     sheet.querySelectorAll('[data-sratio]').forEach((b) => {
       b.addEventListener('click', () => {
         AetherNative.haptic('selection');
+        draftSellQty = null;
         draftSellRatio = Number(b.getAttribute('data-sratio')) || 1;
         renderAssetDrawer();
       });
     });
+
+    const sellQtyInp = document.getElementById('aeSellQtyInp');
+    if (sellQtyInp) {
+      sellQtyInp.addEventListener('change', () => {
+        const v = Number(sellQtyInp.value);
+        if (Number.isFinite(v) && v > 0) {
+          draftSellQty = v;
+          renderAssetDrawer();
+        }
+      });
+    }
 
     sheet.querySelectorAll('[data-door]').forEach((b) => {
       b.addEventListener('click', () => {
@@ -2574,7 +2717,10 @@
     }
     if (slider) {
       slider.addEventListener('input', () => {
-        draftOrderAmount = Number(slider.value) || 1000;
+        const rawV = Number(slider.value) || minOrderTL;
+        const maxV = Number(slider.max) || maxBuyPower;
+        const stp = Number(slider.step) || 1000;
+        draftOrderAmount = (maxV - rawV) < stp && rawMaxPower > 0 ? maxV : rawV;
         if (amtInp) amtInp.value = String(draftOrderAmount);
         updateLiveRippleBoxInSheet(asset);
       });
@@ -2623,15 +2769,18 @@
     });
 
     document.getElementById('aeConfirmSellBtn')?.addEventListener('click', () => {
+      const typedQty = Number(document.getElementById('aeSellQtyInp')?.value || 0);
       const res = K.executeOrder({
         side: 'SELL',
         assetKey: asset.key,
+        sellQty: typedQty > 0 ? typedQty : undefined,
         sellRatio: draftSellRatio,
         door: selectedDoor
       });
       AetherNative.haptic(res.ok ? 'success' : 'error');
       lastDrawerFeedback = { ok: res.ok, text: res.ok ? res.message : res.reason };
       if (res.ok) {
+        draftSellQty = null;
         AetherNative.toast(`${asset.ticker} satış emri işlendi.`, 'ok');
         if (!K.getActiveMember().positions?.[asset.key]) drawerOrderSide = 'BUY';
       }
@@ -2772,9 +2921,19 @@
         <button type="button" class="ms-btn primary" style="padding:14px;font-size:15px" id="msWelcomeStartBtn">
           1.000.000 ₺ Kasamı Aç ve Lige Katıl
         </button>
+        ${!isRunningAsInstalledApp() ? `
+          <button type="button" class="ms-btn sm" style="width:100%" id="msWelcomeInstallBtn">
+            📲 Tarayıcıda Gezme — Telefona Uygulama Olarak Kur
+          </button>
+        ` : ''}
       </div>
     `;
     openModalShell();
+
+    document.getElementById('msWelcomeInstallBtn')?.addEventListener('click', () => {
+      AetherNative.haptic('light');
+      openInstallAppModal(true);
+    });
 
     const submit = () => {
       const name = document.getElementById('msWelcomeName')?.value || '';
@@ -2790,6 +2949,8 @@
       try {
         if (global.webkit?.messageHandlers?.aetherBridge) {
           global.webkit.messageHandlers.aetherBridge.postMessage({ action: 'requestNotifications' });
+        } else if (typeof global.Notification !== 'undefined' && global.Notification.permission === 'default') {
+          global.Notification.requestPermission().catch(() => {});
         }
       } catch (_) {}
       closeModal();
@@ -2801,6 +2962,123 @@
     document.getElementById('msWelcomeStartBtn')?.addEventListener('click', submit);
     document.getElementById('msWelcomeName')?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') submit();
+    });
+  }
+
+  function openResetConfirmModal() {
+    modalMode = 'RESET_CONFIRM';
+    const K = global.AetherKernelV10;
+    const snap = K.evaluateMemberPortfolio();
+    const sheet = document.getElementById('msModalSheet');
+    if (!sheet) return;
+
+    sheet.innerHTML = `
+      <div class="ae-sheet-grabber-zone" id="aeSheetDragHandle"><span class="ae-sheet-grabber"></span></div>
+      <div style="margin-bottom:12px">
+        <span class="ms-sig-pill danger">Güvenlik Onayı · Geri Alınamaz</span>
+        <h2 style="margin:6px 0 4px;font-size:18.5px;font-weight:900">1.000.000 ₺ Kasayı Baştan Başlat?</h2>
+        <p style="margin:0;font-size:12.6px;color:var(--ink-400);line-height:1.48">
+          Mevcut <strong>${fmtTL(snap.totalNetWorthTL)}</strong> portföyün, açık pozisyonların, bekleyen T+2 / valör emirlerin ve işlem geçmişin silinerek temiz <strong>1.000.000 ₺</strong> nakit ile sıfırdan başlatılacak.
+        </p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="ms-btn" style="flex:1;padding:13px" id="aeCancelResetBtn">Vazgeç</button>
+        <button type="button" class="ms-btn sell-cta" style="flex:1.3;padding:13px" id="aeConfirmResetExecBtn">Evet, 1M İle Sıfırla</button>
+      </div>
+    `;
+
+    openModalShell();
+    bindSheetDragToDismiss();
+    document.getElementById('aeCancelResetBtn')?.addEventListener('click', closeModal);
+    document.getElementById('aeConfirmResetExecBtn')?.addEventListener('click', () => {
+      AetherNative.haptic('warning');
+      K.resetMemberOneMillion();
+      starterGuideDismissed = false;
+      closeModal();
+      AetherNative.toast('Portföyün temiz 1.000.000 ₺ ile sıfırlandı.', 'ok');
+      renderHeader();
+      renderCurrentTab(false);
+    });
+  }
+
+  function openInstallAppModal(returnToWelcome = false) {
+    modalMode = 'INSTALL';
+    const sheet = document.getElementById('msModalSheet');
+    if (!sheet) return;
+
+    const releaseIpaUrl = 'https://github.com/4zyq4sk2tk-collab/AETHER-iOS/releases/download/v14.0.0-ios/AETHER-iOS.ipa';
+    const sideStoreDeepLink = 'sidestore://install?url=' + encodeURIComponent(releaseIpaUrl);
+    const isLocalServer = global.location?.port === '3847';
+    const directIpaHref = isLocalServer ? './download/AETHER-Sideload.ipa' : releaseIpaUrl;
+    const mobileConfigHref = isLocalServer ? './download/AETHER.mobileconfig' : './AETHER.mobileconfig';
+
+    sheet.innerHTML = `
+      <div class="ae-sheet-grabber-zone" id="aeSheetDragHandle"><span class="ae-sheet-grabber"></span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px">
+        <div>
+          <span class="ms-sig-pill info">Sıfır Tarayıcı Çubuğu · Gerçek Uygulama</span>
+          <h2 style="margin:5px 0 0;font-size:18.5px;font-weight:900">AETHER'i Telefonuna Kur</h2>
+        </div>
+        <button type="button" class="ms-btn sm" id="msCloseModalBtn">${returnToWelcome ? 'Geri' : 'Kapat'}</button>
+      </div>
+
+      <div class="ms-list">
+        <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:8px;border-color:rgba(245,158,11,0.42)">
+          <div>
+            <strong style="font-size:14px">1. iPhone Native ARM64 Uygulama (.ipa · Taptic + Bildirim)</strong>
+            <div style="font-size:11.8px;color:var(--ink-400);margin-top:2px">
+              Gerçek iOS ikili paketi (Taptic Engine titreşim, yerel bildirim, tam ekran Dynamic Island uyumu).
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a href="${esc(sideStoreDeepLink)}" class="ms-btn primary sm" style="flex:1;text-decoration:none">⚡ SideStore'da Aç</a>
+            <a href="${esc(directIpaHref)}" download="AETHER-iOS.ipa" class="ms-btn sm" style="flex:1;text-decoration:none">📦 AETHER-iOS.ipa İndir</a>
+          </div>
+        </div>
+
+        <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:8px">
+          <div>
+            <strong style="font-size:14px">2. SideStore Olmadan iPhone Tam Ekran Kurulum Profili</strong>
+            <div style="font-size:11.8px;color:var(--ink-400);margin-top:2px">
+              1 dokunuşla iOS Ana Ekranına Safari adres çubuğu olmadan tam ekran AETHER uygulaması kurar (Ayarlar -> Profil İndirildi -> Yükle).
+            </div>
+          </div>
+          <a href="${esc(mobileConfigHref)}" class="ms-btn buy-cta sm" style="width:100%;text-decoration:none">📲 Tam Ekran iOS Profilini Yükle (.mobileconfig)</a>
+        </div>
+
+        ${deferredPwaPrompt ? `
+          <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:8px">
+            <div>
+              <strong style="font-size:14px">3. Android / Chrome Doğrudan Uygulama Kurulumu</strong>
+              <div style="font-size:11.8px;color:var(--ink-400);margin-top:2px">Ana ekranına bağımsız tam ekran uygulama olarak anında eklenir.</div>
+            </div>
+            <button type="button" class="ms-btn primary sm" id="aeTriggerPwaInstallBtn">🚀 Ana Ekrana Uygulama Olarak Kur</button>
+          </div>
+        ` : `
+          <div class="ms-alert info" style="margin:0">
+            <strong>Hızlı İpucu (Safari / Chrome):</strong> Tarayıcının altındaki <strong>Paylaş</strong> simgesine dokunup <strong>"Ana Ekrana Ekle"</strong> seçerek de tam ekran uygulama moduna geçebilirsin.
+          </div>
+        `}
+      </div>
+    `;
+
+    openModalShell();
+    bindSheetDragToDismiss();
+    document.getElementById('msCloseModalBtn')?.addEventListener('click', () => {
+      if (returnToWelcome && !global.AetherKernelV10.getActiveMember().profileRegistered) {
+        openWelcomeModal();
+      } else {
+        closeModal();
+      }
+    });
+    document.getElementById('aeTriggerPwaInstallBtn')?.addEventListener('click', async () => {
+      if (!deferredPwaPrompt) return;
+      try {
+        deferredPwaPrompt.prompt();
+        await deferredPwaPrompt.userChoice;
+        deferredPwaPrompt = null;
+        closeModal();
+      } catch (_) {}
     });
   }
 
@@ -2822,11 +3100,11 @@
       <div style="display:grid;gap:11px">
         <div>
           <label style="display:block;font-size:11.8px;font-weight:800;color:var(--ink-400);margin-bottom:4px">Canlı Ligde Görünen Adın</label>
-          <input id="msProfName" class="ae-input" type="text" value="${esc(me.profileRegistered ? me.name : '')}" placeholder="Adın..." />
+          <input id="msProfName" class="ae-input" type="text" maxlength="28" value="${esc(me.profileRegistered ? me.name : '')}" placeholder="En az 2 harf yaz..." />
         </div>
         <div>
           <label style="display:block;font-size:11.8px;font-weight:800;color:var(--ink-400);margin-bottom:4px">Yatırım Unvanın</label>
-          <input id="msProfRole" class="ae-input" type="text" value="${esc(me.roleLabel)}" />
+          <input id="msProfRole" class="ae-input" type="text" maxlength="32" value="${esc(me.roleLabel)}" />
         </div>
         <div class="ae-kpi-2x2" style="margin-bottom:0">
           <div>
@@ -2857,6 +3135,14 @@
           <input id="msProfOvernightRepo" type="checkbox" ${me.autoOvernightRepo ? 'checked' : ''} style="width:18px;height:18px" />
         </label>
 
+        ${!isRunningAsInstalledApp() ? `
+          <button type="button" class="ms-btn" style="width:100%;border-color:rgba(245,158,11,0.45);color:var(--gold-bright)" id="aeOpenInstallFromProfBtn">
+            📲 Telefona Gerçek Uygulama Olarak Kur (.ipa / Tam Ekran)
+          </button>
+        ` : ''}
+
+        <div id="msProfErr" class="neg" style="font-size:12px;font-weight:700;display:none"></div>
+
         <div style="display:flex;gap:8px">
           <button type="button" class="ms-btn" style="flex:1" id="aeModalThemeBtn">${uiTheme === 'obsidian' ? '☀️ Gündüz Modu' : '🌙 Obsidian Modu'}</button>
           <button type="button" class="ms-btn primary" style="flex:1.4" id="msSaveProfileBtn">Kaydet & Eşitle</button>
@@ -2867,19 +3153,28 @@
     openModalShell();
     bindSheetDragToDismiss();
     document.getElementById('msCloseModalBtn')?.addEventListener('click', closeModal);
+    document.getElementById('aeOpenInstallFromProfBtn')?.addEventListener('click', () => {
+      AetherNative.haptic('light');
+      openInstallAppModal(false);
+    });
     document.getElementById('aeModalThemeBtn')?.addEventListener('click', () => {
       AetherNative.toggleTheme();
       openProfileModal();
     });
     document.getElementById('msSaveProfileBtn')?.addEventListener('click', () => {
-      const nm = document.getElementById('msProfName')?.value || '';
+      const nm = (document.getElementById('msProfName')?.value || '').trim();
       const rl = document.getElementById('msProfRole')?.value || '';
       const exp = Number(document.getElementById('msProfExpense')?.value || 40000);
       const sav = Number(document.getElementById('msProfSavings')?.value || 0);
       const sday = Number(document.getElementById('msProfSalDay')?.value || 15);
       const repoChk = Boolean(document.getElementById('msProfOvernightRepo')?.checked);
       const room = document.getElementById('msProfRoom')?.value || 'ORTAK-LIG';
-      if (nm.trim().length >= 2) K.completeOnboarding(nm, rl);
+      if (nm.length > 0 && nm.length < 2) {
+        AetherNative.haptic('error');
+        const errEl = document.getElementById('msProfErr');
+        if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Lütfen en az 2 harfli bir ad gir.'; }
+        return;
+      }
       K.updateHouseholdBaseline({ name: nm, roleLabel: rl, monthlyExpenseTL: exp, monthlySavingsTL: sav, salaryDay: sday, autoOvernightRepo: repoChk, roomCode: room });
       AetherNative.haptic('success');
       closeModal();
@@ -3021,6 +3316,7 @@
 
   function mount() {
     const K = global.AetherKernelV10;
+    const G = global.RealInvestmentGuide;
     try {
       const savedTheme = global.localStorage?.getItem('aether_ui_theme');
       AetherNative.applyTheme(savedTheme || 'obsidian', false);
@@ -3028,14 +3324,47 @@
       AetherNative.applyTheme('obsidian', false);
     }
 
+    if (global.addEventListener) {
+      global.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPwaPrompt = e;
+        if (modalMode === 'INSTALL') openInstallAppModal(false);
+      });
+    }
+
     K.init();
     const initBanter = K.getState()?.banterFeed?.[0]?.id || null;
     lastKnownTradeFeedId = initBanter;
 
+    const initialFeed = G?.getEnrichedLiveNewsFeed ? G.getEnrichedLiveNewsFeed() : [];
+    initialFeed.forEach((n) => { if (n?.id) knownNewsFeedIds.add(n.id); });
+    newsTrackerReady = true;
+
     K.subscribe(() => {
       renderHeader();
 
-      // Yeni canlı lig hamlesi düştüyse Dynamic Island bildirimi göster
+      // 1) Yeni KAP / Resmi Gazete / Makro bildirimi düştüyse Dynamic Island + Yerel Push tetikle!
+      if (newsTrackerReady && G?.getEnrichedLiveNewsFeed) {
+        const curFeed = G.getEnrichedLiveNewsFeed() || [];
+        let freshUrgent = null;
+        for (const item of curFeed) {
+          if (item?.id && !knownNewsFeedIds.has(item.id)) {
+            knownNewsFeedIds.add(item.id);
+            if (!freshUrgent) freshUrgent = item;
+          }
+        }
+        if (freshUrgent) {
+          preOpenBriefDismissed = false;
+          AetherNative.haptic('medium');
+          AetherNative.toast(`${freshUrgent.badge}: ${freshUrgent.title}`, 'info', () => {
+            compassSubTab = 'BRIEF';
+            switchTab('compass');
+          });
+          AetherNative.scheduleLocalPush(freshUrgent.id, `AETHER · ${freshUrgent.badge}`, freshUrgent.title, 1);
+        }
+      }
+
+      // 2) Yeni canlı lig hamlesi düştüyse Dynamic Island bildirimi göster
       const latestEv = K.getState()?.banterFeed?.[0];
       if (latestEv && latestEv.id !== lastKnownTradeFeedId) {
         lastKnownTradeFeedId = latestEv.id;
@@ -3051,7 +3380,7 @@
 
       // Kullanıcı bir metin kutusunda yazıyorsa veya çekmece açıksa arka plan ekranını sıçratma
       const activeTag = document.activeElement?.tagName || '';
-      if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT' || modalMode === 'ASSET') {
+      if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT' || modalMode === 'ASSET' || modalMode === 'PROFILE' || modalMode === 'WELCOME' || modalMode === 'INSTALL' || modalMode === 'RESET_CONFIRM') {
         return;
       }
       renderCurrentTab(true);
@@ -3083,6 +3412,8 @@
     openAssetDrawer,
     openWelcomeModal,
     openProfileModal,
+    openInstallAppModal,
+    openResetConfirmModal,
     closeModal,
     toggleTheme: () => AetherNative.toggleTheme()
   };

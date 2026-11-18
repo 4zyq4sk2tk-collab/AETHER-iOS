@@ -257,6 +257,9 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
                 statusCode = ((NSHTTPURLResponse *)response).statusCode;
             }
             NSString *utf8Str = data ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] : @"";
+            if (!utf8Str && data) {
+                utf8Str = [[NSString alloc] initWithData:data encoding:NSWindowsCP1254StringEncoding];
+            }
             BOOL isRawText = (utf8Str != nil);
             NSString *payloadOut = isRawText ? utf8Str : (data ? [data base64EncodedStringWithOptions:0] : @"");
             NSString *errStr = error ? (error.localizedDescription ?: @"err") : @"";
@@ -357,13 +360,46 @@ decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
         decisionHandler(WKNavigationActionPolicyAllow);
         return;
     }
-    if (navigationAction.navigationType == WKNavigationTypeLinkActivated &&
-        ([scheme isEqualToString:@"http"] || [scheme isEqualToString:@"https"])) {
-        [self openExternalSafariSheet:url];
+    if (navigationAction.navigationType == WKNavigationTypeLinkActivated) {
+        if ([scheme isEqualToString:@"http"] || [scheme isEqualToString:@"https"]) {
+            [self openExternalSafariSheet:url];
+            decisionHandler(WKNavigationActionPolicyCancel);
+            return;
+        }
+        [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
         decisionHandler(WKNavigationActionPolicyCancel);
         return;
     }
     decisionHandler(WKNavigationActionPolicyAllow);
+}
+
+- (void)webView:(WKWebView *)webView
+runJavaScriptAlertPanelWithMessage:(NSString *)message
+initiatedByFrame:(WKFrameInfo *)frame
+completionHandler:(void (^)(void))completionHandler {
+    UIAlertController *ac = [UIAlertController alertControllerWithTitle:@"AETHER"
+                                                                message:(message ?: @"")
+                                                         preferredStyle:UIAlertControllerStyleAlert];
+    [ac addAction:[UIAlertAction actionWithTitle:@"Tamam" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        completionHandler();
+    }]];
+    [self presentViewController:ac animated:YES completion:nil];
+}
+
+- (void)webView:(WKWebView *)webView
+runJavaScriptConfirmPanelWithMessage:(NSString *)message
+initiatedByFrame:(WKFrameInfo *)frame
+completionHandler:(void (^)(BOOL result))completionHandler {
+    UIAlertController *ac = [UIAlertController alertControllerWithTitle:@"AETHER"
+                                                                message:(message ?: @"")
+                                                         preferredStyle:UIAlertControllerStyleAlert];
+    [ac addAction:[UIAlertAction actionWithTitle:@"Vazgeç" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+        completionHandler(NO);
+    }]];
+    [ac addAction:[UIAlertAction actionWithTitle:@"Onayla" style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
+        completionHandler(YES);
+    }]];
+    [self presentViewController:ac animated:YES completion:nil];
 }
 
 - (WKWebView *)webView:(WKWebView *)webView
