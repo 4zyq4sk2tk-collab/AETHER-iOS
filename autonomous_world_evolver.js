@@ -733,7 +733,7 @@ function computePlainHumanDailyStory(ctx, weather) {
     realWorldBridgeNote = `Gerçek Hayat Karşılığı: Küresel Brent petrol son 1 ayda ${fmtSignedPct(brent1M, 2)} gerileyerek ${fmtTrNum(brentUsd, 2)}$ seviyesine inmiştir (USD/TRY: ${fmtTrNum(usdTry, 2)} TL). Havacılık ve lojistikte (THYAO, PGSUS, CLEBI) jet yakıtı toplam giderin %28-%34'ünü oluşturduğundan petrol düşüşü doğrudan FAVÖK ve serbest nakit akışı (FCF) marjını genişletir; perakendede (BIMAS, MGROS) ise fiyat yapışkanlığı sayesinde soğuk zincir nakliye tasarrufu kasada kalır.${topFeedCleanTitle ? ` Canlı haber akışı (${topFeedSource}): "${topFeedCleanTitle}".` : ''}`;
   } else {
     noviceHeadline = `Mahalle fırınındaki sıcak ekmek sepeti yılda yüzde ${Math.round(weather.breadInflationAnnualPct)} pahalanırken, çekmecesine her akşam gerçek peşin para giren atölyeler borçlu dükkânlardan sessizce ayrılıyor.`;
-    noviceBody = `Borç faizinin yüksek olduğu günlerde krediyle dönen gösterişli binalar yorulur; borcu olmayan ve sattığı malın parasını aynı akşam tahsil eden mütevazı işlikler ise ayakta kalır. Yastık altında eriyen kağıt para yerine ya kesintisiz devlet kira kalkanı ya da çekmecesi dolu üretim dükkânları seçilir.`;
+    noviceBody = `Borç faizinin yüksek olduğu günlerde krediyle dönen gösterişli binalar yorulur; borcu olmayan ve sattığı malın parasını aynı akşam tahsil eden mütevazı işlikler ise ayakta kalır. Atıl nakitte eriyen kağıt para yerine ya kesintisiz devlet kira kalkanı ya da çekmecesi dolu üretim dükkânları seçilir.`;
     roadA = {
       label: '1. Yol: Çekmecesi Peşin Dolan İhracat Fabrikalarına Git',
       targetBuildingId: 'kocaeli-otomotiv',

@@ -15,7 +15,7 @@
       relatedKeys: ['altin-sertifikasi', 'altin-fonu-zgold', 'ceyrek-altin', 'doviz-usd', 'gram-gumus-spot']
     },
     'ceyrek-altin': {
-      shortDesc: 'Darphane basımı 22 ayar fiziki çeyrek altın (1,75 gr). Anadolu’nun klasik yastık dışı fiziki tasarruf aracı.',
+      shortDesc: 'Darphane basımı 22 ayar fiziki çeyrek altın (1,75 gr). Anadolu’nun klasik uzun vadeli fiziki tasarruf aracı.',
       howItWorks: 'Gram altınla aynı yönde gider; ancak alırken Darphane işçiliği ve kuyumcu makası ödenir. Kısa vadeli al-sat için değil, uzun süreli saklama içindir.',
       rawInputs: ['Ons Altın', 'Dolar / TL Kuru', 'Fiziki İşçilik Primi'],
       risesWhen: 'Gram altın yükseldiğinde ve düğün/fiziki talep sezonunda.',

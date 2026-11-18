@@ -1,6 +1,6 @@
 // ============================================================================
-// AETHER v13.0 — GERÇEK PİYASA FİZİĞİ, CİHAZ BAZLI YATIRIMCI KİMLİĞİ,
-// KÜRESEL CANLI AİLE LİGİ AĞI (WSS MQTT MESH) & USTALIK AYNASI ÇEKİRDEĞİ
+// AETHER v13.1 — GERÇEK PİYASA FİZİĞİ, CİHAZ BAZLI YATIRIMCI KİMLİĞİ,
+// KÜRESEL CANLI YATIRIMCI LİGİ AĞI (WSS MQTT MESH) & USTALIK AYNASI ÇEKİRDEĞİ
 // ============================================================================
 (function (global) {
   'use strict';

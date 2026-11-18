@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aether-1m-real-sim-v13-r2';
+const CACHE_NAME = 'aether-1m-real-sim-v13-r3';
 const CORE_ASSETS = [
   './',
   './index.html',

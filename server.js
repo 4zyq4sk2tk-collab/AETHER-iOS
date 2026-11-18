@@ -2134,10 +2134,23 @@ function scheduleHubDiskSave() {
   }, 400);
 }
 
+function normalizeRoomCode(roomCode) {
+  return String(roomCode || 'ORTAK-LIG').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '') || 'ORTAK-LIG';
+}
+
 function getOrInitRoom(roomCode) {
-  const clean = String(roomCode || 'ORTAK-LIG').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '') || 'ORTAK-LIG';
+  const clean = normalizeRoomCode(roomCode);
   if (!hubRoomsMemory[clean]) hubRoomsMemory[clean] = { members: {}, banterFeed: [] };
   return { code: clean, room: hubRoomsMemory[clean] };
+}
+
+function pruneEmptyRoom(roomCode) {
+  const clean = normalizeRoomCode(roomCode);
+  if (clean === 'ORTAK-LIG') return;
+  const r = hubRoomsMemory[clean];
+  if (r && Object.keys(r.members || {}).length === 0 && (r.banterFeed || []).length === 0) {
+    delete hubRoomsMemory[clean];
+  }
 }
 
 function mergeMemberIntoRoom(roomObj, pkt) {
@@ -2294,31 +2307,46 @@ function startServerCloudBridge() {
                 try {
                   const rel = topic.slice(SERVER_MESH_NS.length + 1);
                   const segs = rel.split('/');
-                  const roomCode = segs[0];
+                  const roomCode = normalizeRoomCode(segs[0]);
                   const sub = segs[1];
-                  const { code, room } = getOrInitRoom(roomCode);
                   if (sub === 'member') {
                     if (payload) {
+                      const { room } = getOrInitRoom(roomCode);
                       if (mergeMemberIntoRoom(room, JSON.parse(payload))) scheduleHubDiskSave();
-                    } else if (segs[2] && room.members[segs[2]]) {
-                      delete room.members[segs[2]];
+                    } else if (segs[2] && hubRoomsMemory[roomCode]?.members?.[segs[2]]) {
+                      delete hubRoomsMemory[roomCode].members[segs[2]];
+                      pruneEmptyRoom(roomCode);
                       scheduleHubDiskSave();
                     }
                   } else if (sub === 'event' && payload) {
                     const evObj = JSON.parse(payload);
+                    const { room } = getOrInitRoom(roomCode);
                     let chg = false;
                     if (evObj.memberPacket && mergeMemberIntoRoom(room, evObj.memberPacket)) chg = true;
                     if (evObj.banterItem && mergeBanterIntoRoom(room, [evObj.banterItem])) chg = true;
+                    pruneEmptyRoom(roomCode);
                     if (chg) scheduleHubDiskSave();
-                  } else if (sub === 'banter_snapshot' && payload) {
-                    const snap = JSON.parse(payload);
-                    if (mergeBanterIntoRoom(room, snap.items || [])) scheduleHubDiskSave();
-                  } else if (sub === 'sync_ping') {
-                    for (const mem of Object.values(room.members)) {
-                      ws.send(mqttPublishBuf(`${SERVER_MESH_NS}/${code}/member/${mem.id}`, JSON.stringify(mem), true));
+                  } else if (sub === 'banter_snapshot') {
+                    if (payload) {
+                      const snap = JSON.parse(payload);
+                      if (Array.isArray(snap.items) && snap.items.length > 0) {
+                        const { room } = getOrInitRoom(roomCode);
+                        if (mergeBanterIntoRoom(room, snap.items)) scheduleHubDiskSave();
+                      }
+                    } else if (hubRoomsMemory[roomCode]) {
+                      hubRoomsMemory[roomCode].banterFeed = [];
+                      pruneEmptyRoom(roomCode);
+                      scheduleHubDiskSave();
                     }
-                    if (room.banterFeed.length > 0) {
-                      ws.send(mqttPublishBuf(`${SERVER_MESH_NS}/${code}/banter_snapshot`, JSON.stringify({ ts: Date.now(), items: room.banterFeed.slice(0, 30) }), true));
+                  } else if (sub === 'sync_ping') {
+                    const existing = hubRoomsMemory[roomCode];
+                    if (existing) {
+                      for (const mem of Object.values(existing.members || {})) {
+                        ws.send(mqttPublishBuf(`${SERVER_MESH_NS}/${roomCode}/member/${mem.id}`, JSON.stringify(mem), true));
+                      }
+                      if ((existing.banterFeed || []).length > 0) {
+                        ws.send(mqttPublishBuf(`${SERVER_MESH_NS}/${roomCode}/banter_snapshot`, JSON.stringify({ ts: Date.now(), items: existing.banterFeed.slice(0, 30) }), true));
+                      }
                     }
                   }
                 } catch (_) {}
@@ -2466,7 +2494,8 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'GET') {
-      const { code, room } = getOrInitRoom(url.searchParams.get('room') || 'ORTAK-LIG');
+      const code = normalizeRoomCode(url.searchParams.get('room') || 'ORTAK-LIG');
+      const room = hubRoomsMemory[code] || { members: {}, banterFeed: [] };
       const out = {
         roomCode: code,
         updatedAt: Date.now(),
@@ -2514,17 +2543,24 @@ const server = http.createServer(async (req, res) => {
             serverBroadcastMqtt(`${SERVER_MESH_NS}/${code}/member/${m.id}`, room.members[m.id], true);
           }
         }
+        if (incoming.clearBanter === true) {
+          room.banterFeed = [];
+          serverBroadcastMqtt(`${SERVER_MESH_NS}/${code}/banter_snapshot`, '', true);
+          changed = true;
+        }
         if (Array.isArray(incoming.banterFeed) && mergeBanterIntoRoom(room, incoming.banterFeed)) {
           changed = true;
           serverBroadcastMqtt(`${SERVER_MESH_NS}/${code}/banter_snapshot`, { ts: Date.now(), items: room.banterFeed.slice(0, 30) }, true);
         }
+        pruneEmptyRoom(code);
         if (changed) scheduleHubDiskSave();
 
+        const finalRoom = hubRoomsMemory[code] || { members: {}, banterFeed: [] };
         const out = {
           roomCode: code,
           updatedAt: Date.now(),
-          members: Object.values(room.members).slice(0, 48),
-          banterFeed: room.banterFeed.slice(0, 35)
+          members: Object.values(finalRoom.members).slice(0, 48),
+          banterFeed: finalRoom.banterFeed.slice(0, 35)
         };
         const outBuf = Buffer.from(JSON.stringify(out), 'utf8');
         res.writeHead(200, {

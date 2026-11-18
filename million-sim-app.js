@@ -1067,7 +1067,7 @@
         <button type="button" class="ms-btn sm" id="msCloseModalBtn">Kapat</button>
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px">
+      <div class="ms-drawer-kpi-grid">
         <div class="ms-kpi-box" style="padding:10px">
           <span style="font-size:10.5px">Canlı Fiyat / Oran</span>
           <strong style="font-size:14.5px">${asset.isRateInstrument ? `%${asset.annualGrossRatePct.toFixed(1)}` : fmtUnitTL(asset.priceTL)}</strong>
@@ -1116,7 +1116,7 @@
           <button type="button" class="ms-pill ${selectedThesisTag === 'RUMOR_IMPULSE' ? 'active' : ''}" data-thesis="RUMOR_IMPULSE">🔥 Duyum / Anlık Heyecan</button>
         </div>
 
-        <input id="msThesisNoteInp" class="ms-input" style="margin-bottom:10px;font-size:13px" type="text" value="${esc(draftThesisNote)}" placeholder="Kısa yatırım notun (İsteğe bağlı — Örn: Petrol düşerken marjı açılacak, Aile Liginde görünür)" />
+        <input id="msThesisNoteInp" class="ms-input" style="margin-bottom:10px;font-size:13px" type="text" value="${esc(draftThesisNote)}" placeholder="Kısa yatırım notun (İsteğe bağlı — Örn: Petrol düşerken marjı açılacak, Canlı Ligde görünür)" />
 
         <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:12.3px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px">
           <span><strong>İşlem Akışı:</strong> ${esc(ripple.timingText)}</span>
@@ -1316,7 +1316,7 @@
     if (!sheet) return;
     sheet.innerHTML = `
       <div style="margin-bottom:14px">
-        <span class="ms-asset-code">AETHER CANLI PİYASA & AİLE LİGİ</span>
+        <span class="ms-asset-code">AETHER CANLI PİYASA & YATIRIMCI LİGİ</span>
         <h2 style="margin:6px 0 4px;font-size:22px;font-weight:800">1.000.000 ₺ Gerçek Piyasa Sermayen Hazır</h2>
         <p style="margin:0;font-size:13.6px;color:#475569">
           İleri sarma veya hayali oyun yok: Borsa İstanbul, Kapalıçarşı, TEFAS ve dünya piyasalarının birebir kurallarıyla 1.000.000 ₺ yönetirsin. Uygulamayı yükleyen herkes Canlı Yatırımcı Liginde birbirinin portföyünü ve kâr/zararını anlık görür.
@@ -1326,7 +1326,7 @@
       <div style="display:grid;gap:12px;margin-bottom:14px">
         <div>
           <label style="display:block;font-size:12.8px;font-weight:800;margin-bottom:5px">Canlı Ligde Görünecek Adın:</label>
-          <input id="msWelcomeName" class="ms-input" type="text" maxlength="28" placeholder="Örn: Hera, Ahmet, Babam, Kardeşim..." autofocus />
+          <input id="msWelcomeName" class="ms-input" type="text" maxlength="28" placeholder="Örn: Hera, Ahmet, Mert, Zeynep..." autofocus />
         </div>
         <div>
           <label style="display:block;font-size:12.8px;font-weight:800;margin-bottom:5px">Yatırım Tarzın / Unvanın:</label>
@@ -1637,7 +1637,7 @@
           </div>
 
           <div class="ms-alert warn">
-            <strong>Sessiz Fırsat & Sürtünme Kaybı Kavanozu:</strong><br/>
+            <strong>Sessiz Fırsat & Sürtünme Kaybı Muhasebesi:</strong><br/>
             • Korkup boşta tuttuğun nakdin enflasyon erimesi: <strong>-${fmtTL(idle.cumulativeInflationLossTL)}</strong> (Vergisiz Sukuk'ta dursaydı kazanacağı: <strong>+${fmtTL(idle.missedSukukNetTL)}</strong>).<br/>
             • Al-sat makası, komisyon, erken bozum ve kredi faizinde yanan toplam para: <strong class="neg">-${fmtTL(snap.totalFrictionBurnedTL)}</strong>.
           </div>
@@ -1748,7 +1748,7 @@
         <button type="button" class="ms-btn sm" id="msCloseModalBtn">Kapat</button>
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px">
+      <div class="ms-xray-kpi-grid">
         <div class="ms-kpi-box" style="padding:11px">
           <span>Toplam Portföy</span>
           <strong style="font-size:17px">${fmtTL(snap.totalNetWorthTL)}</strong>
@@ -1902,11 +1902,11 @@
 
           return `
             <article class="ms-member-card ${isMe ? 'is-me' : ''}">
-              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-                <div style="display:flex;align-items:center;gap:9px">
+              <div class="ms-member-head">
+                <div class="ms-member-ident">
                   <span class="ms-rank-badge ${rankCls}">${idx + 1}</span>
                   <span class="ms-avatar" style="background:${esc(raw.avatarColor || '#2563eb')}">${esc(initials(displayName))}</span>
-                  <div>
+                  <div style="min-width:0">
                     <strong style="font-size:15.5px">${esc(displayName)} ${isMe ? '<small style="color:#2563eb">(Sen)</small>' : ''}</strong>
                     <div style="font-size:11.6px;color:#64748b">
                       <span style="color:${onlineNow ? '#059669' : '#64748b'};font-weight:700">${onlineNow ? '● Şimdi Açık' : '○ ' + esc(fmtAgo(raw.lastSeenAt || raw.updatedAt))}</span>
@@ -1915,7 +1915,7 @@
                   </div>
                 </div>
 
-                <div style="text-align:right">
+                <div class="ms-member-worth">
                   <strong style="font-size:17px;display:block">${fmtTL(snap.totalNetWorthTL)}</strong>
                   <span class="${snap.nominalPnlTL >= 0 ? 'pos' : 'neg'}" style="font-size:12.6px;font-weight:800">
                     ${snap.nominalPnlTL >= 0 ? '+' : ''}${fmtTL(snap.nominalPnlTL)} (${snap.nominalPnlPct >= 0 ? '+' : ''}%${snap.nominalPnlPct})
@@ -1967,7 +1967,7 @@
         <div class="ms-sec-head">
           <div>
             <h3 class="ms-sec-title">Canlı Hamle Akışı & "Bunu Nereden Gördün?" Meydanı</h3>
-            <p class="ms-sec-sub">Ailede ve ligde biri güzel bir hamle yakaladığında kıskanmak yerine mantığını sor, aynı pencereden bakmayı öğren.</p>
+            <p class="ms-sec-sub">Canlı Ligde biri güçlü bir hamle yakaladığında kıskanmak yerine mantığını sor, aynı pencereden bakmayı öğren.</p>
           </div>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:12px">
