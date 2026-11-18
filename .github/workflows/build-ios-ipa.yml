@@ -44,6 +44,7 @@ jobs:
             -fobjc-arc \
             -O2 \
             -framework UIKit \
+            -framework CoreGraphics \
             -framework WebKit \
             -framework SafariServices \
             -framework UserNotifications \

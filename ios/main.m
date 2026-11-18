@@ -204,8 +204,9 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
         if (items.count == 0) return;
         UIActivityViewController *avc = [[UIActivityViewController alloc] initWithActivityItems:items applicationActivities:nil];
         if (avc.popoverPresentationController) {
+            CGRect b = self.view.bounds;
             avc.popoverPresentationController.sourceView = self.view;
-            avc.popoverPresentationController.sourceRect = CGRectMake(CGRectGetMidX(self.view.bounds), CGRectGetMaxY(self.view.bounds) - 60.0, 1.0, 1.0);
+            avc.popoverPresentationController.sourceRect = CGRectMake(b.origin.x + b.size.width * 0.5, b.origin.y + b.size.height - 60.0, 1.0, 1.0);
         }
         [self presentViewController:avc animated:YES completion:nil];
         return;
