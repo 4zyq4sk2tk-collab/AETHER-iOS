@@ -2350,17 +2350,17 @@ const server = http.createServer(async (req, res) => {
 
   // Statik iOS / PWA / Veri Paketi Dosyaları
   const staticMap = {
-    '/world-stage.css': { file: 'world-stage.css', mime: 'text/css; charset=utf-8', cc: 'no-cache' },
+    '/million-sim.css': { file: 'million-sim.css', mime: 'text/css; charset=utf-8', cc: 'no-cache' },
     '/aether-data-bundle.js': { file: 'aether-data-bundle.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
     '/aether-history-121m.js': { file: 'aether-history-121m.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
     '/aether-kernel-v10.js': { file: 'aether-kernel-v10.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
-    '/human-wisdom-and-bridge.js': { file: 'human-wisdom-and-bridge.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
-    '/decade-life-journey.js': { file: 'decade-life-journey.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
-    '/world-scene-engine.js': { file: 'world-scene-engine.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
+    '/real-investment-guide.js': { file: 'real-investment-guide.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
+    '/million-sim-app.js': { file: 'million-sim-app.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
     '/manifest.json': { file: 'manifest.json', mime: 'application/manifest+json; charset=utf-8', cc: 'no-cache' },
     '/sw.js': { file: 'sw.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
     '/apple-touch-icon.svg': { file: 'apple-touch-icon.svg', mime: 'image/svg+xml', cc: 'public, max-age=3600' },
     '/apple-touch-icon.png': { file: 'apple-touch-icon.png', mime: 'image/png', cc: 'public, max-age=3600' },
+    '/favicon.ico': { file: 'apple-touch-icon.png', mime: 'image/png', cc: 'public, max-age=3600' },
     '/download/AETHER-Sideload.ipa': { file: 'AETHER-Sideload.ipa', mime: 'application/octet-stream', cc: 'no-cache', download: 'AETHER-iOS.ipa' }
   };
   if (staticMap[url.pathname]) {
@@ -2447,27 +2447,24 @@ const server = http.createServer(async (req, res) => {
       const bp = path.join(__dirname, 'aether-data-bundle.js');
       const histPath = path.join(__dirname, 'aether-history-121m.js');
       const kernelPath = path.join(__dirname, 'aether-kernel-v10.js');
-      const wisdomPath = path.join(__dirname, 'human-wisdom-and-bridge.js');
-      const journeyPath = path.join(__dirname, 'decade-life-journey.js');
-      const scenePath = path.join(__dirname, 'world-scene-engine.js');
-      const stageCssPath = path.join(__dirname, 'world-stage.css');
+      const guidePath = path.join(__dirname, 'real-investment-guide.js');
+      const appPath = path.join(__dirname, 'million-sim-app.js');
+      const cssPath = path.join(__dirname, 'million-sim.css');
       const bundleRaw = fs.existsSync(bp)
         ? await fsp.readFile(bp, 'utf8')
         : (cachedJsonBuf ? 'window.__AETHER_EMBEDDED_DATA__ = ' + cachedJsonBuf.toString('utf8') + ';' : '');
       const histRaw = fs.existsSync(histPath) ? await fsp.readFile(histPath, 'utf8') : '';
       const kernelRaw = fs.existsSync(kernelPath) ? await fsp.readFile(kernelPath, 'utf8') : '';
-      const wisdomRaw = fs.existsSync(wisdomPath) ? await fsp.readFile(wisdomPath, 'utf8') : '';
-      const journeyRaw = fs.existsSync(journeyPath) ? await fsp.readFile(journeyPath, 'utf8') : '';
-      const sceneRaw = fs.existsSync(scenePath) ? await fsp.readFile(scenePath, 'utf8') : '';
-      const stageCssRaw = fs.existsSync(stageCssPath) ? await fsp.readFile(stageCssPath, 'utf8') : '';
+      const guideRaw = fs.existsSync(guidePath) ? await fsp.readFile(guidePath, 'utf8') : '';
+      const appRaw = fs.existsSync(appPath) ? await fsp.readFile(appPath, 'utf8') : '';
+      const cssRaw = fs.existsSync(cssPath) ? await fsp.readFile(cssPath, 'utf8') : '';
       const standaloneHtml = htmlRaw
-        .replace(/<link rel="stylesheet" href="world-stage\.css[^"]*" \/>/, `<style>${stageCssRaw}</style>`)
-        .replace(/<script src="aether-data-bundle\.js[^"]*"><\/script>/, `<script>${bundleRaw}</script>`)
-        .replace(/<script src="aether-history-121m\.js[^"]*"><\/script>/, `<script>${histRaw}</script>`)
-        .replace(/<script src="aether-kernel-v10\.js[^"]*"><\/script>/, `<script>${kernelRaw}</script>`)
-        .replace(/<script src="human-wisdom-and-bridge\.js[^"]*"><\/script>/, `<script>${wisdomRaw}</script>`)
-        .replace(/<script src="decade-life-journey\.js[^"]*"><\/script>/, `<script>${journeyRaw}</script>`)
-        .replace(/<script src="world-scene-engine\.js[^"]*"><\/script>/, `<script>${sceneRaw}</script>`);
+        .replace(/<link rel="stylesheet" href="million-sim\.css[^"]*" \/>/, () => `<style>${cssRaw}</style>`)
+        .replace(/<script src="aether-data-bundle\.js[^"]*"><\/script>/, () => `<script>${bundleRaw}</script>`)
+        .replace(/<script src="aether-history-121m\.js[^"]*"><\/script>/, () => `<script>${histRaw}</script>`)
+        .replace(/<script src="aether-kernel-v10\.js[^"]*"><\/script>/, () => `<script>${kernelRaw}</script>`)
+        .replace(/<script src="real-investment-guide\.js[^"]*"><\/script>/, () => `<script>${guideRaw}</script>`)
+        .replace(/<script src="million-sim-app\.js[^"]*"><\/script>/, () => `<script>${appRaw}</script>`);
       const outBuf = clientAcceptsGzip(req)
         ? await gzipAsync(Buffer.from(standaloneHtml, 'utf8'), { level: zlib.constants.Z_BEST_SPEED })
         : Buffer.from(standaloneHtml, 'utf8');

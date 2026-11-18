@@ -1,34 +1,46 @@
 <!DOCTYPE html>
-<html lang="tr" class="wse-lock-viewport">
+<html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="OCAK" />
-  <meta name="theme-color" content="#f4ede1" />
-  <title>OCAK — Yaşayan Memleket, Ev Kileri ve Gerçek Hayat Ustalığı</title>
+  <meta name="apple-mobile-web-app-title" content="AETHER 1M" />
+  <meta name="theme-color" content="#f4f6f9" />
+  <title>AETHER — 1.000.000 ₺ Gerçek Yatırım Simülasyonu</title>
   <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" href="apple-touch-icon.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-  <link rel="stylesheet" href="world-stage.css?v=11.0.0" />
+  <link rel="stylesheet" href="million-sim.css?v=12.0.0" />
 </head>
-<body class="wse-world-active">
-  <div id="worldStageRoot"></div>
+<body>
+  <header class="ms-header">
+    <div id="msHeaderInner" class="ms-header-inner"></div>
+  </header>
 
-  <script src="aether-data-bundle.js?v=11.0.0"></script>
-  <script src="aether-history-121m.js?v=11.0.0"></script>
-  <script src="aether-kernel-v10.js?v=11.0.0"></script>
-  <script src="human-wisdom-and-bridge.js?v=11.0.0"></script>
-  <script src="decade-life-journey.js?v=11.0.0"></script>
-  <script src="world-scene-engine.js?v=11.0.0"></script>
+  <nav class="ms-tabs" aria-label="Ana Bölümler">
+    <button type="button" class="ms-tab-btn active" data-tab="market">Piyasa &amp; Yatırım Yap</button>
+    <button type="button" class="ms-tab-btn" data-tab="portfolio">Portföyüm</button>
+    <button type="button" class="ms-tab-btn" data-tab="family">Aile Ligi (1 Milyon ₺)</button>
+    <button type="button" class="ms-tab-btn" data-tab="sim10y">10 Yıl Simülasyon</button>
+  </nav>
+
+  <main id="msMainContainer" class="ms-container"></main>
+
+  <div id="msModalBackdrop" class="ms-modal-backdrop" role="dialog" aria-modal="true">
+    <div id="msModalSheet" class="ms-modal-sheet"></div>
+  </div>
+
+  <script src="aether-data-bundle.js?v=12.0.0"></script>
+  <script src="aether-history-121m.js?v=12.0.0"></script>
+  <script src="aether-kernel-v10.js?v=12.0.0"></script>
+  <script src="real-investment-guide.js?v=12.0.0"></script>
+  <script src="million-sim-app.js?v=12.0.0"></script>
   <script>
     (function () {
       'use strict';
-      if (window.AetherKernelV10) {
-        window.AetherKernelV10.init();
-      }
-      if (window.WorldSceneEngine) {
-        window.WorldSceneEngine.mount('#worldStageRoot');
+      if (window.MillionSimApp) {
+        window.MillionSimApp.mount();
       }
       if ('serviceWorker' in navigator && location.protocol !== 'file:') {
         navigator.serviceWorker.register('./sw.js').catch(function () {});

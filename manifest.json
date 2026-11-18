@@ -1,13 +1,13 @@
 {
-  "name": "AETHER — Enflasyona Karşı Akıllı Sepet",
-  "short_name": "AETHER",
-  "description": "Faiz dışındaki yatırım dünyasını günlük hayat örnekleriyle öğreten, enflasyon erimesini ve sepet farkını canlı gösteren kişisel servet uygulaması.",
+  "name": "AETHER — 1.000.000 ₺ Gerçek Yatırım Simülasyonu",
+  "short_name": "AETHER 1M",
+  "description": "Herkesin 1.000.000 ₺ başlangıç sermayesiyle Borsa İstanbul, Altın, Döviz, Mevduat, Kira Sertifikası ve Dünya Piyasalarında birebir gerçek kurallarla yarıştığı yatırım simülasyonu.",
   "start_url": "./?source=ios-app",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#07080d",
-  "theme_color": "#07080d",
+  "background_color": "#f4f6f9",
+  "theme_color": "#f4f6f9",
   "lang": "tr-TR",
   "icons": [
     {

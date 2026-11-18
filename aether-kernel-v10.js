@@ -5,7 +5,8 @@
 (function (global) {
   'use strict';
 
-  const STORAGE_KEY = 'aether_v10_unified_state_r1';
+  const STORAGE_KEY = 'aether_1m_real_sim_v12';
+  const DEFAULT_STARTING_CAPITAL_TL = 1000000;
   const CANONICAL_CLOUD_URL = 'https://4zyq4sk2tk-collab.github.io/AETHER-iOS/';
   const CLOUD_BUNDLE_URL = CANONICAL_CLOUD_URL + 'aether-data-bundle.js';
 
@@ -193,7 +194,7 @@
     // Resmi Takvim Olay Pencereleri (TÜİK Ayın 3'ü 10:00, TCMB Perşembe 14:00, Çeyrek Sonu 15:30 Kur)
     const calendarAlerts = [];
     if (p.day === 3 && m >= 9 * 60 + 55 && m <= 12 * 60) {
-      calendarAlerts.push('TÜİK Aylık Enflasyon Verisi (10:00): Tüm kilerlerin gerçek alım gücü güncellendi.');
+      calendarAlerts.push('TÜİK Aylık Enflasyon Verisi (10:00): Tüm portföylerin gerçek alım gücü güncellendi.');
     }
     if (isBizDay && p.weekday === 4 && m >= 13 * 60 + 50 && m <= 14 * 60 + 45) {
       calendarAlerts.push('Perşembe 14:00 TCMB Faiz / 14:30 Haftalık Rezerv & Kart Harcama Penceresi.');
@@ -467,44 +468,46 @@
   // --------------------------------------------------------------------------
   // 4. TEKİL EYALET VE AİLE ÇAY MASASI DEFTERİ (SINGLE SOURCE OF TRUTH)
   // --------------------------------------------------------------------------
+  function captureCurrentBenchmarkPrices() {
+    return {
+      goldPrice: getAsset('gram-altin-spot')?.priceTL || 6120,
+      usdPrice: getAsset('doviz-usd')?.priceTL || 50.44,
+      bistPrice: getAsset('bist-100')?.priceTL || 11660,
+      depositNetAnnualPct: +(((getAsset('mevduat-ust')?.annualGrossRatePct || 39) * (1 - 0.175))).toFixed(2)
+    };
+  }
+
   function createMemberProfile(name, roleLabel, monthlyExpenseTL, startingCashTL) {
     const now = Date.now();
     const clean = String(name || 'Ben').trim().slice(0, 28);
     const slug = clean.toLocaleLowerCase('tr-TR').replace(/[^a-z0-9çğıöşü]+/g, '_').replace(/^_+|_+$/g, '') || 'uye';
     const id = 'fam_' + slug;
+    const cap = Number(startingCashTL) > 0 ? Number(startingCashTL) : DEFAULT_STARTING_CAPITAL_TL;
     return {
       id,
       name: clean,
-      roleLabel: String(roleLabel || 'Ev Kaptanı').slice(0, 28),
+      roleLabel: String(roleLabel || 'Yatırımcı').slice(0, 28),
       createdAt: now,
       updatedAt: now,
-      baselineCapitalTL: Number(startingCashTL) || 100000,
-      monthlyExpenseTL: Math.max(5000, Number(monthlyExpenseTL) || 35000),
-      monthlySavingsTL: 12000,
-      salaryDay: 15, // Ayın 1'i veya 15'i gerçek maaş günü
+      baselineCapitalTL: cap,
+      monthlyExpenseTL: Math.max(5000, Number(monthlyExpenseTL) || 40000),
+      monthlySavingsTL: 0,
+      salaryDay: 15,
       lastSalaryCreditedYm: getIstanbulParts(now).ym,
-      cashTL: Number(startingCashTL) || 100000,
-      // T+2 Takas Kum Saatindeki Bekleyen BIST Satış Tahsilatları
-      settlementQueue: [], // { id, ticker, grossTL, settlesAtMs, soldAtMs, note }
-      // TEFAS Valör veya Borsa Açılış Eşleşmesi Bekleyen Emirler
-      pendingOrders: [],   // { id, side, assetKey, name, reservedTL, qty, orderType, executesAtMs, createdAtMs, door, note }
-      // Ayrı Vade Dilimleri (Yeni para asla eski mevduat gününü kopyalamaz!)
-      rateTranches: [],    // { id, assetKey, name, principalTL, annualGrossPct, stopajPct, openedAtMs, maturityDays, maturesAtMs, isTermDeposit }
-      // Spot / Pay / Fon / Maden Varlık Pozisyonları
-      positions: {},       // { [assetKey]: { assetKey, qty, avgCostTL, avgCostUsd, buyYiUfe, openedAtMs, lastBuyDayYmd, doorUsed } }
-      // Tek Seferlik SPK Halka Arz Dağıtım Kaydı
+      cashTL: cap,
+      benchmarksAtStart: captureCurrentBenchmarkPrices(),
+      settlementQueue: [],
+      pendingOrders: [],
+      rateTranches: [],
+      positions: {},
       ipoParticipations: {},
-      // İşlem Geçmişi ve Aile Çay Sohbeti İçin Son Hamleler
-      tradeHistory: [],    // { id, ts, side, assetKey, name, amountTL, priceTL, feeAndTaxTL, spreadLeakTL, note }
-      // Görünmez Davranış İzleri (Sessiz Ayna)
-      footprints: [],      // { id, ts, code, title, detail, leakTL }
-      // Uçup Giden Fırsat Kavanozu (Korkup Boş Nakitte Beklemenin Maliyeti)
+      tradeHistory: [],
+      footprints: [],
       idleErosionLog: {
         lastCheckedMs: now,
         cumulativeInflationLossTL: 0,
         missedSukukNetTL: 0
       },
-      // Organik Dağılan Sis Deneyim İzleri (Hile Butonu Yoktur!)
       livedMilestones: {
         executedRealOrder: false,
         waitedSettlementOrValor: false,
@@ -516,18 +519,18 @@
   }
 
   function createInitialState() {
-    const starter = createMemberProfile('Ben', 'Aile Kaptanı', 35000, 100000);
+    const starter = createMemberProfile('Ben', 'Portföy Yöneticisi', 40000, DEFAULT_STARTING_CAPITAL_TL);
     return {
-      version: '10.0.0',
+      version: '12.0.0',
       activeMemberId: starter.id,
       members: [starter],
       banterFeed: [
         {
           id: 'b_init',
           ts: Date.now(),
-          authorName: 'Çay Masası',
+          authorName: 'Aile Ligi',
           targetName: '',
-          text: 'Akşam çayı demlendi. Herkesin kileri, kârı, zararı ve takas kum saati masada açık.'
+          text: 'Herkes 1.000.000 ₺ başlangıç sermayesiyle gerçek Türkiye ve dünya piyasalarında yarışıyor. Tüm portföyler ve hamleler açık.'
         }
       ],
       blindMode: false
@@ -552,6 +555,7 @@
     saveState(false);
   }
 
+  let hubSyncTimer = null;
   function saveState(emit = true) {
     if (!state) return;
     try {
@@ -562,7 +566,11 @@
     if (bcChannel) {
       try { bcChannel.postMessage({ type: 'AETHER_V10_STATE', state }); } catch (_) {}
     }
-    if (emit) notifyListeners();
+    if (emit) {
+      notifyListeners();
+      clearTimeout(hubSyncTimer);
+      hubSyncTimer = setTimeout(() => { pushFamilyHubAsync(); }, 450);
+    }
   }
 
   function getActiveMember() {
@@ -1140,8 +1148,8 @@
           feeAndTaxTL: bsmvTL,
           spreadLeakTL: spreadAndTaxLeakTL,
           note: door === 'BAZAAR'
-            ? `Kapalıçarşı dar makasla (%0 BSMV) fiziki kiler alımı.`
-            : `Banka gişesi (%${(halfSpreadPct * 2).toFixed(2)} makas + ${bsmvTL.toLocaleString('tr-TR')} TL BSMV kambiyo vergisi).`
+            ? `Kapalıçarşı dar makasla (%0 kambiyo vergisi) serbest piyasa alımı.`
+            : `Banka ekranı (%${(halfSpreadPct * 2).toFixed(2)} makas + ${bsmvTL.toLocaleString('tr-TR')} TL BSMV kambiyo vergisi).`
         });
         member.updatedAt = nowMs;
         checkConcentrationFootprint(member);
@@ -1308,7 +1316,7 @@
     if (side === 'SELL') {
       const pos = member.positions[asset.key];
       if (!pos || pos.qty <= 0) {
-        return { ok: false, reason: 'Kilerinde bu varlıktan bulunmuyor.' };
+        return { ok: false, reason: 'Portföyünde bu yatırımdan bulunmuyor.' };
       }
       const micro = inspectBoardMicrostructure(asset);
       const ratio = Math.min(1, Math.max(0.01, Number(params.sellRatio) || 1));
@@ -1455,11 +1463,11 @@
     spotItems.sort((a, b) => b.netValTL - a.netValTL);
 
     const totalNetWorthTL = +(cashTL + unsettledTL + pendingOrderTL + tranchesNetTL + spotNetAfterTaxTL).toFixed(2);
-    const baselineTL = Math.max(1, Number(m.baselineCapitalTL) || 100000);
+    const baselineTL = Math.max(1, Number(m.baselineCapitalTL) || DEFAULT_STARTING_CAPITAL_TL);
     const nominalPnlTL = +(totalNetWorthTL - baselineTL).toFixed(2);
     const nominalPnlPct = +(((totalNetWorthTL / baselineTL) - 1) * 100).toFixed(2);
 
-    // Enflasyondan Arındırılmış Gerçek Alım Gücü ve Özgürlük Ayları
+    // Enflasyondan Arındırılmış Gerçek Alım Gücü & Benchmark Kıyaslamaları
     const elapsedYears = Math.max(0, (nowMs - (m.createdAt || nowMs)) / (365 * 24 * 3600 * 1000));
     const infFactor = Math.pow(1 + (getAnnualInflationPct() / 100), elapsedYears);
     const inflationAdjustedBaselineTL = +(baselineTL * infFactor).toFixed(2);
@@ -1468,13 +1476,20 @@
       ? +(((totalNetWorthTL / inflationAdjustedBaselineTL) - 1) * 100).toFixed(2)
       : 0;
 
-    const monthlyExpense = Math.max(5000, Number(m.monthlyExpenseTL) || 35000);
+    const bm = m.benchmarksAtStart || captureCurrentBenchmarkPrices();
+    const curGold = getAsset('gram-altin-spot')?.priceTL || bm.goldPrice || 6120;
+    const curBist = getAsset('bist-100')?.priceTL || bm.bistPrice || 11660;
+    const depNetPct = bm.depositNetAnnualPct || 32.18;
+    const ifAllGoldTL = +(baselineTL * (curGold / Math.max(1, bm.goldPrice || curGold))).toFixed(2);
+    const ifAllBist100TL = +(baselineTL * (curBist / Math.max(1, bm.bistPrice || curBist))).toFixed(2);
+    const ifAllDepositNetTL = +(baselineTL * Math.pow(1 + depNetPct / 100, elapsedYears)).toFixed(2);
+
+    const monthlyExpense = Math.max(5000, Number(m.monthlyExpenseTL) || 40000);
     const freedomMonths = +(totalNetWorthTL / monthlyExpense).toFixed(1);
     const largestSingleSharePct = totalNetWorthTL > 0 && spotItems.length > 0
       ? +((spotItems[0].netValTL / totalNetWorthTL) * 100).toFixed(1)
       : 0;
 
-    // Dağılan Sis Sayısı (0..4 arası gerçek yaşanmışlık)
     const ms = m.livedMilestones || {};
     const clearedCloudsCount = [
       ms.executedRealOrder,
@@ -1499,8 +1514,12 @@
       baselineTL,
       nominalPnlTL,
       nominalPnlPct,
+      inflationTargetTL: inflationAdjustedBaselineTL,
       realPurchasingPnlTL,
       realPurchasingPnlPct,
+      ifAllGoldTL,
+      ifAllBist100TL,
+      ifAllDepositNetTL,
       monthlyExpense,
       freedomMonths,
       largestSingleSharePct,
@@ -1515,7 +1534,7 @@
         member,
         'SINGLE_BASKET_RISK',
         'Tüm Yumurtalar Tek Sepette',
-        `Toplam varlığının %${snap.largestSingleSharePct} kadarı tek başına ${snap.spotItems[0].name} içinde duruyor; tek bir sarsıntı tüm kileri sarsabilir.`,
+        `Toplam portföyünün %${snap.largestSingleSharePct} kadarı tek başına ${snap.spotItems[0].name} içinde toplanmış durumda; tek bir düşüş tüm 1.000.000 ₺ sermayeni sarsabilir.`,
         0
       );
     }
@@ -1527,7 +1546,12 @@
   function addFamilyMember(name, roleLabel, monthlyExpenseTL, startingCashTL) {
     const cleanName = String(name || '').trim();
     if (!cleanName) return { ok: false, reason: 'Lütfen aile bireyinin adını yaz.' };
-    const candidate = createMemberProfile(cleanName, roleLabel || 'Aile Üyesi', monthlyExpenseTL || 35000, startingCashTL || 100000);
+    const candidate = createMemberProfile(
+      cleanName,
+      roleLabel || 'Aile Yatırımcısı',
+      monthlyExpenseTL || 40000,
+      Number(startingCashTL) > 0 ? Number(startingCashTL) : DEFAULT_STARTING_CAPITAL_TL
+    );
     const existing = state.members.find((x) => x.id === candidate.id);
     if (existing) {
       state.activeMemberId = existing.id;
@@ -1539,6 +1563,38 @@
     saveState(true);
     pushFamilyHubAsync();
     return { ok: true, member: candidate };
+  }
+
+  function resetMemberOneMillion(memberId) {
+    const target = state.members.find((m) => m.id === (memberId || state.activeMemberId)) || getActiveMember();
+    if (!target) return { ok: false };
+    const now = Date.now();
+    target.baselineCapitalTL = DEFAULT_STARTING_CAPITAL_TL;
+    target.cashTL = DEFAULT_STARTING_CAPITAL_TL;
+    target.benchmarksAtStart = captureCurrentBenchmarkPrices();
+    target.positions = {};
+    target.rateTranches = [];
+    target.settlementQueue = [];
+    target.pendingOrders = [];
+    target.tradeHistory = [{
+      id: 'th_rst_' + Math.random().toString(36).slice(2, 8),
+      ts: now,
+      side: 'BAŞLANGIÇ',
+      assetKey: 'CASH_TL',
+      name: '1.000.000 ₺ Başlangıç Sermayesi Sıfırlandı',
+      amountTL: DEFAULT_STARTING_CAPITAL_TL,
+      priceTL: 1,
+      feeAndTaxTL: 0,
+      spreadLeakTL: 0,
+      note: 'Portföy 1.000.000 ₺ nakit ile yeniden başlatıldı.'
+    }];
+    target.footprints = [];
+    target.idleErosionLog = { lastCheckedMs: now, cumulativeInflationLossTL: 0, missedSukukNetTL: 0 };
+    target.createdAt = now;
+    target.updatedAt = now;
+    saveState(true);
+    pushFamilyHubAsync();
+    return { ok: true };
   }
 
   function switchActiveMember(memberId) {
@@ -1740,45 +1796,99 @@
       } catch (_) {}
     }
 
-    // 2) GitHub Pages / Native iOS Canlı Bulut Paketi (aether-data-bundle.js) sıcak yüklemesi
-    try {
-      const bundleUrl = (isFileMode ? CLOUD_BUNDLE_URL : './aether-data-bundle.js') + '?t=' + Math.floor(Date.now() / 60000);
-      const rb = await fetch(bundleUrl, { cache: 'no-store' });
-      if (rb.ok) {
-        const txt = await rb.text();
-        const prefix = 'window.__AETHER_EMBEDDED_DATA__ = ';
-        const idx = txt.indexOf(prefix);
-        if (idx >= 0) {
-          const parsed = JSON.parse(txt.slice(idx + prefix.length).trim().replace(/;$/, ''));
-          if (parsed && Array.isArray(parsed.instruments)) {
-            marketData = parsed;
-            rebuildAssetCatalog();
+    // 2) Sunuculu fakat API önbelleksiz modda yerel ./aether-data-bundle.js sıcak yüklemesi
+    if (!isFileMode) {
+      try {
+        const bundleUrl = './aether-data-bundle.js?t=' + Math.floor(Date.now() / 60000);
+        const rb = await fetch(bundleUrl, { cache: 'no-store' });
+        if (rb.ok) {
+          const txt = await rb.text();
+          const prefix = 'window.__AETHER_EMBEDDED_DATA__ = ';
+          const idx = txt.indexOf(prefix);
+          if (idx >= 0) {
+            const parsed = JSON.parse(txt.slice(idx + prefix.length).trim().replace(/;$/, ''));
+            if (parsed && Array.isArray(parsed.instruments)) {
+              marketData = parsed;
+              rebuildAssetCatalog();
+            }
           }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
 
-    // 3) Doğrudan 49 Sütunlu Canlı BIST + Küresel Fiyat Tazeleme (Sunucusuz modda tüm bilanço sütunlarını korur!)
+    // 3) Doğrudan Canlı BIST + Döviz/Altın/Küresel/Kripto Fiyat Tazeleme (Native iOS IPA & Standalone Offline/Online modda 0 sunucuyla çalışır!)
     try {
-      const tvRes = await fetch('https://scanner.tradingview.com/turkey/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          filter: [{ left: 'type', operation: 'in_range', right: ['stock'] }],
-          options: { lang: 'tr' },
-          markets: ['turkey'],
-          columns: [
-            'name', 'close', 'change', 'Perf.W', 'Perf.1M', 'volume',
-            'relative_volume_10d_calc', 'ChaikinMoneyFlow', 'price_earnings_ttm', 'price_book_fq',
-            'total_debt', 'cash_n_short_term_invest_fq', 'net_debt',
-            'current_ratio_fq', 'operating_margin_ttm',
-            'capital_expenditures_ttm', 'cash_f_operating_activities_ttm',
-            'net_income_ttm', 'total_assets_fq', 'ebitda_ttm'
-          ],
-          range: [0, 650]
-        })
-      });
-      if (tvRes.ok) {
+      const [tvRes, glRes] = await Promise.all([
+        fetch('https://scanner.tradingview.com/turkey/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filter: [{ left: 'type', operation: 'in_range', right: ['stock'] }],
+            options: { lang: 'tr' },
+            markets: ['turkey'],
+            columns: [
+              'name', 'close', 'change', 'Perf.W', 'Perf.1M', 'volume',
+              'relative_volume_10d_calc', 'ChaikinMoneyFlow', 'price_earnings_ttm', 'price_book_fq',
+              'total_debt', 'cash_n_short_term_invest_fq', 'net_debt',
+              'current_ratio_fq', 'operating_margin_ttm',
+              'capital_expenditures_ttm', 'cash_f_operating_activities_ttm',
+              'net_income_ttm', 'total_assets_fq', 'ebitda_ttm'
+            ],
+            range: [0, 650]
+          })
+        }).catch(() => null),
+        fetch('https://scanner.tradingview.com/global/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            symbols: {
+              tickers: [
+                'FX_IDC:USDTRY', 'FX_IDC:EURTRY', 'FX_IDC:GBPTRY', 'FX_IDC:CHFTRY',
+                'TVC:GOLD', 'TVC:SILVER', 'BIST:ALTIN',
+                'BINANCE:BTCTRY', 'BINANCE:ETHTRY', 'BINANCE:SOLTRY',
+                'AMEX:SPY', 'NASDAQ:QQQ', 'NASDAQ:NVDA', 'NASDAQ:AAPL', 'NASDAQ:MSFT',
+                'AMEX:BNO', 'AMEX:DBA'
+              ]
+            },
+            columns: ['close', 'change']
+          })
+        }).catch(() => null)
+      ]);
+
+      let updatedAny = false;
+
+      if (glRes && glRes.ok) {
+        const glJson = await glRes.json();
+        const glMap = {};
+        for (const item of (glJson.data || [])) {
+          if (item.s && item.d && item.d[0] > 0) {
+            glMap[item.s] = { close: Number(item.d[0]), chg: Number(item.d[1] || 0) };
+          }
+        }
+        const usdTry = glMap['FX_IDC:USDTRY']?.close || marketData?.macro?.usdTry || 0;
+        if (usdTry > 0 && marketData?.macro) marketData.macro.usdTry = +usdTry.toFixed(4);
+        const ozGold = glMap['TVC:GOLD']?.close || 0;
+        const ozSilver = glMap['TVC:SILVER']?.close || 0;
+        const gramGoldCalc = (ozGold > 0 && usdTry > 0) ? +((ozGold * usdTry) / 31.1034768).toFixed(2) : 0;
+        const gramSilverCalc = (ozSilver > 0 && usdTry > 0) ? +((ozSilver * usdTry) / 31.1034768).toFixed(2) : 0;
+
+        for (const inst of (marketData?.instruments || [])) {
+          if (inst.id === 'doviz-usd' && glMap['FX_IDC:USDTRY']) { inst.currentPrice = +glMap['FX_IDC:USDTRY'].close.toFixed(4); inst.change1D = +glMap['FX_IDC:USDTRY'].chg.toFixed(2); }
+          else if (inst.id === 'doviz-eur' && glMap['FX_IDC:EURTRY']) { inst.currentPrice = +glMap['FX_IDC:EURTRY'].close.toFixed(4); inst.change1D = +glMap['FX_IDC:EURTRY'].chg.toFixed(2); }
+          else if (inst.id === 'doviz-gbp' && glMap['FX_IDC:GBPTRY']) { inst.currentPrice = +glMap['FX_IDC:GBPTRY'].close.toFixed(4); inst.change1D = +glMap['FX_IDC:GBPTRY'].chg.toFixed(2); }
+          else if (inst.id === 'doviz-chf' && glMap['FX_IDC:CHFTRY']) { inst.currentPrice = +glMap['FX_IDC:CHFTRY'].close.toFixed(4); inst.change1D = +glMap['FX_IDC:CHFTRY'].chg.toFixed(2); }
+          else if (inst.id === 'gram-altin-spot' && gramGoldCalc > 0) { inst.currentPrice = gramGoldCalc; inst.change1D = +(glMap['TVC:GOLD']?.chg || 0).toFixed(2); }
+          else if (inst.id === 'gram-gumus-spot' && gramSilverCalc > 0) { inst.currentPrice = gramSilverCalc; inst.change1D = +(glMap['TVC:SILVER']?.chg || 0).toFixed(2); }
+          else if (inst.id === 'altin-sertifikasi' && glMap['BIST:ALTIN']) { inst.currentPrice = +glMap['BIST:ALTIN'].close.toFixed(2); inst.change1D = +glMap['BIST:ALTIN'].chg.toFixed(2); }
+          else if (inst.id === 'kripto-btc' && glMap['BINANCE:BTCTRY']) { inst.currentPrice = Math.round(glMap['BINANCE:BTCTRY'].close); inst.change1D = +glMap['BINANCE:BTCTRY'].chg.toFixed(2); }
+          else if (inst.id === 'kripto-eth' && glMap['BINANCE:ETHTRY']) { inst.currentPrice = Math.round(glMap['BINANCE:ETHTRY'].close); inst.change1D = +glMap['BINANCE:ETHTRY'].chg.toFixed(2); }
+          else if (inst.id === 'kripto-sol' && glMap['BINANCE:SOLTRY']) { inst.currentPrice = +glMap['BINANCE:SOLTRY'].close.toFixed(2); inst.change1D = +glMap['BINANCE:SOLTRY'].chg.toFixed(2); }
+          else if (usdTry > 0 && glMap[inst.symbol]) { inst.currentPrice = +(glMap[inst.symbol].close * usdTry).toFixed(2); inst.change1D = +glMap[inst.symbol].chg.toFixed(2); }
+        }
+        updatedAny = true;
+      }
+
+      if (tvRes && tvRes.ok) {
         const tvJson = await tvRes.json();
         const lookup = marketData?.kitchenIntelSummary?.openHorizon?.bistStockLookup || {};
         for (const item of (tvJson.data || [])) {
@@ -1810,7 +1920,6 @@
             }
           }
         }
-        // 69 varlık içindeki BIST sembollerini de eşzamanlı güncelle
         for (const inst of (marketData?.instruments || [])) {
           const sym = String(inst.symbol || '');
           if (sym.startsWith('BIST:')) {
@@ -1821,6 +1930,10 @@
             }
           }
         }
+        updatedAny = true;
+      }
+
+      if (updatedAny) {
         rebuildAssetCatalog();
         notifyListeners();
         return true;
@@ -1896,6 +2009,8 @@
     evaluateRateTranche,
     executeOrder,
     addFamilyMember,
+    resetMemberOneMillion,
+    DEFAULT_STARTING_CAPITAL_TL,
     switchActiveMember,
     updateHouseholdBaseline,
     postTeaBanter,

@@ -1,14 +1,13 @@
-const CACHE_NAME = 'ocak-living-world-v11-r1';
+const CACHE_NAME = 'aether-1m-real-sim-v12-r1';
 const CORE_ASSETS = [
   './',
   './index.html',
-  './world-stage.css',
+  './million-sim.css',
   './aether-data-bundle.js',
   './aether-history-121m.js',
   './aether-kernel-v10.js',
-  './human-wisdom-and-bridge.js',
-  './decade-life-journey.js',
-  './world-scene-engine.js',
+  './real-investment-guide.js',
+  './million-sim-app.js',
   './manifest.json',
   './apple-touch-icon.png',
   './apple-touch-icon.svg'
