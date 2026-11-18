@@ -1,22 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#050816"/>
-      <stop offset="55%" stop-color="#0b1026"/>
-      <stop offset="100%" stop-color="#170b36"/>
+    <radialGradient id="bgGlow" cx="50%" cy="20%" r="85%">
+      <stop offset="0%" stop-color="#17233b"/>
+      <stop offset="55%" stop-color="#0a101f"/>
+      <stop offset="100%" stop-color="#050811"/>
+    </radialGradient>
+    <linearGradient id="goldArc" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fde68a"/>
+      <stop offset="48%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#d97706"/>
     </linearGradient>
-    <linearGradient id="triOuter" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#38bdf8"/>
-      <stop offset="100%" stop-color="#8b5cf6"/>
-    </linearGradient>
-    <linearGradient id="triInner" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#34d399"/>
-      <stop offset="100%" stop-color="#38bdf8"/>
+    <linearGradient id="emeraldPulse" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#34d399"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
-  <circle cx="256" cy="246" r="176" fill="none" stroke="rgba(56,189,248,0.22)" stroke-width="4" stroke-dasharray="10 8"/>
-  <path d="M256 76 L92 384 H420 Z" fill="rgba(56,189,248,0.14)" stroke="url(#triOuter)" stroke-width="18" stroke-linejoin="round"/>
-  <path d="M256 172 L166 344 H346 Z" fill="url(#triInner)" opacity="0.92"/>
-  <text x="256" y="452" text-anchor="middle" fill="#f8fafc" font-family="system-ui, -apple-system, sans-serif" font-size="44" font-weight="900" letter-spacing="8">AETHER</text>
+  <rect width="512" height="512" fill="url(#bgGlow)"/>
+  <circle cx="256" cy="236" r="168" fill="none" stroke="rgba(245,158,11,0.22)" stroke-width="5"/>
+  <circle cx="256" cy="236" r="142" fill="none" stroke="rgba(56,189,248,0.16)" stroke-width="2.5" stroke-dasharray="8 8"/>
+  <polygon points="256,82 126,352 190,352 256,206 322,352 386,352" fill="url(#goldArc)"/>
+  <polyline points="154,294 218,266 258,284 348,186" fill="none" stroke="url(#emeraldPulse)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="348" cy="186" r="13" fill="#34d399" stroke="#050811" stroke-width="5"/>
+  <text x="256" y="438" text-anchor="middle" fill="#f8fafc" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="44" font-weight="900" letter-spacing="9">AETHER</text>
 </svg>

@@ -1,24 +1,24 @@
 {
-  "name": "AETHER — 1.000.000 ₺ Gerçek Yatırım Simülasyonu",
-  "short_name": "AETHER 1M",
-  "description": "Herkesin 1.000.000 ₺ başlangıç sermayesiyle Borsa İstanbul, Altın, Döviz, Mevduat, Kira Sertifikası ve Dünya Piyasalarında birebir gerçek kurallarla yarıştığı yatırım simülasyonu.",
+  "name": "AETHER — 1.000.000 ₺ Gerçek Yatırım Meydanı",
+  "short_name": "AETHER",
+  "description": "1.000.000 ₺ başlangıç sermayesiyle Borsa İstanbul, Kapalıçarşı, TEFAS, Sukuk ve Dünya Piyasalarında birebir gerçek kurallarla yatırım ve canlı lig uygulaması.",
   "start_url": "./?source=ios-app",
   "scope": "./",
   "display": "standalone",
-  "orientation": "any",
-  "background_color": "#f4f6f9",
-  "theme_color": "#f4f6f9",
+  "orientation": "portrait",
+  "background_color": "#060a12",
+  "theme_color": "#060a12",
   "lang": "tr-TR",
   "icons": [
     {
       "src": "./apple-touch-icon.png",
-      "sizes": "180x180",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
       "src": "./apple-touch-icon.svg",
-      "sizes": "180x180 512x512",
+      "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }

@@ -11,6 +11,7 @@ on:
       - 'million-sim-app.js'
       - 'sw.js'
       - 'manifest.json'
+      - 'apple-touch-icon.png'
       - 'ios/**'
       - '.github/workflows/build-ios-ipa.yml'
   workflow_dispatch:
@@ -45,6 +46,7 @@ jobs:
             -framework UIKit \
             -framework WebKit \
             -framework SafariServices \
+            -framework UserNotifications \
             -framework Foundation \
             ios/main.m \
             -o build-ios/Payload/AETHER.app/AETHER
@@ -57,8 +59,8 @@ jobs:
           plutil -convert binary1 build-ios/Payload/AETHER.app/Info.plist
           printf "APPL????" > build-ios/Payload/AETHER.app/PkgInfo
 
-          cp apple-touch-icon.png build-ios/Payload/AETHER.app/AppIcon60x60@2x.png
-          cp apple-touch-icon.png build-ios/Payload/AETHER.app/AppIcon60x60@3x.png
+          sips -z 120 120 apple-touch-icon.png --out build-ios/Payload/AETHER.app/AppIcon60x60@2x.png >/dev/null
+          sips -z 180 180 apple-touch-icon.png --out build-ios/Payload/AETHER.app/AppIcon60x60@3x.png >/dev/null
 
           cp index.html million-sim.css aether-data-bundle.js aether-kernel-v10.js real-investment-guide.js million-sim-app.js manifest.json sw.js apple-touch-icon.png apple-touch-icon.svg build-ios/Payload/AETHER.app/www/
 
@@ -76,8 +78,8 @@ jobs:
       - name: Publish IPA to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v13.1.0-ios
-          name: "AETHER v13.1 — 1.000.000 ₺ Gerçek Yatırım Meydanı ve Küresel Canlı Yatırımcı Ligi (ARM64 iOS IPA)"
+          tag_name: v14.0.0-ios
+          name: "AETHER v14.0 — Tam Ekran Native Mobil Yatırım Meydanı, Sokak Zekâsı Pusulası ve Canlı Lig (ARM64 iOS IPA)"
           files: AETHER-iOS.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -454,9 +454,11 @@
     const K = global.AetherKernelV10;
     if (!K) return [];
     const md = K.getMarketData() || {};
+    const gp = K.getGlobalLivePulse ? K.getGlobalLivePulse() : null;
     const mc = md?.kitchenIntelSummary?.openHorizon?.macroChains || {};
-    const brent = mc?.inputOutputChains?.brentOilUsd || 88.4;
-    const copper = mc?.inputOutputChains?.copperUsd || 5.74;
+    const brent = gp?.brentUsd || mc?.inputOutputChains?.brentOilUsd || 88.4;
+    const copper = gp?.copperUsd || mc?.inputOutputChains?.copperUsd || 5.74;
+    const wheat = gp?.wheatUsd || mc?.inputOutputChains?.wheatUsd || 562.0;
     const damPct = md?.worldLiveEvolution?.townWeatherAndMood?.damWaterPct || 41.8;
     const gold = K.getAsset('gram-altin-spot');
     const s1Info = K.getDarphanePremiumInfo();
@@ -468,8 +470,9 @@
       {
         id: 'chain-oil',
         title: 'Mazot -> Domates & Uçak Bileti',
+        shortTitle: 'Mazot & Uçak',
         triggerHeadline: `Brent Petrol ${brent} $ · Rafineriden Market Kasasına Maliyet Zinciri`,
-        step1: 'Ham Petrol Varili (Brent)',
+        step1: `Ham Petrol Varili (${brent} $)`,
         step2: 'Rafineri Mazot & Jet Yakıtı (TÜPRAŞ)',
         step3: 'Uçak Gideri & Hal Kamyonu (THYAO, Pegasus, BİM)',
         insight: 'Pazarda domatesin niye pahalandığını anlamanın sırrı mazottadır: Petrol düştüğünde uçak kaldıran THYAO ve binlerce kamyonla mal taşıyan perakendeci nefes alır; petrol fırladığında ise rafineri (TUPRS) stok gücü kazanır.',
@@ -477,9 +480,10 @@
       },
       {
         id: 'chain-drought',
-        title: 'Kuraklık -> Baraj, Fabrika & Raf',
-        triggerHeadline: `Baraj Doluluk Referansı %${damPct} · İklimden Bilançoya Öncü Bakış`,
-        step1: 'Yağış Azlığı & Tarım Emtiası (DBA)',
+        title: 'Kuraklık -> Baraj, Buğday & Raf',
+        shortTitle: 'Kuraklık & Gıda',
+        triggerHeadline: `Baraj Doluluk %${damPct} · Dünya Buğday ${wheat} ¢ · İklimden Bilançoya Öncü Bakış`,
+        step1: `Yağış Azlığı & Buğday (${wheat} ¢ / DBA)`,
         step2: 'Hidroelektrik & Gıda Hammadde Maliyeti',
         step3: 'Peşin Kasalı Marketler & İçecek/Gıda (BİM, Migros, TAB Gıda)',
         insight: 'Kuraklık başladığında barajdan ucuz elektrik üreten HES’ler zorlanır ve tarladaki ürün azalır; aylar sonra hammaddeyi ucuza stoklamış ve raf fiyatını anında güncelleyen peşin kasalı marketler ayakta kalır.',
@@ -488,6 +492,7 @@
       {
         id: 'chain-gold',
         title: 'Altın Terazisi & Hava Parası',
+        shortTitle: 'Altın Terazisi',
         triggerHeadline: `Çarşı Gram ${Math.round(gold?.priceTL || 6115).toLocaleString('tr-TR')} ₺ vs Borsa ALTIN.S1 +%${s1Info.premiumPct} Fark`,
         step1: 'Ons Altın ($) + Dolar/TL Kuru',
         step2: 'Kapalıçarşı Fiziki Gram (%0 Vergi · Dar Makas)',
@@ -498,8 +503,9 @@
       {
         id: 'chain-winter',
         title: 'Kış Öncesi Enerji & Bakır Stoku',
+        shortTitle: 'Bakır & Trafo',
         triggerHeadline: `Bakır ${copper} $ · Şebeke, Trafo ve Yenilenebilir Döngüsü`,
-        step1: 'Bakır, Gümüş & Doğalgaz Girişi',
+        step1: `Bakır (${copper} $), Gümüş & Doğalgaz Girişi`,
         step2: 'Trafo ve Güneş Paneli Üreticileri (Astor, CW Enerji)',
         step3: 'Elektrik Dağıtım & Sanayi Üretimi (Enerjisa)',
         insight: 'Kış gelmeden odun-kömür stoklayan köylü gibi, faiz ve mevsim döngüleri dönmeden önce şebeke yenileme ve enerji altyapı darboğazlarını okuyan yatırımcı sürüden önce pozisyon alır.',
@@ -508,7 +514,8 @@
       {
         id: 'chain-export',
         title: 'Çelik, Euro & Avrupa İhracatı',
-        triggerHeadline: `Euro/TL ${(eur?.priceTL || 55.4).toFixed(2)} ₺ · Fabrikadan Limana Döviz Kasası`,
+        shortTitle: 'Euro & İhracat',
+        triggerHeadline: `Euro/TL ${(eur?.priceTL || 55.4).toFixed(2)} ₺ · EUR/USD ${(gp?.eurUsd || 1.09).toFixed(3)} · Döviz Kasası`,
         step1: 'Yassı Çelik Sac & Alüminyum (Ereğli)',
         step2: 'Avrupa İhracat Devleri (Ford Otosan, Tofaş)',
         step3: 'Niş Yan Sanayi & Savunma (ASELSAN, Ege Endüstri)',
@@ -518,6 +525,7 @@
       {
         id: 'chain-rates',
         title: 'Faiz Kalkanı vs Borçlu Şirketler',
+        shortTitle: 'Faiz & Kalkan',
         triggerHeadline: `Mevduat Brüt %${dep?.annualGrossRatePct || 39} · Enflasyon %${inf.toFixed(1)}`,
         step1: 'Merkez Bankası Politika Faizi',
         step2: '%0 Stopaj Sukuk & Günlük PPF Kalkanı',
@@ -528,18 +536,69 @@
     ];
   }
 
+  function getMarketSeasonCompass() {
+    const K = global.AetherKernelV10;
+    if (!K) return null;
+    const inf = K.getAnnualInflationPct();
+    const sukukNet = K.getAsset('kira-sertifikasi-sukuk')?.annualGrossRatePct || 36.5;
+    const depNet = +((K.getAsset('mevduat-ust')?.annualGrossRatePct || 39) * 0.825).toFixed(1);
+    const realSpread = +(sukukNet - inf).toFixed(1);
+
+    let activePhase = 'TIGHT_WINTER';
+    let currentTitle = 'Yüksek Faiz Kışı & Seçici Toplama Mevsimi';
+    let villagerWisdom = 'Hiçbir kış sonsuza kadar sürmez, hiçbir yaz da sonsuza kadar yükselmez. Kredi faizleri yüksekken borçsuz nakit kaleleri ve %0 vergili Sukuk ocağı sıcak tutar; ama ileri görüşlü köylü, faiz baharı gelmeden önce yangın yerindeki sağlam fabrikaların tohumunu sessizce toplar.';
+    let thrivesNowKeys = ['kira-sertifikasi-sukuk', 'para-piyasasi-fonu', 'reel-perakende-bimas', 'bist-tuprs'];
+    let nextSeedKeys = ['gayrimenkul-konut-ekgyo', 'bist-froto', 'bist-eregl', 'reel-enerji-astor'];
+
+    if (realSpread < -2) {
+      activePhase = 'INFLATION_AUTUMN';
+      currentTitle = 'Negatif Reel Faiz & Malda Korunma Mevsimi';
+      villagerWisdom = 'Enflasyon net faizin üzerinde koştuğunda TL nakitte bekleyen sessizce erir; fiziki altın, döviz kasalı ihracatçılar ve fiyatlama gücü olan gerçek varlıklar kalkan olur.';
+      thrivesNowKeys = ['gram-altin-spot', 'bist-froto', 'bist-thyao', 'reel-perakende-bimas'];
+      nextSeedKeys = ['kira-sertifikasi-sukuk', 'bist-asels', 'abd-sp500-spy'];
+    } else if (inf < 24 && realSpread >= 2) {
+      activePhase = 'DISINFLATION_SPRING';
+      currentTitle = 'Dezenflasyon & Faiz İndirimi Baharı';
+      villagerWisdom = 'Enflasyon ateşi düşerken faiz indirim döngüsü kapıyı çalar; yüksek faiz kışında ezilmiş konut, sanayi ve otomotiv şirketleri bahar suyuyla ilk filizlenenler olur.';
+      thrivesNowKeys = ['gayrimenkul-konut-ekgyo', 'bist-froto', 'bist-eregl', 'bist-tuprs'];
+      nextSeedKeys = ['bist-asels', 'abd-sp500-spy', 'gram-altin-spot'];
+    }
+
+    return {
+      activePhase,
+      currentTitle,
+      realSpreadPct: realSpread,
+      inflationPct: inf,
+      sukukNetPct: sukukNet,
+      depositNetPct: depNet,
+      villagerWisdom,
+      thrivesNowKeys,
+      nextSeedKeys,
+      wheel: [
+        { code: 'TIGHT_WINTER', name: 'Sıkı Faiz Kışı', sub: 'Nakit Basan & Sukuk Korur' },
+        { code: 'DISINFLATION_SPRING', name: 'Faiz İndirim Baharı', sub: 'GYO, Otomotiv & Sanayi Uyanır' },
+        { code: 'GROWTH_SUMMER', name: 'Üretim & İhracat Yazı', sub: 'Çelik, Havacılık & Büyüme Koşar' },
+        { code: 'INFLATION_AUTUMN', name: 'Isınma & Emtia Sonbaharı', sub: 'Altın, Enerji & Perakende Zırh Olur' }
+      ]
+    };
+  }
+
   // --------------------------------------------------------------------------
-  // 4. 6 GERÇEKÇİ KRİZ & FIRTINA TATBİKATI ("ORTALIK KARIŞTIĞINDA KİM SOĞUKKANLI?")
+  // 4. 7 GERÇEKÇİ KRİZ & FIRTINA TATBİKATI ("ORTALIK KARIŞTIĞINDA KİM SOĞUKKANLI?")
   // --------------------------------------------------------------------------
   const CRISIS_SCENARIOS = [
     {
       id: 'NONE',
+      shortTitle: 'Normal Piyasa',
       title: 'Tatbikat Seç (Normal Piyasa)',
+      cashInflationShockPct: 0,
       desc: 'Her şey güllük gülistanlık giderken aniden ortalık karıştığında mevcut portföyüne ne olacağını test et.'
     },
     {
       id: 'STRAIT_BLOCKADE',
+      shortTitle: 'Boğaz & Petrol +%35',
       title: 'Boğazlarda Gemi Sıkışması & Petrol Şoku (+%35)',
+      cashInflationShockPct: 4.5,
       desc: 'Deniz ticareti kilitlendi, Brent petrol bir gecede +%35 fırladı, küresel navlun ve altın sert yükseldi; havacılık ve ithalata dayalı sektörler satış yedi.',
       computeAssetShockPct(a) {
         if (a.id === 'emtia-petrol-bno') return 35;
@@ -555,7 +614,9 @@
     },
     {
       id: 'GRID_BLACKOUT',
+      shortTitle: 'Elektrik Kesintisi',
       title: 'Bölgesel Elektrik & Sanayi Kesintisi Krizi',
+      cashInflationShockPct: 2.0,
       desc: 'Organize sanayi bölgelerinde enerji kısıntısı başladı; yüksek enerji tüketen fabrikalar yavaşlarken şebeke/trafo üreticileri ve nakit kalkanları ayrıştı.',
       computeAssetShockPct(a) {
         if (['ASTOR', 'CWENE', 'SMRTG', 'ENJSA'].includes(a.ticker)) return 9;
@@ -568,8 +629,10 @@
     },
     {
       id: 'SEVERE_DROUGHT',
+      shortTitle: 'Kuraklık & Gıda',
       title: 'Şiddetli Kuraklık & Gıda Enflasyonu Dalgası',
-      desc: 'Barajlar kritik sınırın altına indi, tarımsal rekolte düştü; gıda fiyatları sıçrarken su/enerji yoğun tesisler zorlandı.',
+      cashInflationShockPct: 8.5,
+      desc: 'Barajlar kritik sınırın altına indi, tarımsal rekolte düştü; gıda fiyatları sıçrarken su/enerji yoğun tesisler zorlandı ve boş nakdin mutfak alım gücü eridi.',
       computeAssetShockPct(a) {
         if (a.id === 'emtia-tarim-dba') return 22;
         if (['BIMAS', 'MGROS', 'TABGD'].includes(a.ticker)) return 8;
@@ -581,7 +644,9 @@
     },
     {
       id: 'SHOCK_RATE_HIKE',
+      shortTitle: '14:00 Şok Faiz +750bp',
       title: 'Perşembe 14:00 Şok TCMB Faiz Artışı (+750 bp)',
+      cashInflationShockPct: 0,
       desc: 'Merkez Bankası beklentilerin çok üzerinde sert faiz artırdı; kredili konut (GYO) ve yüksek borçlu şirketler tabana yaklaştı.',
       computeAssetShockPct(a) {
         if (a.isRateInstrument) return 1.5;
@@ -594,19 +659,23 @@
     },
     {
       id: 'FX_SPIKE',
+      shortTitle: 'Kur Şoku +%22',
       title: 'Ani Döviz Kuru Sıçraması (+%22 Kur Şoku)',
-      desc: 'İç ve dış gerilimle döviz kurları +%22 sıçradı; döviz geliri olan ihracatçılar ve altın korurken borçlu iç pazar sarsıldı.',
+      cashInflationShockPct: 16.0,
+      desc: 'İç ve dış gerilimle döviz kurları +%22 sıçradı; döviz geliri olan ihracatçılar ve altın korurken boş TL nakdin alım gücü sert eridi.',
       computeAssetShockPct(a) {
         if (String(a.id).startsWith('doviz-') || a.isForeignUsd || a.id.includes('altin') || a.id.includes('gumus') || a.venue === 'CRYPTO_24_7') return 21;
         if (['THYAO', 'FROTO', 'TOASO', 'TUPRS', 'ASELS', 'SISE', 'EREGL'].includes(a.ticker)) return 12;
-        if (a.isRateInstrument) return 0; // Nominal düşmez ama alım gücü %18 erir!
+        if (a.isRateInstrument) return 0;
         if (a.venue === 'BIST') return 3;
         return 0;
       }
     },
     {
       id: 'GLOBAL_CRASH',
+      shortTitle: 'Küresel Çöküş',
       title: 'Küresel Likidite Çöküşü & Kaldıraç Tasfiyesi',
+      cashInflationShockPct: 0,
       desc: 'Dünya borsalarında sert satış dalgası: Kripto -%32, ABD teknoloji -%16, gelişen ülke borsaları -%11 çekildi; sabit getiri ve fiziki altın korudu.',
       computeAssetShockPct(a) {
         if (a.venue === 'CRYPTO_24_7') return -32;
@@ -615,6 +684,21 @@
         if (a.isRateInstrument) return 0;
         if (a.venue === 'BIST') return -11;
         return -5;
+      }
+    },
+    {
+      id: 'ALTIN_S1_BUBBLE_POP',
+      shortTitle: 'Hava Parası Çöküşü',
+      title: 'Hava Parası Balonlarının Sönmesi & Spekülatif Tahta Çözülmesi',
+      cashInflationShockPct: 0,
+      desc: 'Fiziki altın yatay kalırken borsadaki şişik ALTIN.S1 primi sıfırlandı ve sosyal medya/dedikodu tahtaları üst üste taban kilitledi; kaliteli kasalar sağlam kaldı.',
+      computeAssetShockPct(a) {
+        if (a.subVenue === 'DARPHANE_S1') return -Math.max(9, Math.round(global.AetherKernelV10?.getDarphanePremiumInfo()?.premiumPct || 12));
+        if (a.isPumpAnomaly || a.isTms29Illusion || a.distributionTrap) return -24;
+        if (a.id === 'gram-altin-spot' || a.isRateInstrument) return 0.5;
+        if (a.bistRow && (a.bistRow.ocfMillionTL || 0) > 250) return 1.5;
+        if (a.venue === 'BIST') return -4;
+        return 0;
       }
     }
   ];
@@ -647,6 +731,12 @@
     }
 
     const postNetWorthTL = Math.max(0, Math.round(snap.totalNetWorthTL + totalDeltaTL));
+    const infShockPct = Number(sc.cashInflationShockPct) || 0;
+    const realPostWorthTL = infShockPct > 0
+      ? Math.round(postNetWorthTL / (1 + infShockPct / 100))
+      : postNetWorthTL;
+    const realPurchasingDeltaTL = Math.round(realPostWorthTL - snap.totalNetWorthTL);
+    const realPurchasingDeltaPct = +((realPurchasingDeltaTL / Math.max(1, snap.totalNetWorthTL)) * 100).toFixed(2);
     const marginWiped = snap.marginDebtTL > 0 && (postNetWorthTL / Math.max(1, postNetWorthTL + snap.marginDebtTL)) < 0.35;
 
     return {
@@ -654,6 +744,10 @@
       totalDeltaTL,
       totalDeltaPct: +((totalDeltaTL / Math.max(1, snap.totalNetWorthTL)) * 100).toFixed(2),
       postNetWorthTL,
+      infShockPct,
+      realPostWorthTL,
+      realPurchasingDeltaTL,
+      realPurchasingDeltaPct,
       marginWiped,
       itemImpacts: itemImpacts.sort((a, b) => a.deltaTL - b.deltaTL)
     };
@@ -968,7 +1062,7 @@
     } else if (asset.venue === 'TEFAS') {
       executionRule = `İş günleri 13:30 valör sınırından önce verilen emir gününde işlenir; 13:30 sonrası alım ve bozum emirleri +1/+2 iş günü valör bekler. Stopaj: %${asset.stopajPct}.`;
     } else if (asset.venue === 'TWO_DOOR') {
-      executionRule = `Kapalıçarşı (Pzt–Cmt 09:30–18:30, dar makas, %0 vergi) ile Mobil Banka (7/24 açık; ancak akşam 17:30 sonrası ve hafta sonu makas %3,60 açılır + %0,2 kambiyo vergisi kesilir) arasında gerçek seçim yaparsın.`;
+      executionRule = `Üç gerçek gişe arasında seçim yaparsın: Kapalıçarşı (Pzt–Cmt 09:30–18:30, %0,40 dar makas, %0 vergi), Nöbetçi Döviz/Kuyumcu (Her gün 10:00–22:00, %1,45 hafta sonu/akşam makası, %0 vergi) ve Mobil Banka (7/24 açık; 17:30 sonrası ve hafta sonu makas %3,60 açılır + alımda %0,2 kambiyo vergisi kesilir).`;
     } else if (asset.subVenue === 'TERM_DEPOSIT') {
       executionRule = `Vade sonuna kadar (32/181/366 gün) kilitlenir. 6 aya kadar %17,5, 1 yıla kadar %15, 1 yıl üstü %10 stopaj kesilir. Vadeden önce bozarsan biriken faizin tamamı yanar!`;
     } else if (asset.isGvk80) {
@@ -1104,6 +1198,7 @@
     getDailyStreetBriefing,
     getEnrichedLiveNewsFeed,
     getLiveWorldChains,
+    getMarketSeasonCompass,
     getCardQuickSignal,
     computeRange52W,
     computeBakery100kScale,

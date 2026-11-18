@@ -1,8 +1,10 @@
 #import <UIKit/UIKit.h>
 #import <WebKit/WebKit.h>
 #import <SafariServices/SafariServices.h>
+#import <UserNotifications/UserNotifications.h>
 
 static NSString * const kAetherNativeStateKey = @"aether_native_state_v13";
+static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
 
 @class AetherViewController;
 
@@ -11,9 +13,10 @@ static NSString * const kAetherNativeStateKey = @"aether_native_state_v13";
 - (instancetype)initWithController:(AetherViewController *)controller;
 @end
 
-@interface AetherViewController : UIViewController <WKNavigationDelegate, WKUIDelegate>
+@interface AetherViewController : UIViewController <WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate, UNUserNotificationCenterDelegate>
 @property (nonatomic, strong) WKWebView *webView;
 @property (nonatomic, strong) WKUserContentController *userContentController;
+@property (nonatomic, assign) BOOL isDaylightTheme;
 - (void)handleScriptMessage:(WKScriptMessage *)message;
 - (void)refreshBootUserScript;
 @end
@@ -39,7 +42,56 @@ static NSString * const kAetherNativeStateKey = @"aether_native_state_v13";
 }
 
 - (UIStatusBarStyle)preferredStatusBarStyle {
-    return UIStatusBarStyleLightContent;
+    return self.isDaylightTheme ? UIStatusBarStyleDarkContent : UIStatusBarStyleLightContent;
+}
+
+- (UIColor *)currentCanvasColor {
+    if (self.isDaylightTheme) {
+        return [UIColor colorWithRed:238.0/255.0 green:242.0/255.0 blue:247.0/255.0 alpha:1.0];
+    }
+    return [UIColor colorWithRed:6.0/255.0 green:10.0/255.0 blue:18.0/255.0 alpha:1.0];
+}
+
+- (void)applyNativeTheme:(NSString *)themeStr {
+    BOOL daylight = [themeStr isEqualToString:@"daylight"];
+    self.isDaylightTheme = daylight;
+    [[NSUserDefaults standardUserDefaults] setObject:(daylight ? @"daylight" : @"obsidian") forKey:kAetherNativeThemeKey];
+    UIColor *bg = [self currentCanvasColor];
+    self.view.backgroundColor = bg;
+    if (self.webView) {
+        self.webView.backgroundColor = bg;
+        self.webView.scrollView.backgroundColor = bg;
+    }
+    [self setNeedsStatusBarAppearanceUpdate];
+}
+
+- (void)triggerHaptic:(NSString *)style {
+    if ([style isEqualToString:@"selection"]) {
+        UISelectionFeedbackGenerator *gen = [[UISelectionFeedbackGenerator alloc] init];
+        [gen prepare];
+        [gen selectionChanged];
+    } else if ([style isEqualToString:@"success"]) {
+        UINotificationFeedbackGenerator *gen = [[UINotificationFeedbackGenerator alloc] init];
+        [gen prepare];
+        [gen notificationOccurred:UINotificationFeedbackTypeSuccess];
+    } else if ([style isEqualToString:@"warning"]) {
+        UINotificationFeedbackGenerator *gen = [[UINotificationFeedbackGenerator alloc] init];
+        [gen prepare];
+        [gen notificationOccurred:UINotificationFeedbackTypeWarning];
+    } else if ([style isEqualToString:@"error"]) {
+        UINotificationFeedbackGenerator *gen = [[UINotificationFeedbackGenerator alloc] init];
+        [gen prepare];
+        [gen notificationOccurred:UINotificationFeedbackTypeError];
+    } else {
+        UIImpactFeedbackStyle impactStyle = UIImpactFeedbackStyleLight;
+        if ([style isEqualToString:@"medium"]) impactStyle = UIImpactFeedbackStyleMedium;
+        else if ([style isEqualToString:@"heavy"]) impactStyle = UIImpactFeedbackStyleHeavy;
+        else if ([style isEqualToString:@"rigid"]) impactStyle = UIImpactFeedbackStyleRigid;
+        else if ([style isEqualToString:@"soft"]) impactStyle = UIImpactFeedbackStyleSoft;
+        UIImpactFeedbackGenerator *gen = [[UIImpactFeedbackGenerator alloc] initWithStyle:impactStyle];
+        [gen prepare];
+        [gen impactOccurred];
+    }
 }
 
 - (void)refreshBootUserScript {
@@ -78,10 +130,20 @@ static NSString * const kAetherNativeStateKey = @"aether_native_state_v13";
     NSString *scheme = [url.scheme lowercaseString];
     if ([scheme isEqualToString:@"http"] || [scheme isEqualToString:@"https"]) {
         SFSafariViewController *sf = [[SFSafariViewController alloc] initWithURL:url];
-        sf.preferredBarTintColor = [UIColor colorWithRed:15.0/255.0 green:23.0/255.0 blue:42.0/255.0 alpha:1.0];
-        sf.preferredControlTintColor = [UIColor colorWithRed:56.0/255.0 green:189.0/255.0 blue:248.0/255.0 alpha:1.0];
+        sf.preferredBarTintColor = [UIColor colorWithRed:6.0/255.0 green:10.0/255.0 blue:18.0/255.0 alpha:1.0];
+        sf.preferredControlTintColor = [UIColor colorWithRed:245.0/255.0 green:158.0/255.0 blue:11.0/255.0 alpha:1.0];
         [self presentViewController:sf animated:YES completion:nil];
     }
+}
+
+- (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView {
+    return nil;
+}
+
+- (void)userNotificationCenter:(UNUserNotificationCenter *)center
+       willPresentNotification:(UNNotification *)notification
+         withCompletionHandler:(void (^)(UNNotificationPresentationOptions options))completionHandler {
+    completionHandler(UNNotificationPresentationOptionBanner | UNNotificationPresentationOptionList | UNNotificationPresentationOptionSound);
 }
 
 - (void)handleScriptMessage:(WKScriptMessage *)message {
@@ -91,6 +153,63 @@ static NSString * const kAetherNativeStateKey = @"aether_native_state_v13";
     NSDictionary *body = (NSDictionary *)message.body;
     NSString *action = body[@"action"];
     if (![action isKindOfClass:[NSString class]]) return;
+
+    if ([action isEqualToString:@"haptic"]) {
+        NSString *style = [body[@"style"] isKindOfClass:[NSString class]] ? body[@"style"] : @"light";
+        [self triggerHaptic:style];
+        return;
+    }
+
+    if ([action isEqualToString:@"setTheme"]) {
+        NSString *theme = [body[@"theme"] isKindOfClass:[NSString class]] ? body[@"theme"] : @"obsidian";
+        [self applyNativeTheme:theme];
+        return;
+    }
+
+    if ([action isEqualToString:@"requestNotifications"]) {
+        UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+        center.delegate = self;
+        [center requestAuthorizationWithOptions:(UNAuthorizationOptionAlert | UNAuthorizationOptionSound | UNAuthorizationOptionBadge)
+                              completionHandler:^(BOOL granted, NSError * _Nullable error) {}];
+        return;
+    }
+
+    if ([action isEqualToString:@"scheduleNotification"]) {
+        NSString *nid = [body[@"id"] isKindOfClass:[NSString class]] ? body[@"id"] : @"aether_alert";
+        NSString *title = [body[@"title"] isKindOfClass:[NSString class]] ? body[@"title"] : @"AETHER";
+        NSString *msg = [body[@"body"] isKindOfClass:[NSString class]] ? body[@"body"] : @"";
+        double delaySec = [body[@"delaySec"] respondsToSelector:@selector(doubleValue)] ? [body[@"delaySec"] doubleValue] : 1.0;
+        if (msg.length == 0) return;
+
+        UNMutableNotificationContent *content = [[UNMutableNotificationContent alloc] init];
+        content.title = title;
+        content.body = msg;
+        content.sound = [UNNotificationSound defaultSound];
+
+        UNTimeIntervalNotificationTrigger *trigger = [UNTimeIntervalNotificationTrigger triggerWithTimeInterval:MAX(1.0, delaySec) repeats:NO];
+        UNNotificationRequest *req = [UNNotificationRequest requestWithIdentifier:nid content:content trigger:trigger];
+        [[UNUserNotificationCenter currentNotificationCenter] addNotificationRequest:req withCompletionHandler:nil];
+        return;
+    }
+
+    if ([action isEqualToString:@"share"]) {
+        NSString *text = [body[@"text"] isKindOfClass:[NSString class]] ? body[@"text"] : @"";
+        NSString *urlStr = [body[@"url"] isKindOfClass:[NSString class]] ? body[@"url"] : @"";
+        NSMutableArray *items = [NSMutableArray array];
+        if (text.length > 0) [items addObject:text];
+        if (urlStr.length > 0) {
+            NSURL *u = [NSURL URLWithString:urlStr];
+            if (u) [items addObject:u];
+        }
+        if (items.count == 0) return;
+        UIActivityViewController *avc = [[UIActivityViewController alloc] initWithActivityItems:items applicationActivities:nil];
+        if (avc.popoverPresentationController) {
+            avc.popoverPresentationController.sourceView = self.view;
+            avc.popoverPresentationController.sourceRect = CGRectMake(CGRectGetMidX(self.view.bounds), CGRectGetMaxY(self.view.bounds) - 60.0, 1.0, 1.0);
+        }
+        [self presentViewController:avc animated:YES completion:nil];
+        return;
+    }
 
     if ([action isEqualToString:@"saveState"]) {
         NSString *payload = body[@"payload"];
@@ -116,7 +235,7 @@ static NSString * const kAetherNativeStateKey = @"aether_native_state_v13";
                                                            cachePolicy:NSURLRequestReloadIgnoringLocalCacheData
                                                        timeoutInterval:12.0];
         req.HTTPMethod = method;
-        [req setValue:@"Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15" forHTTPHeaderField:@"User-Agent"];
+        [req setValue:@"Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15" forHTTPHeaderField:@"User-Agent"];
         if (headers) {
             for (id k in headers) {
                 id v = headers[k];
@@ -158,8 +277,12 @@ static NSString * const kAetherNativeStateKey = @"aether_native_state_v13";
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    UIColor *bg = [UIColor colorWithRed:15.0/255.0 green:23.0/255.0 blue:42.0/255.0 alpha:1.0];
+    NSString *savedTheme = [[NSUserDefaults standardUserDefaults] stringForKey:kAetherNativeThemeKey];
+    self.isDaylightTheme = [savedTheme isEqualToString:@"daylight"];
+    UIColor *bg = [self currentCanvasColor];
     self.view.backgroundColor = bg;
+
+    [UNUserNotificationCenter currentNotificationCenter].delegate = self;
 
     WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
     config.websiteDataStore = [WKWebsiteDataStore defaultDataStore];
@@ -182,8 +305,17 @@ static NSString * const kAetherNativeStateKey = @"aether_native_state_v13";
     self.webView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.webView.opaque = NO;
     self.webView.backgroundColor = bg;
-    self.webView.scrollView.backgroundColor = [UIColor colorWithRed:241.0/255.0 green:245.0/255.0 blue:249.0/255.0 alpha:1.0];
-    self.webView.scrollView.bounces = YES;
+    self.webView.allowsLinkPreview = NO;
+    self.webView.allowsBackForwardNavigationGestures = NO;
+    self.webView.scrollView.backgroundColor = bg;
+    self.webView.scrollView.bounces = NO;
+    self.webView.scrollView.alwaysBounceVertical = NO;
+    self.webView.scrollView.alwaysBounceHorizontal = NO;
+    self.webView.scrollView.showsVerticalScrollIndicator = NO;
+    self.webView.scrollView.showsHorizontalScrollIndicator = NO;
+    self.webView.scrollView.minimumZoomScale = 1.0;
+    self.webView.scrollView.maximumZoomScale = 1.0;
+    self.webView.scrollView.delegate = self;
     self.webView.scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
     self.webView.navigationDelegate = self;
     self.webView.UIDelegate = self;
@@ -251,7 +383,7 @@ createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
-    self.window.backgroundColor = [UIColor colorWithRed:15.0/255.0 green:23.0/255.0 blue:42.0/255.0 alpha:1.0];
+    self.window.backgroundColor = [UIColor colorWithRed:6.0/255.0 green:10.0/255.0 blue:18.0/255.0 alpha:1.0];
     self.window.rootViewController = [[AetherViewController alloc] init];
     [self.window makeKeyAndVisible];
     return YES;

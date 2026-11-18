@@ -188,6 +188,36 @@
     return addTurkishBusinessDays(startMs, 1, 10, 0);
   }
 
+  function getNextBistAuctionMatchInfo(startMs) {
+    const p = getIstanbulParts(startMs);
+    const isHalfDay = TR_HALF_DAYS.has(p.ymd);
+    if (isTurkishBusinessDay(p.ymd, p.weekday)) {
+      if (p.minOfDay < 10 * 60) {
+        return {
+          executesAtMs: Date.UTC(p.year, p.month - 1, p.day, 10 - 3, 0, 0),
+          orderType: 'BIST_OPEN_AUCTION',
+          sessionLabel: '10:00 Açılış Eşleşmesi'
+        };
+      }
+      const contEnd = isHalfDay ? (12 * 60 + 30) : (18 * 60);
+      const closeCollectEnd = isHalfDay ? (12 * 60 + 35) : (18 * 60 + 5);
+      if (p.minOfDay >= contEnd && p.minOfDay < closeCollectEnd) {
+        const matchH = isHalfDay ? 12 : 18;
+        const matchM = isHalfDay ? 35 : 5;
+        return {
+          executesAtMs: Date.UTC(p.year, p.month - 1, p.day, matchH - 3, matchM, 0),
+          orderType: 'BIST_CLOSE_AUCTION',
+          sessionLabel: `${String(matchH).padStart(2, '0')}:${String(matchM).padStart(2, '0')} Kapanış Eşleşmesi`
+        };
+      }
+    }
+    return {
+      executesAtMs: addTurkishBusinessDays(startMs, 1, 10, 0),
+      orderType: 'BIST_OPEN_AUCTION',
+      sessionLabel: '10:00 Açılış Eşleşmesi'
+    };
+  }
+
   function getTurkishClock(customMs) {
     const p = getIstanbulParts(customMs);
     const isWeekend = p.weekday === 0 || p.weekday === 6;
@@ -268,11 +298,20 @@
       ? `TEFAS Valör Açık (13:30'a ${minsToTefas} dk kaldı)`
       : 'TEFAS 13:30 Geçildi (+1 İş Günü Valör)';
 
-    // Kapalıçarşı vs Mobil Banka Makası
+    // Kapalıçarşı vs Nöbetçi Döviz/Kuyumcu vs Mobil Banka Makası
     const grandBazaarOpen = !isHoliday && p.weekday !== 0 && m >= 9 * 60 + 30 && m < 18 * 60 + 30;
+    const nobetciOpen = !isHoliday && m >= 10 * 60 && m < 22 * 60;
     const bankDaytimeTight = isBizDay && m >= 9 * 60 + 30 && m < 17 * 60 + 30;
     const bankSpreadPct = bankDaytimeTight ? 0.65 : 3.60;
+    const nobetciSpreadPct = 1.45;
     const bazaarSpreadPct = 0.40;
+
+    // Canlı Resmi Veri & Zil Pencereleri (Yüksek Frekanslı Senkronizasyon)
+    const isHighVolatilityEventWindow =
+      (isBizDay && m >= 9 * 60 + 55 && m <= 10 * 60 + 5) ||
+      (isBizDay && m >= 18 * 60 && m <= 18 * 60 + 10) ||
+      (isBizDay && p.weekday === 4 && m >= 13 * 60 + 58 && m <= 14 * 60 + 15) ||
+      (p.day === 3 && m >= 9 * 60 + 59 && m <= 10 * 60 + 12);
 
     // Resmi Takvim Pencereleri
     const calendarAlerts = [];
@@ -312,9 +351,12 @@
       minsToTefas,
       tefasLabel,
       grandBazaarOpen,
+      nobetciOpen,
       bankDaytimeTight,
       bankSpreadPct,
+      nobetciSpreadPct,
       bazaarSpreadPct,
+      isHighVolatilityEventWindow,
       calendarAlerts
     };
   }
@@ -881,6 +923,9 @@
       creditedDividends: {},
       tradeHistory: [],
       footprints: [],
+      equityCurve: [{ ts: now, nw: DEFAULT_STARTING_CAPITAL_TL, base: DEFAULT_STARTING_CAPITAL_TL }],
+      studiedDisclosures: {},
+      seenNewsIds: [],
       idleErosionLog: {
         lastCheckedMs: now,
         cumulativeInflationLossTL: 0,
@@ -890,7 +935,8 @@
         executedRealOrder: false,
         waitedSettlementOrValor: false,
         inspectedCashScale: false,
-        wroteInvestmentThesis: false
+        wroteInvestmentThesis: false,
+        studiedNightDisclosure: false
       }
     };
   }
@@ -902,7 +948,7 @@
       : ('inv_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4));
     const me = createDeviceInvestor(deviceId, '', '1 Milyon ₺ Portföy Yöneticisi');
     return {
-      version: '13.1.0',
+      version: '14.0.0',
       roomCode: DEFAULT_ROOM_CODE,
       localDeviceId: deviceId,
       me,
@@ -933,6 +979,11 @@
     me.pendingOrders = Array.isArray(me.pendingOrders) ? me.pendingOrders : [];
     me.tradeHistory = Array.isArray(me.tradeHistory) ? me.tradeHistory : [];
     me.footprints = Array.isArray(me.footprints) ? me.footprints : [];
+    me.equityCurve = Array.isArray(me.equityCurve) && me.equityCurve.length > 0
+      ? me.equityCurve
+      : [{ ts: me.createdAt || Date.now(), nw: me.baselineCapitalTL || DEFAULT_STARTING_CAPITAL_TL, base: me.baselineCapitalTL || DEFAULT_STARTING_CAPITAL_TL }];
+    me.studiedDisclosures = me.studiedDisclosures && typeof me.studiedDisclosures === 'object' ? me.studiedDisclosures : {};
+    me.seenNewsIds = Array.isArray(me.seenNewsIds) ? me.seenNewsIds : [];
     me.livedMilestones = me.livedMilestones || {};
     parsed.roomCode = String(parsed.roomCode || DEFAULT_ROOM_CODE).toUpperCase();
     parsed.peers = parsed.peers && typeof parsed.peers === 'object' ? parsed.peers : {};
@@ -1199,6 +1250,7 @@
       positions: inv.positions || {},
       tradeHistory: (inv.tradeHistory || []).slice(0, 10),
       footprints: (inv.footprints || []).slice(0, 6),
+      equityCurve: (inv.equityCurve || []).slice(-24),
       masteryScore: mastery.overallScore,
       masteryRank: mastery.rankTitle
     };
@@ -1759,10 +1811,38 @@
     }
 
     if (changed) {
+      recordEquityCurveSnapshot(member, nowMs, false);
       member.updatedAt = nowMs;
       member.rev = (Number(member.rev) || 1) + 1;
     }
     return changed;
+  }
+
+  function recordEquityCurveSnapshot(member, customNowMs, forcePoint = false) {
+    if (!member) return;
+    const nowMs = customNowMs != null ? customNowMs : getTurkishClock().ms;
+    const snap = evaluateMemberPortfolio(member, nowMs);
+    const nw = Math.round(snap.totalNetWorthTL);
+    const base = Math.round(snap.baselineTL);
+    if (!Array.isArray(member.equityCurve) || member.equityCurve.length === 0) {
+      member.equityCurve = [{ ts: member.createdAt || nowMs, nw: base, base }];
+    }
+    const last = member.equityCurve[member.equityCurve.length - 1];
+    const dt = nowMs - (Number(last?.ts) || 0);
+    const diff = Math.abs(nw - (Number(last?.nw) || base));
+    if (forcePoint || dt >= 10 * 60 * 1000 || diff >= 250) {
+      if (dt < 15000 && member.equityCurve.length > 1 && !forcePoint) {
+        last.nw = nw;
+        last.base = base;
+        last.ts = nowMs;
+      } else {
+        member.equityCurve.push({ ts: nowMs, nw, base });
+      }
+      if (member.equityCurve.length > 72) {
+        const anchor = member.equityCurve[0];
+        member.equityCurve = [anchor, ...member.equityCurve.slice(-70)];
+      }
+    }
   }
 
   function mergeSpotPosition(member, asset, addQty, buyUnitTL, ymd, doorUsed, thesisTag, thesisNote) {
@@ -1833,7 +1913,10 @@
 
     let spreadHalfPct = 0;
     if (asset.venue === 'TWO_DOOR') {
-      spreadHalfPct = (door === 'BAZAAR' ? clock.bazaarSpreadPct : clock.bankSpreadPct) / 2;
+      const fullSp = door === 'BAZAAR'
+        ? clock.bazaarSpreadPct
+        : (door === 'NOBETCI' ? clock.nobetciSpreadPct : clock.bankSpreadPct);
+      spreadHalfPct = fullSp / 2;
     }
     const effectiveBidTL = +(rawExecPriceTL * (1 - spreadHalfPct / 100)).toFixed(4);
     const grossTL = +(sellQty * effectiveBidTL).toFixed(2);
@@ -1945,12 +2028,12 @@
     const nowMs = clock.ms;
     const side = String(params.side || 'BUY').toUpperCase();
 
-    // --- SIRADA BEKLEYEN EMRİ İPTAL ETME (09:50–10:00 BIST İPTAL YASAĞI KONTROLLÜ) ---
+    // --- SIRADA BEKLEYEN EMRİ İPTAL ETME (09:50–10:00 ve 18:05–18:08 BIST İPTAL YASAĞI KONTROLLÜ) ---
     if (side === 'CANCEL_ORDER') {
       const idx = (member.pendingOrders || []).findIndex((o) => o.id === params.orderId);
       if (idx < 0) return { ok: false, reason: 'İptal edilecek bekleyen emir bulunamadı.' };
       const ord = member.pendingOrders[idx];
-      if (ord.orderType === 'BIST_OPEN_AUCTION' && clock.bistCancelLocked) {
+      if ((ord.orderType === 'BIST_OPEN_AUCTION' || ord.orderType === 'BIST_CLOSE_AUCTION') && clock.bistCancelLocked) {
         return {
           ok: false,
           reason: `Borsa İstanbul Kuralı (${clock.bistLabel}): Eşleşme penceresinde bekleyen emir iptal edilemez!`
@@ -2397,17 +2480,27 @@
         };
       }
 
-      // C) KAPALIÇARŞI vs MOBİL BANKA (İKİ KAPILI ALTIN/GÜMÜŞ/DÖVİZ)
+      // C) KAPALIÇARŞI vs NÖBETÇİ DÖVİZ/KUYUMCU vs MOBİL BANKA (ALTIN/GÜMÜŞ/DÖVİZ)
       if (asset.venue === 'TWO_DOOR') {
-        const door = params.door === 'BAZAAR' ? 'BAZAAR' : 'BANK';
+        const door = params.door === 'BAZAAR' ? 'BAZAAR' : (params.door === 'NOBETCI' ? 'NOBETCI' : 'BANK');
         if (door === 'BAZAAR' && !clock.grandBazaarOpen) {
           return {
             ok: false,
-            reason: `Kapalıçarşı şu an kapalı (${clock.shortTimeStr} · Açılış 09:30). Sabahı bekleyebilir veya %${clock.bankSpreadPct.toFixed(2)} mesai dışı makas + %0,2 kambiyo vergisiyle Mobil Banka kanalını seçebilirsin.`
+            reason: `Kapalıçarşı şu an kapalı (${clock.shortTimeStr} · Pzt–Cmt 09:30–18:30 açık). ${clock.nobetciOpen ? 'Nöbetçi Döviz/Kuyumcu Gişesini (%1,45 makas, %0 vergi) veya ' : ''}Mobil Banka kanalını seçebilirsin.`
           };
         }
-        const halfSpreadPct = (door === 'BAZAAR' ? clock.bazaarSpreadPct : clock.bankSpreadPct) / 2;
+        if (door === 'NOBETCI' && !clock.nobetciOpen) {
+          return {
+            ok: false,
+            reason: `Nöbetçi döviz/kuyumcu gişeleri gece 22:00–10:00 arası kapalıdır (${clock.shortTimeStr}). Sabahı bekleyebilir veya 7/24 Mobil Banka kanalını seçebilirsin.`
+          };
+        }
+        const fullSpreadPct = door === 'BAZAAR'
+          ? clock.bazaarSpreadPct
+          : (door === 'NOBETCI' ? clock.nobetciSpreadPct : clock.bankSpreadPct);
+        const halfSpreadPct = fullSpreadPct / 2;
         const bsmvPct = door === 'BANK' ? 0.20 : 0;
+        const doorLabel = door === 'BAZAAR' ? 'Kapalıçarşı' : (door === 'NOBETCI' ? 'Nöbetçi Gişe' : 'Mobil Banka');
         const askPriceTL = +(asset.priceTL * (1 + halfSpreadPct / 100)).toFixed(4);
         const bsmvTL = +(amountTL * (bsmvPct / 100)).toFixed(2);
         const netForMetalOrFx = Math.max(0, +(amountTL - bsmvTL).toFixed(2));
@@ -2436,7 +2529,7 @@
           side: 'ALIM',
           assetKey: asset.key,
           ticker: asset.ticker,
-          name: `${asset.name} (${door === 'BAZAAR' ? 'Kapalıçarşı' : 'Mobil Banka'})`,
+          name: `${asset.name} (${doorLabel})`,
           amountTL,
           priceTL: askPriceTL,
           thesisTag,
@@ -2445,19 +2538,22 @@
           spreadLeakTL: spreadAndTaxLeakTL,
           note: door === 'BAZAAR'
             ? 'Kapalıçarşı dar makas (%0 kambiyo vergisi).'
-            : `Mobil Banka (%${(halfSpreadPct * 2).toFixed(2)} makas + ${bsmvTL.toLocaleString('tr-TR')} ₺ kambiyo vergisi).`
+            : (door === 'NOBETCI'
+              ? `Nöbetçi döviz/kuyumcu gişesi (%${fullSpreadPct.toFixed(2)} makas · %0 vergi).`
+              : `Mobil Banka (%${fullSpreadPct.toFixed(2)} makas + ${bsmvTL.toLocaleString('tr-TR')} ₺ kambiyo vergisi).`)
         });
         maybeSnapshotGhostHoldPortfolio(member);
         checkConcentrationFootprint(member);
+        recordEquityCurveSnapshot(member, nowMs, true);
         member.updatedAt = nowMs;
         member.rev = (member.rev || 1) + 1;
-        const ev = broadcastTradeToLeague(member, 'Aldı', `${asset.name} (${door === 'BAZAAR' ? 'Kapalıçarşı' : 'Banka'})`, amountTL, thesisNote);
+        const ev = broadcastTradeToLeague(member, 'Aldı', `${asset.name} (${doorLabel})`, amountTL, thesisNote);
         saveState(true, false);
         publishMyInvestorToMesh(ev);
         return {
           ok: true,
           status: 'FILLED',
-          message: `${door === 'BAZAAR' ? 'Kapalıçarşı' : 'Mobil Banka'} üzerinden ${qty.toFixed(3)} birim ${asset.name} alındı (Makas+Vergi maliyeti: ${spreadAndTaxLeakTL.toLocaleString('tr-TR')} ₺).`
+          message: `${doorLabel} üzerinden ${qty.toFixed(3)} birim ${asset.name} alındı (Makas+Vergi maliyeti: ${spreadAndTaxLeakTL.toLocaleString('tr-TR')} ₺).`
         };
       }
 
@@ -2477,8 +2573,8 @@
         }
 
         if (!clock.bistCanMatchNow) {
-          const nextOpenMs = getNextBistOpenMatchMs(nowMs);
-          const nextParts = getIstanbulParts(nextOpenMs);
+          const aucInfo = getNextBistAuctionMatchInfo(nowMs);
+          const nextParts = getIstanbulParts(aucInfo.executesAtMs);
           deductFunds(amountTL);
           member.pendingOrders.push({
             id: 'po_' + Math.random().toString(36).slice(2, 9),
@@ -2487,18 +2583,18 @@
             name: asset.name,
             reservedTL: amountTL,
             qty: 0,
-            orderType: 'BIST_OPEN_AUCTION',
-            executesAtMs: nextOpenMs,
+            orderType: aucInfo.orderType,
+            executesAtMs: aucInfo.executesAtMs,
             createdAtMs: nowMs,
             door: 'BIST',
             thesisTag,
             thesisNote,
-            note: `Borsa kapalı (${clock.bistLabel}); emir ${nextParts.ymd} saat 10:00 açılış eşleşmesine yazıldı.`
+            note: `${clock.bistLabel}; emir ${nextParts.ymd} ${aucInfo.sessionLabel} sırasına yazıldı.`
           });
           member.tradeHistory.unshift({
             id: 'th_' + Math.random().toString(36).slice(2, 9),
             ts: nowMs,
-            side: 'AÇILIŞ EMRİ',
+            side: aucInfo.orderType === 'BIST_CLOSE_AUCTION' ? 'KAPANIŞ EMRİ' : 'AÇILIŞ EMRİ',
             assetKey: asset.key,
             ticker: asset.ticker,
             name: asset.name,
@@ -2508,18 +2604,19 @@
             thesisNote,
             feeAndTaxTL: 0,
             spreadLeakTL: 0,
-            note: `${nextParts.ymd} 10:00 Borsa İstanbul açılış ziline kuyruğa alındı.`
+            note: `${nextParts.ymd} ${aucInfo.sessionLabel} kuyruğuna alındı.`
           });
           member.livedMilestones.executedRealOrder = true;
+          recordEquityCurveSnapshot(member, nowMs, true);
           member.updatedAt = nowMs;
           member.rev = (member.rev || 1) + 1;
-          const ev = broadcastTradeToLeague(member, 'Sabah Açılışına Emir Yazdı', asset.ticker, amountTL, thesisNote);
+          const ev = broadcastTradeToLeague(member, aucInfo.orderType === 'BIST_CLOSE_AUCTION' ? 'Kapanış Eşleşmesine Emir Yazdı' : 'Sabah Açılışına Emir Yazdı', asset.ticker, amountTL, thesisNote);
           saveState(true, false);
           publishMyInvestorToMesh(ev);
           return {
             ok: true,
             status: 'QUEUED_BIST_OPEN',
-            message: `${clock.bistLabel}. Alım emrin gerçek hayattaki gibi ${nextParts.ymd} sabah 10:00 açılış eşleşmesine alındı.`
+            message: `${clock.bistLabel}. Alım emrin gerçek hayattaki gibi ${nextParts.ymd} ${aucInfo.sessionLabel} sırasına alındı.`
           };
         }
 
@@ -2591,6 +2688,7 @@
         });
         maybeSnapshotGhostHoldPortfolio(member);
         checkConcentrationFootprint(member);
+        recordEquityCurveSnapshot(member, nowMs, true);
         member.updatedAt = nowMs;
         member.rev = (member.rev || 1) + 1;
         const ev = broadcastTradeToLeague(member, borrowedTL > 0 ? 'Kredili Aldı' : 'Aldı', `${asset.ticker} (${qty} lot)`, totalCostTL, thesisNote);
@@ -2638,6 +2736,7 @@
       });
       maybeSnapshotGhostHoldPortfolio(member);
       checkConcentrationFootprint(member);
+      recordEquityCurveSnapshot(member, nowMs, true);
       member.updatedAt = nowMs;
       member.rev = (member.rev || 1) + 1;
       const ev = broadcastTradeToLeague(member, 'Aldı', asset.ticker, amountTL, thesisNote);
@@ -2665,7 +2764,7 @@
       if (availableQty <= 0.000001) {
         return {
           ok: false,
-          reason: `Bu pozisyonun tamamı (${alreadyQueuedSellQty} adet) zaten sabah 10:00 açılış eşleşmesi için satış kuyruğunda bekliyor.`
+          reason: `Bu pozisyonun tamamı (${alreadyQueuedSellQty} adet) zaten eşleşme için satış kuyruğunda bekliyor.`
         };
       }
 
@@ -2695,8 +2794,8 @@
           return { ok: false, reason: `${asset.ticker} devre kesicide! Eşleşme bitene kadar satış yapılamaz.` };
         }
         if (!clock.bistCanMatchNow) {
-          const nextOpenMs = getNextBistOpenMatchMs(nowMs);
-          const nextParts = getIstanbulParts(nextOpenMs);
+          const aucInfo = getNextBistAuctionMatchInfo(nowMs);
+          const nextParts = getIstanbulParts(aucInfo.executesAtMs);
           member.pendingOrders.push({
             id: 'po_' + Math.random().toString(36).slice(2, 9),
             side: 'SELL',
@@ -2704,11 +2803,11 @@
             name: asset.name,
             reservedTL: 0,
             qty: sellQty,
-            orderType: 'BIST_OPEN_AUCTION',
-            executesAtMs: nextOpenMs,
+            orderType: aucInfo.orderType,
+            executesAtMs: aucInfo.executesAtMs,
             createdAtMs: nowMs,
             door: 'BIST',
-            note: `Borsa kapalı; ${sellQty} adet satış emri ${nextParts.ymd} 10:00 açılış eşleşmesine yazıldı.`
+            note: `${clock.bistLabel}; ${sellQty} adet satış emri ${nextParts.ymd} ${aucInfo.sessionLabel} sırasına yazıldı.`
           });
           member.updatedAt = nowMs;
           member.rev = (member.rev || 1) + 1;
@@ -2716,17 +2815,21 @@
           return {
             ok: true,
             status: 'QUEUED_BIST_OPEN',
-            message: `Borsa kapalı olduğu için ${sellQty} adet satış emrin ${nextParts.ymd} sabah 10:00 açılış eşleşmesine alındı.`
+            message: `${clock.bistLabel}. ${sellQty} adet satış emrin ${nextParts.ymd} ${aucInfo.sessionLabel} sırasına alındı.`
           };
         }
       }
 
-      const door = params.door === 'BAZAAR' ? 'BAZAAR' : 'BANK';
+      const door = params.door === 'BAZAAR' ? 'BAZAAR' : (params.door === 'NOBETCI' ? 'NOBETCI' : 'BANK');
       if (asset.venue === 'TWO_DOOR' && door === 'BAZAAR' && !clock.grandBazaarOpen) {
-        return { ok: false, reason: 'Kapalıçarşı şu an kapalı; sabah 09:30 açılışını bekle veya Mobil Banka kanalını seç.' };
+        return { ok: false, reason: `Kapalıçarşı şu an kapalı; ${clock.nobetciOpen ? 'Nöbetçi Gişeyi veya ' : ''}Mobil Banka kanalını seçebilirsin.` };
+      }
+      if (asset.venue === 'TWO_DOOR' && door === 'NOBETCI' && !clock.nobetciOpen) {
+        return { ok: false, reason: 'Nöbetçi döviz/kuyumcu gişeleri 22:00–10:00 arası kapalıdır; 7/24 Mobil Banka kanalını seçebilirsin.' };
       }
 
       const res = settleSpotSale(member, asset, sellQty, asset.priceTL, nowMs, door, false);
+      recordEquityCurveSnapshot(member, nowMs, true);
       member.updatedAt = nowMs;
       member.rev = (member.rev || 1) + 1;
       const ev = broadcastTradeToLeague(member, 'Sattı', asset.ticker, res.netAfterFeeAndStopajTL, '');
@@ -3094,7 +3197,8 @@
       }
     }
     const thesisWrittenCount = Object.values(m.positions || {}).filter((p) => p.thesisNote && p.thesisNote.length >= 4).length;
-    const disciplineScore = Math.max(25, Math.min(98, 72 + thesisWrittenCount * 7 - rumCnt * 14 + (m.livedMilestones?.inspectedCashScale ? 8 : 0)));
+    const studiedCount = Object.keys(m.studiedDisclosures || {}).length;
+    const disciplineScore = Math.max(25, Math.min(98, 72 + thesisWrittenCount * 7 + Math.min(12, studiedCount * 3) - rumCnt * 14 + (m.livedMilestones?.inspectedCashScale ? 8 : 0)));
 
     // 6) Enflasyon Kalkanı & Nakit Çarkı
     let shieldScore = 60;
@@ -3118,7 +3222,10 @@
 
     // Görmüş Geçirmiş Dostun Kişisel Yorumu
     let mentorVoice = '';
-    if (snap.allocationBreakdown.cashPct > 85) {
+    const queuedCapitalTL = (Number(snap.pendingOrderTL) || 0) + (Number(snap.ipoBlockedTL) || 0);
+    if (queuedCapitalTL >= snap.totalNetWorthTL * 0.12 && snap.spotItems.length === 0 && snap.tranches.length === 0) {
+      mentorVoice = 'Emirlerin (' + Math.round(queuedCapitalTL).toLocaleString('tr-TR') + ' ₺) gerçek Borsa İstanbul açılış / TEFAS valör sırasına girdi dostum. Gerçek piyasada seans kapalıyken verilen emir sabah zilini bekler; kalan nakdini de acele etmeden farklı mevsim varlıklarıyla dengeleyebilirsin.';
+    } else if (snap.allocationBreakdown.cashPct > 85) {
       mentorVoice = 'Paranın neredeyse tamamı hâlâ boş nakitte bekliyor dostum. Enflasyonun %' + getAnnualInflationPct().toFixed(1) + ' olduğu yerde hareketsiz beklemek de bir karardır ama her gün sessizce alım gücünden yer. Hiç değilse bir kısmını %0 stopajlı Kira Sertifikası veya sağlam kasalı gerçek varlıklarla çalıştırmaya başla.';
     } else if (snap.marginStatus?.isWarning) {
       mentorVoice = 'Sırtında ' + Math.round(snap.marginDebtTL).toLocaleString('tr-TR') + ' ₺ aracı kurum kredisi taşıyorsun ve her gece faiz işliyor. Borç parayla alınan mal, piyasa biraz sallandığında insanın uykusunu kaçırır ve en dipte zorla sattırır. Özsermayeni rahatlat.';
@@ -3132,10 +3239,63 @@
       mentorVoice = 'Adımlarını atmaya başladın. Bir şirkete ortak olurken sadece hisse fiyatına değil, mahalle fırını gibi kasasına gerçek nakit girip girmediğine ve borç yüküne bakmayı alışkanlık haline getir.';
     }
 
+    // Kendi Yoğurt Yiyişin — Hamlelerden Doğan Yatırımcı Karakter Arketipi
+    const ab = snap.allocationBreakdown;
+    let archetype = {
+      code: 'CAUTIOUS_SCOUT',
+      title: 'Temkinli Piyasa Gözcüsü',
+      motto: 'Önce suyu tartar, sonra ayağını sokar.',
+      strength: 'Aceleyle balon tahtalara atlamaz, ana sermayesini korur.',
+      blindSpot: 'Fazla beklemek yüksek enflasyonda her gün sessizce alım gücü kaybettirir.'
+    };
+    if (snap.marginDebtTL > snap.totalNetWorthTL * 0.12 || sellTrades >= 8) {
+      archetype = {
+        code: 'HIGH_VOLTAGE_TRADER',
+        title: 'Yüksek Gerilim Tahta Savaşçısı',
+        motto: 'Hareketin ve hızın içinde fırsat arar.',
+        strength: 'Kısa vadeli katalizörlere ve piyasa dönüşlerine hızlı tepki verir.',
+        blindSpot: 'Kredi faizi, gişe makası ve sabırsızlık uzun vadede kârı sessizce kemirebilir.'
+      };
+    } else if (ab.fixedPct >= 38 && snap.passiveCoveragePct >= 30) {
+      archetype = {
+        code: 'PASSIVE_RIVER_ARCHITECT',
+        title: 'Nakit Nehri Mimarı',
+        motto: 'Küçük damlaları birleştirip kendi özgürlük çarkını kurar.',
+        strength: 'Stopaj kalkanını ve düzenli nakit akışını ustaca kullanır; fırtınada uykusu kaçmaz.',
+        blindSpot: 'Faiz indirim baharı başladığında reel şirket ve ihracat trenini geç yakalayabilir.'
+      };
+    } else if (ab.metalPct + ab.globalFxCryptoPct >= 45) {
+      archetype = {
+        code: 'MACRO_SHIELD_NAVIGATOR',
+        title: 'Küresel & Altın Terazi Ustası',
+        motto: 'Paranın sınır tanımayan akışını ve alım gücü terazisini okur.',
+        strength: 'Kur şoklarına ve küresel jeopolitik fırtınalara karşı doğal zırh taşır.',
+        blindSpot: 'Yüksek reel TL faizi dönemlerinde iç piyasadaki nakit basan iskontolu fabrikaları ıskalayabilir.'
+      };
+    } else if (ab.equityPct >= 35 && qualityScore >= 80) {
+      archetype = {
+        code: 'BAKERY_VAULT_PARTNER',
+        title: 'Mahalle Fırını & Kasa Ortağı',
+        motto: 'Hisse senedi değil, kasasına sıcak nakit giren yaşayan fabrika alır.',
+        strength: 'Kağıt kârı ile gerçek faaliyet nakdini ayırır; yangın yerindeki sağlam cevheri toplar.',
+        blindSpot: 'Tek sektöre aşırı yüklenirse hammadde veya enerji döngüsü döndüğünde sarsılabilir.'
+      };
+    } else if (ab.cashPct <= 70) {
+      archetype = {
+        code: 'BALANCED_SEASON_FARMER',
+        title: 'Dört Mevsim Sepet Çiftçisi',
+        motto: 'Kıştan önce odununu, bahardan önce tohumunu hazır tutar.',
+        strength: 'Yumurtaları tek sepete koymaz; hem nakit çarkı hem reel büyüme taşır.',
+        blindSpot: 'Aşırı dağılım yaparsa en iyi bildiği sağlam fırsatların ağırlığı cılız kalabilir.'
+      };
+    }
+
     return {
       overallScore,
       rankTitle,
       mentorVoice,
+      archetype,
+      studiedDisclosureCount: studiedCount,
       axes: [
         { label: 'Kasa & Nakit Kalitesi', score: qualityScore },
         { label: 'Sepet Dengesi', score: balanceScore },
@@ -3234,6 +3394,7 @@
       note: 'Portföy temiz 1.000.000 ₺ nakit ile yeniden başlatıldı.'
     }];
     target.footprints = [];
+    target.equityCurve = [{ ts: now, nw: DEFAULT_STARTING_CAPITAL_TL, base: DEFAULT_STARTING_CAPITAL_TL }];
     target.idleErosionLog = { lastCheckedMs: now, cumulativeInflationLossTL: 0, missedSukukNetTL: 0 };
     target.createdAt = now;
     target.updatedAt = now;
@@ -3369,6 +3530,10 @@
             marketData = fresh;
             lastLiveSyncMs = Date.now();
             rebuildAssetCatalog();
+            if (state?.me) {
+              recordEquityCurveSnapshot(state.me, Date.now(), false);
+              persistStateLocally();
+            }
             notifyListeners();
             return true;
           }
@@ -3401,7 +3566,8 @@
               'BIST:ZGOLD', 'BIST:GMSTR', 'BIST:USDTR',
               'BINANCE:BTCTRY', 'BINANCE:ETHTRY', 'BINANCE:SOLTRY',
               'AMEX:SPY', 'NASDAQ:QQQ', 'NASDAQ:NVDA', 'NASDAQ:AAPL', 'NASDAQ:MSFT',
-              'AMEX:BNO', 'AMEX:DBA', 'ICEEUR:BRN1!', 'COMEX:HG1!'
+              'AMEX:BNO', 'AMEX:DBA', 'ICEEUR:BRN1!', 'COMEX:HG1!', 'CBOT:ZW1!',
+              'FX_IDC:EURUSD', 'XETR:DAX'
             ]
           },
           columns: ['close', 'change']
@@ -3418,6 +3584,7 @@
             glMap[item.s] = { close: Number(item.d[0]), chg: Number(item.d[1] || 0) };
           }
         }
+        marketData.globalLiveMap = { ...(marketData.globalLiveMap || {}), ...glMap };
         const usdTry = glMap['FX_IDC:USDTRY']?.close || marketData?.macro?.usdTry || 0;
         const usdChg = glMap['FX_IDC:USDTRY']?.chg || 0;
         const combineChg = (a, b) => +((((1 + (Number(a) || 0) / 100) * (1 + (Number(b) || 0) / 100)) - 1) * 100).toFixed(2);
@@ -3434,6 +3601,7 @@
           if (mc.inputOutputChains) {
             if (glMap['ICEEUR:BRN1!']?.close) mc.inputOutputChains.brentOilUsd = +glMap['ICEEUR:BRN1!'].close.toFixed(2);
             if (glMap['COMEX:HG1!']?.close) mc.inputOutputChains.copperUsd = +glMap['COMEX:HG1!'].close.toFixed(3);
+            if (glMap['CBOT:ZW1!']?.close) mc.inputOutputChains.wheatUsd = +glMap['CBOT:ZW1!'].close.toFixed(2);
           }
         }
 
@@ -3517,11 +3685,98 @@
       if (updatedAny) {
         lastLiveSyncMs = Date.now();
         rebuildAssetCatalog();
+        if (state?.me) {
+          recordEquityCurveSnapshot(state.me, Date.now(), false);
+          persistStateLocally();
+        }
         notifyListeners();
         return true;
       }
     } catch (_) {}
     return false;
+  }
+
+  function getGlobalLivePulse() {
+    const clock = getTurkishClock();
+    const gl = marketData?.globalLiveMap || {};
+    const mc = marketData?.kitchenIntelSummary?.openHorizon?.macroChains || {};
+    const io = mc.inputOutputChains || {};
+    const viop = getViopEveningSignal();
+    const spy = getAsset('abd-sp500-spy');
+    const qqq = getAsset('abd-nasdaq-qqq');
+    const btc = getAsset('kripto-btc');
+    const bno = getAsset('emtia-petrol-bno');
+    const dba = getAsset('emtia-tarim-dba');
+
+    return {
+      clock,
+      brentUsd: Number(gl['ICEEUR:BRN1!']?.close || io.brentOilUsd || 84.5),
+      brentChg1D: Number(gl['ICEEUR:BRN1!']?.chg ?? bno?.change1D ?? 0),
+      copperUsd: Number(gl['COMEX:HG1!']?.close || io.copperUsd || 5.42),
+      copperChg1D: Number(gl['COMEX:HG1!']?.chg || 0),
+      wheatUsd: Number(gl['CBOT:ZW1!']?.close || io.wheatUsd || 562.0),
+      wheatChg1D: Number(gl['CBOT:ZW1!']?.chg ?? dba?.change1D ?? 0),
+      goldOzUsd: Number(gl['TVC:GOLD']?.close || 0),
+      goldOzChg1D: Number(gl['TVC:GOLD']?.chg || 0),
+      eurUsd: Number(gl['FX_IDC:EURUSD']?.close || 1.09),
+      eurUsdChg1D: Number(gl['FX_IDC:EURUSD']?.chg || 0),
+      daxPts: Number(gl['XETR:DAX']?.close || 0),
+      daxChg1D: Number(gl['XETR:DAX']?.chg || 0),
+      sp500Usd: spy?.priceUsd || Number(gl['AMEX:SPY']?.close || 0),
+      sp500Chg1D: Number(gl['AMEX:SPY']?.chg ?? spy?.change1D ?? 0),
+      nasdaqChg1D: Number(gl['NASDAQ:QQQ']?.chg ?? qqq?.change1D ?? 0),
+      btcTL: btc?.priceTL || 0,
+      btcChg1D: btc?.change1D || 0,
+      viop
+    };
+  }
+
+  function markDisclosureStudied(newsId, stance = 'RESEARCHED', title = '') {
+    if (!newsId) return { ok: false };
+    const m = getActiveMember();
+    const clock = getTurkishClock();
+    if (!m.studiedDisclosures || typeof m.studiedDisclosures !== 'object') {
+      m.studiedDisclosures = {};
+    }
+    m.studiedDisclosures[String(newsId)] = {
+      ts: clock.ms,
+      stance: String(stance || 'RESEARCHED'),
+      title: String(title || '').slice(0, 120),
+      preOpen: !clock.bistCanMatchNow
+    };
+    if (!m.livedMilestones) m.livedMilestones = {};
+    m.livedMilestones.studiedNightDisclosure = true;
+    if (!Array.isArray(m.seenNewsIds)) m.seenNewsIds = [];
+    if (!m.seenNewsIds.includes(String(newsId))) m.seenNewsIds.push(String(newsId));
+    m.updatedAt = clock.ms;
+    m.rev = (Number(m.rev) || 1) + 1;
+    saveState(true, true);
+    return { ok: true, preOpen: !clock.bistCanMatchNow, totalStudied: Object.keys(m.studiedDisclosures).length };
+  }
+
+  function getUnreadDisclosureCount(feedIds = []) {
+    const m = getActiveMember();
+    const seen = new Set(Array.isArray(m.seenNewsIds) ? m.seenNewsIds : []);
+    let unread = 0;
+    for (const id of feedIds) {
+      if (id && !seen.has(String(id))) unread++;
+    }
+    return unread;
+  }
+
+  function markDisclosuresSeen(feedIds = []) {
+    const m = getActiveMember();
+    if (!Array.isArray(m.seenNewsIds)) m.seenNewsIds = [];
+    let changed = false;
+    for (const id of feedIds) {
+      const s = String(id || '');
+      if (s && !m.seenNewsIds.includes(s)) {
+        m.seenNewsIds.push(s);
+        changed = true;
+      }
+    }
+    if (m.seenNewsIds.length > 60) m.seenNewsIds = m.seenNewsIds.slice(-60);
+    if (changed) saveState(false, false);
   }
 
   // --------------------------------------------------------------------------
@@ -3564,6 +3819,7 @@
     }
 
     processTimeHooksForMember(state.me);
+    recordEquityCurveSnapshot(state.me, Date.now(), false);
     saveState(false, false);
 
     startCloudMesh();
@@ -3592,10 +3848,13 @@
       }
     }, 15000);
 
-    // Yerel ağ / HTTP Hub yedek senkronizasyonu (Dış WSS engelli ağlarda bile canlı lig senkron kalır)
+    // Yerel ağ / HTTP Hub yedek senkronizasyonu ve kritik veri anlarında (TCMB 14:00, BIST Zil, TÜİK) hızlandırılmış akış
     setInterval(() => {
       if (global.document?.visibilityState !== 'hidden') {
         syncHttpFamilyHubAsync();
+        if (getTurkishClock().isHighVolatilityEventWindow) {
+          refreshLiveMarketData();
+        }
       }
     }, 8000);
 
@@ -3617,11 +3876,13 @@
     getAllAssets: () => Array.from(new Set(assetCatalog.values())).filter((a) => !a.isSyntheticIpo),
     getAsset,
     getTurkishClock,
+    getNextBistAuctionMatchInfo,
     getBistTickSize,
     snapToBistTick,
     inspectBoardMicrostructure,
     getDarphanePremiumInfo,
     getViopEveningSignal,
+    getGlobalLivePulse,
     getAnnualInflationPct,
     getAnnualMarginRatePct,
     getOvernightRepoNetAnnualPct,
@@ -3645,6 +3906,9 @@
     refreshLiveMarketData,
     buildCompactInvestorPacket,
     mergeIncomingPeerPacket,
+    markDisclosureStudied,
+    getUnreadDisclosureCount,
+    markDisclosuresSeen,
     markInspectedCashScale() {
       const m = getActiveMember();
       if (!m.livedMilestones.inspectedCashScale) {
