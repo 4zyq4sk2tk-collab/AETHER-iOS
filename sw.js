@@ -1,11 +1,13 @@
-const CACHE_NAME = 'aether-v9-living-world-r1';
+const CACHE_NAME = 'aether-v10-zero-spreadsheet-r1';
 const CORE_ASSETS = [
   './',
   './index.html',
-  './aether-world-v9.css',
+  './aether-v10.css',
   './aether-data-bundle.js',
-  './aether-experience-engine.js',
-  './aether-living-world-v9.js',
+  './aether-history-121m.js',
+  './aether-kernel-v10.js',
+  './aether-canvas-world-v10.js',
+  './aether-arena-120m-v10.js',
   './manifest.json',
   './apple-touch-icon.png',
   './apple-touch-icon.svg'
@@ -54,7 +56,6 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (url.origin === self.location.origin) {
-    // HTML, JS ve CSS için her zaman ÖNCE AĞ (Network-First), çevrimdışıysa Önbellek!
     event.respondWith(
       fetch(req, { cache: 'no-store' })
         .then((res) => {

@@ -9,7 +9,7 @@
 @implementation AetherViewController
 
 - (UIStatusBarStyle)preferredStatusBarStyle {
-    return UIStatusBarStyleLightContent;
+    return UIStatusBarStyleDarkContent;
 }
 
 - (void)openExternalSafariSheet:(NSURL *)url {
@@ -25,7 +25,7 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    UIColor *obsidian = [UIColor colorWithRed:7.0/255.0 green:8.0/255.0 blue:13.0/255.0 alpha:1.0];
+    UIColor *obsidian = [UIColor colorWithRed:247.0/255.0 green:243.0/255.0 blue:235.0/255.0 alpha:1.0];
     self.view.backgroundColor = obsidian;
 
     WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
@@ -39,7 +39,7 @@
     } @catch (NSException *e) {}
 
     WKUserContentController *ucc = [[WKUserContentController alloc] init];
-    WKUserScript *bootScript = [[WKUserScript alloc] initWithSource:@"window.__AETHER_NATIVE_IOS_APP__ = true;"
+    WKUserScript *bootScript = [[WKUserScript alloc] initWithSource:@"window.__AETHER_NATIVE_IOS_APP__ = true; window.__AETHER_CLOUD_ORIGIN__ = 'https://4zyq4sk2tk-collab.github.io/AETHER-iOS/';"
                                                       injectionTime:WKUserScriptInjectionTimeAtDocumentStart
                                                    forMainFrameOnly:NO];
     [ucc addUserScript:bootScript];

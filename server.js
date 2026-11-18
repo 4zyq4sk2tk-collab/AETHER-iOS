@@ -2090,7 +2090,7 @@ async function refreshMarketDataset() {
       cachedEtag = etag;
       lastFetchTime = Date.now();
 
-      persistBundleAtomically(jsonStr);
+      await persistBundleAtomically(jsonStr);
       return fresh;
     } finally {
       inflightRefreshPromise = null;
@@ -2100,31 +2100,33 @@ async function refreshMarketDataset() {
 }
 
 // Sunucu açılışında mevcut gömülü veri paketini anında RAM'e yükle (0ms soğuk başlangıç)
-(async function warmCacheFromDisk() {
-  try {
-    const bp = path.join(__dirname, 'aether-data-bundle.js');
-    if (fs.existsSync(bp)) {
-      const txt = await fsp.readFile(bp, 'utf8');
-      const prefix = 'window.__AETHER_EMBEDDED_DATA__ = ';
-      const idx = txt.indexOf(prefix);
-      if (idx >= 0) {
-        const jsonPart = txt.slice(idx + prefix.length).trim().replace(/;$/, '');
-        const parsed = JSON.parse(jsonPart);
-        const rawBuf = Buffer.from(jsonPart, 'utf8');
-        const gzBuf = await gzipAsync(rawBuf, { level: zlib.constants.Z_BEST_SPEED });
-        cachedData = parsed;
-        cachedJsonBuf = rawBuf;
-        cachedGzipBuf = gzBuf;
-        cachedEtag = 'W/"' + crypto.createHash('sha1').update(rawBuf).digest('hex').slice(0, 16) + '"';
+if (!process.argv.includes('--bundle-only')) {
+  (async function warmCacheFromDisk() {
+    try {
+      const bp = path.join(__dirname, 'aether-data-bundle.js');
+      if (fs.existsSync(bp)) {
+        const txt = await fsp.readFile(bp, 'utf8');
+        const prefix = 'window.__AETHER_EMBEDDED_DATA__ = ';
+        const idx = txt.indexOf(prefix);
+        if (idx >= 0) {
+          const jsonPart = txt.slice(idx + prefix.length).trim().replace(/;$/, '');
+          const parsed = JSON.parse(jsonPart);
+          const rawBuf = Buffer.from(jsonPart, 'utf8');
+          const gzBuf = await gzipAsync(rawBuf, { level: zlib.constants.Z_BEST_SPEED });
+          cachedData = parsed;
+          cachedJsonBuf = rawBuf;
+          cachedGzipBuf = gzBuf;
+          cachedEtag = 'W/"' + crypto.createHash('sha1').update(rawBuf).digest('hex').slice(0, 16) + '"';
+        }
       }
-    }
-  } catch (_) {}
-  refreshMarketDataset().catch((err) => console.error('Initial background warm error:', err.message));
-})();
+    } catch (_) {}
+    refreshMarketDataset().catch((err) => console.error('Initial background warm error:', err.message));
+  })();
 
-setInterval(() => {
-  refreshMarketDataset().catch((err) => console.error('Scheduled refresh error:', err.message));
-}, 45000).unref();
+  setInterval(() => {
+    refreshMarketDataset().catch((err) => console.error('Scheduled refresh error:', err.message));
+  }, 45000).unref();
+}
 
 function clientAcceptsGzip(req) {
   const ae = req.headers['accept-encoding'] || '';
@@ -2206,6 +2208,16 @@ const server = http.createServer(async (req, res) => {
 
   // Aile İçi Ortak Portföy, Kâr/Zarar ve Oyun Gelişim Merkezi (/api/family-hub)
   if (url.pathname === '/api/family-hub') {
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Max-Age': '86400'
+      });
+      res.end();
+      return;
+    }
     const hubFile = path.join(__dirname, 'family-hub.json');
     const readHub = async () => {
       try {
@@ -2332,10 +2344,12 @@ const server = http.createServer(async (req, res) => {
 
   // Statik iOS / PWA / Veri Paketi Dosyaları
   const staticMap = {
-    '/aether-world-v9.css': { file: 'aether-world-v9.css', mime: 'text/css; charset=utf-8', cc: 'no-cache' },
+    '/aether-v10.css': { file: 'aether-v10.css', mime: 'text/css; charset=utf-8', cc: 'no-cache' },
     '/aether-data-bundle.js': { file: 'aether-data-bundle.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
-    '/aether-experience-engine.js': { file: 'aether-experience-engine.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
-    '/aether-living-world-v9.js': { file: 'aether-living-world-v9.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
+    '/aether-history-121m.js': { file: 'aether-history-121m.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
+    '/aether-kernel-v10.js': { file: 'aether-kernel-v10.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
+    '/aether-canvas-world-v10.js': { file: 'aether-canvas-world-v10.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
+    '/aether-arena-120m-v10.js': { file: 'aether-arena-120m-v10.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
     '/manifest.json': { file: 'manifest.json', mime: 'application/manifest+json; charset=utf-8', cc: 'no-cache' },
     '/sw.js': { file: 'sw.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
     '/apple-touch-icon.svg': { file: 'apple-touch-icon.svg', mime: 'image/svg+xml', cc: 'public, max-age=3600' },
@@ -2424,20 +2438,27 @@ const server = http.createServer(async (req, res) => {
     try {
       const htmlRaw = await fsp.readFile(path.join(__dirname, 'index.html'), 'utf8');
       const bp = path.join(__dirname, 'aether-data-bundle.js');
-      const expPath = path.join(__dirname, 'aether-experience-engine.js');
-      const worldJsPath = path.join(__dirname, 'aether-living-world-v9.js');
-      const worldCssPath = path.join(__dirname, 'aether-world-v9.css');
+      const histPath = path.join(__dirname, 'aether-history-121m.js');
+      const kernelPath = path.join(__dirname, 'aether-kernel-v10.js');
+      const worldJsPath = path.join(__dirname, 'aether-canvas-world-v10.js');
+      const arenaJsPath = path.join(__dirname, 'aether-arena-120m-v10.js');
+      const worldCssPath = path.join(__dirname, 'aether-v10.css');
       const bundleRaw = fs.existsSync(bp)
         ? await fsp.readFile(bp, 'utf8')
         : (cachedJsonBuf ? 'window.__AETHER_EMBEDDED_DATA__ = ' + cachedJsonBuf.toString('utf8') + ';' : '');
-      const expRaw = fs.existsSync(expPath) ? await fsp.readFile(expPath, 'utf8') : '';
+      const histRaw = fs.existsSync(histPath) ? await fsp.readFile(histPath, 'utf8') : '';
+      const kernelRaw = fs.existsSync(kernelPath) ? await fsp.readFile(kernelPath, 'utf8') : '';
       const worldJsRaw = fs.existsSync(worldJsPath) ? await fsp.readFile(worldJsPath, 'utf8') : '';
+      const arenaJsRaw = fs.existsSync(arenaPathFix(arenaJsPath)) ? await fsp.readFile(arenaJsPath, 'utf8') : '';
+      function arenaPathFix(p) { return p; }
       const worldCssRaw = fs.existsSync(worldCssPath) ? await fsp.readFile(worldCssPath, 'utf8') : '';
       const standaloneHtml = htmlRaw
-        .replace(/<link rel="stylesheet" href="aether-world-v9\.css[^"]*" \/>/, `<style>${worldCssRaw}</style>`)
+        .replace(/<link rel="stylesheet" href="aether-v10\.css[^"]*" \/>/, `<style>${worldCssRaw}</style>`)
         .replace(/<script src="aether-data-bundle\.js[^"]*"><\/script>/, `<script>${bundleRaw}</script>`)
-        .replace(/<script src="aether-experience-engine\.js[^"]*"><\/script>/, `<script>${expRaw}</script>`)
-        .replace(/<script src="aether-living-world-v9\.js[^"]*"><\/script>/, `<script>${worldJsRaw}</script>`);
+        .replace(/<script src="aether-history-121m\.js[^"]*"><\/script>/, `<script>${histRaw}</script>`)
+        .replace(/<script src="aether-kernel-v10\.js[^"]*"><\/script>/, `<script>${kernelRaw}</script>`)
+        .replace(/<script src="aether-canvas-world-v10\.js[^"]*"><\/script>/, `<script>${worldJsRaw}</script>`)
+        .replace(/<script src="aether-arena-120m-v10\.js[^"]*"><\/script>/, `<script>${arenaJsRaw}</script>`);
       const outBuf = clientAcceptsGzip(req)
         ? await gzipAsync(Buffer.from(standaloneHtml, 'utf8'), { level: zlib.constants.Z_BEST_SPEED })
         : Buffer.from(standaloneHtml, 'utf8');
