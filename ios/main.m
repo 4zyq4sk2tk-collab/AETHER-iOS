@@ -133,6 +133,8 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
         sf.preferredBarTintColor = [UIColor colorWithRed:6.0/255.0 green:10.0/255.0 blue:18.0/255.0 alpha:1.0];
         sf.preferredControlTintColor = [UIColor colorWithRed:245.0/255.0 green:158.0/255.0 blue:11.0/255.0 alpha:1.0];
         [self presentViewController:sf animated:YES completion:nil];
+    } else {
+        [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
     }
 }
 

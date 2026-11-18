@@ -685,11 +685,13 @@
         const fn = inst.fundamentals;
         const h52 = Number(fn.high52W) || priceTL;
         const l52 = Number(fn.low52W) || priceTL;
-        const ocfM = fn.ocf != null ? Math.round(Number(fn.ocf) / 1e6) : 0;
+        const ocfM = fn.ocf != null ? Math.round(Number(fn.ocf) / 1e6) : null;
         const fcfM = fn.fcf != null ? Math.round(Number(fn.fcf) / 1e6) : ocfM;
-        const totDebtM = fn.totalDebt != null ? Math.round(Number(fn.totalDebt) / 1e6) : 0;
-        const cashM = fn.cash != null ? Math.round(Number(fn.cash) / 1e6) : 0;
-        const netDebtM = fn.netDebt != null ? Math.round(Number(fn.netDebt) / 1e6) : (totDebtM - cashM);
+        const totDebtM = fn.totalDebt != null ? Math.round(Number(fn.totalDebt) / 1e6) : null;
+        const cashM = fn.cash != null ? Math.round(Number(fn.cash) / 1e6) : null;
+        const netDebtM = fn.netDebt != null
+          ? Math.round(Number(fn.netDebt) / 1e6)
+          : ((totDebtM != null || cashM != null) ? ((totDebtM || 0) - (cashM || 0)) : null);
         const mcapB = fn.marketCap != null ? +(Number(fn.marketCap) / 1e9).toFixed(2) : 0;
         bistRow = {
           ticker: tUp,
@@ -721,11 +723,11 @@
           roe: fn.roe != null ? +Number(fn.roe).toFixed(1) : null,
           fcfMillionTL: fcfM,
           ocfMillionTL: ocfM,
-          capexMillionTL: -(Math.max(0, ocfM - fcfM)),
+          capexMillionTL: (ocfM != null && fcfM != null) ? -(Math.max(0, ocfM - fcfM)) : null,
           totalDebtMillionTL: totDebtM,
           cashMillionTL: cashM,
           netDebtMillionTL: netDebtM,
-          isNetCash: netDebtM < 0,
+          isNetCash: netDebtM != null ? netDebtM < 0 : false,
           floatPct: 35,
           fdpdMillionTL: mcapB > 0 ? Math.round(mcapB * 350) : 500,
           currentRatio: fn.currentRatio != null ? +Number(fn.currentRatio).toFixed(2) : null,
@@ -4204,8 +4206,10 @@
               if (d[17] != null) row.netIncomeMillionTL = Math.round(d[17] / 1e6);
               if (d[18] != null) row.totalAssetsMillionTL = Math.round(d[18] / 1e6);
               if (d[19] != null) row.ebitdaMillionTL = Math.round(d[19] / 1e6);
-              row.fcfMillionTL = (Number(row.ocfMillionTL) || 0) - Math.abs(Number(row.capexMillionTL) || 0);
-              row.isNetCash = (Number(row.netDebtMillionTL) || 0) < 0;
+              if (row.ocfMillionTL != null) {
+                row.fcfMillionTL = Number(row.ocfMillionTL) - Math.abs(Number(row.capexMillionTL) || 0);
+              }
+              row.isNetCash = row.netDebtMillionTL != null ? Number(row.netDebtMillionTL) < 0 : false;
               if (row.totalAssetsMillionTL > 1 && row.netIncomeMillionTL != null && row.ocfMillionTL != null) {
                 row.sloanAccrualPct = +(((row.netIncomeMillionTL - row.ocfMillionTL) / row.totalAssetsMillionTL) * 100).toFixed(2);
               }

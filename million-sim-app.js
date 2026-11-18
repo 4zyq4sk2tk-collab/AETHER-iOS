@@ -1199,8 +1199,8 @@
     const quickTickerBtn = (tk, extraLabel = '') => {
       const cleanTk = String(tk || '').replace(/^BIST:/i, '').trim();
       const a = K.getAsset(cleanTk) || K.getAsset(tk);
-      if (!a) return `<span class="ms-asset-code">${esc(cleanTk || tk)}</span>`;
-      return `<button type="button" class="ms-btn sm" data-open-asset="${esc(a.key)}" style="padding:5px 9px;font-size:11.2px">${esc(a.ticker)}${extraLabel ? ' · ' + esc(extraLabel) : ' · ' + (a.isRateInstrument ? '%' + a.annualGrossRatePct.toFixed(1) : fmtUnitTL(a.priceTL))}</button>`;
+      if (!a) return `<span class="ms-asset-code" style="flex-shrink:0">${esc(cleanTk || tk)}</span>`;
+      return `<button type="button" class="ms-btn sm" data-open-asset="${esc(a.key)}" style="padding:5px 9px;font-size:11.2px;flex-shrink:0">${esc(a.ticker)}${extraLabel ? ' · ' + esc(extraLabel) : ' · ' + (a.isRateInstrument ? '%' + a.annualGrossRatePct.toFixed(1) : fmtUnitTL(a.priceTL))}</button>`;
     };
 
     if (kitchenDeskId === 'AUDIT_BARBELL' && desks?.auditAndBarbell) {
@@ -1247,8 +1247,8 @@
             <div class="ms-list" style="margin-bottom:10px">
               ${(bp.layer1Armor || []).map((arm) => `
                 <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:5px">
-                  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-                    <div><span class="ms-sig-pill good">${esc(arm.slot)} · %${arm.weightPct}</span> <strong style="font-size:12.8px">${esc(arm.name)}</strong></div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0">
+                    <div style="min-width:0;flex:1"><span class="ms-sig-pill good">${esc(arm.slot)} · %${arm.weightPct}</span> <strong style="font-size:12.8px">${esc(arm.name)}</strong></div>
                     ${arm.assetId ? quickTickerBtn(arm.assetId) : ''}
                   </div>
                   <div style="font-size:11.6px;color:var(--ink-200)">${esc(arm.role)}</div>
@@ -1259,8 +1259,8 @@
             <div class="ms-list">
               ${(bp.layer2AsymmetricBasket || []).slice(0, 6).map((eq) => `
                 <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:5px">
-                  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-                    <div><span class="ms-asset-code">${esc(String(eq.ticker || '').replace(/^BIST:/, ''))}</span> <strong style="font-size:12.6px">${esc(eq.name)}</strong></div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0">
+                    <div style="min-width:0;flex:1"><span class="ms-asset-code">${esc(String(eq.ticker || '').replace(/^BIST:/, ''))}</span> <strong style="font-size:12.6px">${esc(eq.name)}</strong></div>
                     ${quickTickerBtn(eq.ticker, 'R/R ' + (eq.riskRewardRatio || '2x'))}
                   </div>
                   <div style="font-size:11.5px;color:var(--ink-400)">Pay: %${eq.weightPct} · Destek: ${eq.supportBand} · Stop: ${eq.stopLossPrice} · 1A Hedef: +${eq.targetGainPct}%</div>
@@ -1361,8 +1361,8 @@
           <div class="ms-list" style="margin-bottom:12px">
             ${[...desks.tms29.vukCashLeaders, ...desks.tms29.cashChampions].slice(0, 8).map((x) => `
               <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:6px">
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-                  <div><span class="ms-asset-code">${esc(x.ticker)}</span> <strong style="font-size:13px">${esc(x.name)}</strong></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0">
+                  <div style="min-width:0;flex:1"><span class="ms-asset-code">${esc(x.ticker)}</span> <strong style="font-size:13px">${esc(x.name)}</strong></div>
                   ${quickTickerBtn(x.ticker, 'Röntgen')}
                 </div>
                 <div style="font-size:11.8px;color:var(--ink-200)">${esc(x.vukVerdict || x.auditNote)}</div>
@@ -1380,8 +1380,8 @@
               ...desks.tms29.debtWalls.slice(0, 2)
             ].map((x) => `
               <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:6px;border-color:rgba(244,63,94,0.28)">
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-                  <div><span class="ms-sig-pill danger">${esc(x.ticker)}</span> <strong style="font-size:13px">${esc(x.name)}</strong></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0">
+                  <div style="min-width:0;flex:1"><span class="ms-sig-pill danger">${esc(x.ticker)}</span> <strong style="font-size:13px">${esc(x.name)}</strong></div>
                   ${quickTickerBtn(x.ticker, 'İncele')}
                 </div>
                 <div style="font-size:11.8px;color:var(--ink-400)">${esc(x.auditNote || x.auditWarning || x.bondDeskNote)}</div>
@@ -1402,8 +1402,8 @@
           <div class="ms-list" style="margin-bottom:12px">
             ${desks.mkkWhale.lotExpansions.map((x) => `
               <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:6px;border-color:rgba(244,63,94,0.3)">
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-                  <div><span class="ms-sig-pill danger">${esc(x.ticker)}</span> <strong style="font-size:13px">${esc(x.name)}</strong></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0">
+                  <div style="min-width:0;flex:1"><span class="ms-sig-pill danger">${esc(x.ticker)}</span> <strong style="font-size:13px">${esc(x.name)}</strong></div>
                   ${quickTickerBtn(x.ticker, 'Röntgen')}
                 </div>
                 <div style="font-size:11.8px;color:var(--ink-200)">${esc(x.note)}</div>
@@ -1420,8 +1420,8 @@
               ...desks.mkkWhale.tightFortresses.slice(0, 3)
             ].map((x) => `
               <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:6px">
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-                  <div><span class="ms-asset-code">${esc(x.ticker)}</span> <strong style="font-size:13px">${esc(x.name)}</strong></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0">
+                  <div style="min-width:0;flex:1"><span class="ms-asset-code">${esc(x.ticker)}</span> <strong style="font-size:13px">${esc(x.name)}</strong></div>
                   ${quickTickerBtn(x.ticker, 'İncele')}
                 </div>
                 <div style="font-size:11.8px;color:var(--ink-200)">${esc(x.whaleSignal || x.fxNote || x.note)}</div>
@@ -1450,8 +1450,8 @@
           <div class="ms-list">
             ${arr.map((x) => `
               <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:5px">
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-                  <div><span class="ms-asset-code">${esc(x.ticker)}</span> <strong style="font-size:12.8px">${esc(x.name)}</strong></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0">
+                  <div style="min-width:0;flex:1"><span class="ms-asset-code">${esc(x.ticker)}</span> <strong style="font-size:12.8px">${esc(x.name)}</strong></div>
                   ${quickTickerBtn(x.ticker)}
                 </div>
                 <div style="font-size:11.6px;color:var(--ink-400)">${esc(x.forensicNote)}</div>
@@ -1481,8 +1481,8 @@
           <div class="ms-list" style="margin-bottom:12px">
             ${[...desks.capexAndValue.capexHarvest, ...desks.capexAndValue.evaMoat.slice(0, 4)].map((x) => `
               <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:6px">
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-                  <div><span class="ms-asset-code">${esc(x.ticker)}</span> <strong style="font-size:13px">${esc(x.name)}</strong></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0">
+                  <div style="min-width:0;flex:1"><span class="ms-asset-code">${esc(x.ticker)}</span> <strong style="font-size:13px">${esc(x.name)}</strong></div>
                   ${quickTickerBtn(x.ticker, 'Röntgen')}
                 </div>
                 <div style="font-size:11.8px;color:var(--ink-200)">${esc(x.harvestNote || x.evaNote)}</div>
@@ -1495,8 +1495,8 @@
           <div class="ms-list">
             ${[...desks.capexAndValue.bookArbitrage, ...(desks.capexAndValue.tierPromotions || []).slice(0, 4)].map((x) => `
               <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:6px">
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-                  <div><span class="ms-asset-code">${esc(x.ticker)}</span> <strong style="font-size:13px">${esc(x.name)}</strong></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0">
+                  <div style="min-width:0;flex:1"><span class="ms-asset-code">${esc(x.ticker)}</span> <strong style="font-size:13px">${esc(x.name)}</strong></div>
                   ${quickTickerBtn(x.ticker)}
                 </div>
                 <div style="font-size:11.8px;color:var(--ink-400)">${esc(x.legalNote || x.catalyst)}</div>
@@ -1527,7 +1527,7 @@
           <div class="ms-list" style="margin-bottom:12px">
             ${desks.fieldAndBddk.gtipMatrix.map((g) => `
               <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:6px">
-                <div><span class="ms-sig-pill warn">${esc(g.hsCode)}</span> <strong style="font-size:13px;margin-left:4px">${esc(g.productName)}</strong></div>
+                <div style="min-width:0"><span class="ms-sig-pill warn">${esc(g.hsCode)}</span> <strong style="font-size:13px;margin-left:4px">${esc(g.productName)}</strong></div>
                 <div style="font-size:11.5px;color:var(--cyan);font-weight:700">Öncü Kaynak: ${esc(g.leadingSource)}</div>
                 <div style="font-size:11.8px;color:var(--ink-200)">${esc(g.liveSpreadSignal)}</div>
                 <div class="ae-hscroll" style="padding-bottom:0">
@@ -1558,8 +1558,8 @@
 
             ${[...(desks.fieldAndBddk.epiasEnergy || []).slice(0, 3), ...(desks.fieldAndBddk.insuranceFloat || []).slice(0, 3)].map((ef) => `
               <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:5px">
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-                  <div><span class="ms-asset-code">${esc(ef.ticker)}</span> <strong style="font-size:12.8px">${esc(ef.name)}</strong></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0">
+                  <div style="min-width:0;flex:1"><span class="ms-asset-code">${esc(ef.ticker)}</span> <strong style="font-size:12.8px">${esc(ef.name)}</strong></div>
                   ${quickTickerBtn(ef.ticker)}
                 </div>
                 <div style="font-size:11.6px;color:var(--ink-200)">${esc(ef.fieldNote)}</div>
@@ -1587,8 +1587,8 @@
           <div class="ms-list">
             ${desks.fieldAndBddk.bddkBanks.map((b) => `
               <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:5px">
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-                  <div><span class="ms-asset-code">${esc(b.ticker)}</span> <strong style="font-size:13px">${esc(b.name)}</strong></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;min-width:0">
+                  <div style="min-width:0;flex:1"><span class="ms-asset-code">${esc(b.ticker)}</span> <strong style="font-size:13px">${esc(b.name)}</strong></div>
                   ${quickTickerBtn(b.ticker)}
                 </div>
                 <div style="font-size:11.6px;color:var(--ink-400)">${esc(b.bddkSignal)}</div>
@@ -2120,9 +2120,9 @@
             ${(member.tradeHistory || []).length > 0 ? member.tradeHistory.slice(0, 30).map((th) => `
               <div class="ms-list-row">
                 <div style="min-width:0;flex:1">
-                  <div style="display:flex;align-items:center;gap:6px">
-                    <span class="ms-sig-pill ${th.side.includes('SATIŞ') || th.side.includes('BOZUM') ? 'warn' : 'good'}">${esc(th.side)}</span>
-                    <strong style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(th.name)}</strong>
+                  <div style="display:flex;align-items:center;gap:6px;min-width:0">
+                    <span class="ms-sig-pill ${th.side.includes('SATIŞ') || th.side.includes('BOZUM') ? 'warn' : 'good'}" style="flex-shrink:0">${esc(th.side)}</span>
+                    <strong style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${esc(th.name)}</strong>
                   </div>
                   <div style="font-size:11.6px;color:var(--ink-400);margin-top:3px">${esc(th.note || '')}</div>
                   ${th.thesisNote ? `<div style="font-size:11.2px;color:var(--cyan)">Not: "${esc(th.thesisNote)}"</div>` : ''}
@@ -2475,12 +2475,12 @@
             <div class="ae-kpi-2x2" style="margin-bottom:8px">
               <div class="ms-kpi-box">
                 <span>Yıllık Kasa & Faiz Motorun</span>
-                <strong class="${doc.totalAnnualCashEngineTL >= 0 ? 'pos' : 'neg'}">${doc.totalAnnualCashEngineTL >= 0 ? '+' : ''}${fmtTL(doc.totalAnnualCashEngineTL)}/yıl</strong>
-                <small>Günde ~+${doc.dailyCashEngineTL.toLocaleString('tr-TR')} ₺ üretim</small>
+                <strong style="font-size:14.4px" class="${doc.totalAnnualCashEngineTL >= 0 ? 'pos' : 'neg'}">${doc.totalAnnualCashEngineTL >= 0 ? '+' : ''}${Math.abs(doc.totalAnnualCashEngineTL) >= 1000000 ? fmtCompactTL(doc.totalAnnualCashEngineTL) : fmtTL(doc.totalAnnualCashEngineTL)}/yıl</strong>
+                <small>Günde ~${doc.dailyCashEngineTL >= 0 ? '+' : ''}${doc.dailyCashEngineTL.toLocaleString('tr-TR')} ₺ üretim</small>
               </div>
               <div class="ms-kpi-box">
                 <span>Şirket Serbest Nakit Payın</span>
-                <strong class="${doc.annualPartnerFcfTL >= 0 ? 'pos' : 'warn-txt'}">${doc.annualPartnerFcfTL >= 0 ? '+' : ''}${fmtTL(doc.annualPartnerFcfTL)}/yıl</strong>
+                <strong style="font-size:14.4px" class="${doc.annualPartnerFcfTL >= 0 ? 'pos' : 'warn-txt'}">${doc.annualPartnerFcfTL >= 0 ? '+' : ''}${Math.abs(doc.annualPartnerFcfTL) >= 1000000 ? fmtCompactTL(doc.annualPartnerFcfTL) : fmtTL(doc.annualPartnerFcfTL)}/yıl</strong>
                 <small>CAPEX sonrası saf FCF</small>
               </div>
               <div class="ms-kpi-box">
@@ -3236,6 +3236,18 @@
             </div>
 
             <div class="ms-bakery-grid" style="margin-bottom:8px">
+              ${qp.kind === 'RATE_EMPIRICAL_10Y' ? `
+                <div class="ms-bakery-cell">
+                  <span>Net Oran & Fisher Farkı</span>
+                  <strong style="font-size:13px" class="pos">Net %${qp.netAnnualPct}/Yıl</strong>
+                  <small class="${(qp.fisherSpreadPct || 0) >= 0 ? 'pos' : 'neg'}">${(qp.fisherSpreadPct || 0) >= 0 ? '+' : ''}${qp.fisherSpreadPct}p TÜFE Farkı</small>
+                </div>
+                <div class="ms-bakery-cell">
+                  <span>1A Dolar Başabaş & Kelly</span>
+                  <strong style="font-size:13px">${qp.usdBreakeven1M != null ? fmtUnitTL(qp.usdBreakeven1M) : '-'}</strong>
+                  <small>Yarım-Kelly Tavanı: %${qp.kellyPct ?? 0}</small>
+                </div>
+              ` : ''}
               ${qp.intrinsicPriceTL != null ? `
                 <div class="ms-bakery-cell">
                   <span>İçsel Adil Değer</span>
@@ -3466,8 +3478,14 @@
         const estGross = Math.max(0, Math.round(grossSaleTL * (1 - sellFeeRate - estStopajRatio)));
         const showPartialRatios = !isIntLot || Math.floor(availQty) >= 2;
 
+        const fmtCompactLots = (q) => {
+          const fl = Math.floor(q);
+          if (fl >= 1000000) return TR_DEC2.format(fl / 1000000) + 'M Lot';
+          if (fl >= 100000) return Math.round(fl / 1000).toLocaleString('tr-TR') + 'B Lot';
+          return fl.toLocaleString('tr-TR') + ' Lot';
+        };
         const segAvailLbl = isIntLot
-          ? Math.floor(availQty).toLocaleString('tr-TR') + ' Lot'
+          ? fmtCompactLots(availQty)
           : (+Number(availQty).toFixed(availQty >= 10 ? 2 : 4)).toLocaleString('tr-TR');
 
         tabContentHtml = `
@@ -3518,7 +3536,11 @@
         const ripple = computeOrderRipplePreview(asset, draftOrderAmount);
         const segHeldLbl = existingPos && existingPos.qty > 0
           ? (asset.subVenue === 'BIST_STOCK'
-            ? Math.floor(existingPos.qty).toLocaleString('tr-TR') + ' Lot'
+            ? (Math.floor(existingPos.qty) >= 1000000
+              ? TR_DEC2.format(Math.floor(existingPos.qty) / 1000000) + 'M Lot'
+              : (Math.floor(existingPos.qty) >= 100000
+                ? Math.round(Math.floor(existingPos.qty) / 1000).toLocaleString('tr-TR') + 'B Lot'
+                : Math.floor(existingPos.qty).toLocaleString('tr-TR') + ' Lot'))
             : (+Number(existingPos.qty).toFixed(existingPos.qty >= 10 ? 2 : 4)).toLocaleString('tr-TR'))
           : '';
         tabContentHtml = `

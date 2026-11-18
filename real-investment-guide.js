@@ -1532,7 +1532,9 @@
       const p5 = asset.isPatronSelling ? 30 : (cmf >= 0.12 ? 90 : (cmf >= 0 ? 72 : 46));
       sc = Math.round(p1 * 0.28 + p2 * 0.24 + p3 * 0.20 + p4 * 0.12 + p5 * 0.16);
     } else if (r) {
-      const hasCashFlow = r.ocfMillionTL != null || r.fcfMillionTL != null || r.netIncomeMillionTL != null;
+      const hasOcf = r.ocfMillionTL != null || r.fcfMillionTL != null;
+      const hasNetInc = r.netIncomeMillionTL != null;
+      const hasCashFlow = hasOcf || hasNetInc;
       const hasBalanceSheet = r.cashMillionTL != null || r.totalDebtMillionTL != null || r.netDebtMillionTL != null;
       const ocf = Number(r.ocfMillionTL) || 0;
       const netInc = Number(r.netIncomeMillionTL) || 0;
@@ -1546,38 +1548,41 @@
       const ndEbitda = r.netDebtToEbitda != null ? Number(r.netDebtToEbitda) : null;
       const curRatio = r.currentRatio != null ? Number(r.currentRatio) : null;
       const sloan = r.sloanAccrualPct != null ? Number(r.sloanAccrualPct) : null;
-      const cashConv = r.cashConversionRatio != null ? Number(r.cashConversionRatio) : (netInc > 0 ? +(ocf / netInc).toFixed(2) : null);
+      const cashConv = r.cashConversionRatio != null ? Number(r.cashConversionRatio) : ((hasOcf && netInc > 0) ? +(ocf / netInc).toFixed(2) : null);
       const roic = r.roic != null ? Number(r.roic) : null;
       const evEbitda = r.evEbitda != null ? Number(r.evEbitda) : null;
       const pb = r.pb != null ? Number(r.pb) : null;
       const cmf = Number(r.cmf20) || 0;
 
       let p1 = 55;
-      if (hasCashFlow) {
+      if (hasOcf) {
         if (ocf > 0 && fcf > 0) p1 = 92;
         else if (ocf > 0 && fcf <= 0) p1 = 74;
         else if (ocf <= 0 && fcf < 0) p1 = 26;
+      } else if (hasNetInc) {
+        p1 = netInc > 0 ? 68 : 38;
       }
 
-      let p2 = hasCashFlow ? 68 : 56;
-      if (hasCashFlow) {
+      let p2 = hasOcf ? 68 : (hasNetInc ? (netInc > 0 ? 66 : 42) : 56);
+      if (hasOcf) {
         if (ocf > 0 && ((sloan != null && sloan < -5) || (cashConv != null && cashConv >= 1.35))) p2 = 94;
-        else if ((netInc > 0 && ocf < 0) || asset.isTms29Illusion || (sloan != null && sloan > 18)) p2 = 24;
+        else if ((hasNetInc && netInc > 0 && ocf < 0) || asset.isTms29Illusion || (sloan != null && sloan > 18)) p2 = 24;
         else if (ocf < 0 && netInc <= 0) p2 = 34;
       }
 
       let p3 = 65;
-      if (((pb != null && pb <= 1.5) || (evEbitda != null && evEbitda > 0 && evEbitda <= 7.5)) && ocf > 0) {
+      if (((pb != null && pb <= 1.5) || (evEbitda != null && evEbitda > 0 && evEbitda <= 7.5)) && (hasOcf ? ocf > 0 : netInc > 0)) {
         p3 = (roic != null && roic >= 15) ? 93 : 85;
       } else if (pb != null && pb > 6.5 && (roic == null || roic < 15)) {
         p3 = 34;
-      } else if (hasCashFlow && ocf <= 0 && pb != null && pb < 1.0) {
+      } else if (hasOcf && ocf <= 0 && pb != null && pb < 1.0) {
         p3 = 40;
       }
 
       let p4 = hasBalanceSheet ? 66 : 56;
       if (hasBalanceSheet) {
-        if (cash >= debt || netDebt <= 0) p4 = 95;
+        if (netDebt < 0 || (cash > debt && cash > 0)) p4 = 95;
+        else if (netDebt === 0) p4 = (curRatio != null && curRatio < 0.85) ? 58 : 86;
         else if (ndEbitda != null && ndEbitda > 0 && ndEbitda <= 2.2 && (curRatio == null || curRatio >= 1.2)) p4 = 84;
         else if ((ndEbitda != null && ndEbitda >= 4.5) || (curRatio != null && curRatio < 0.85 && debt > cash * 2)) p4 = 28;
       }
@@ -1601,7 +1606,7 @@
   function isPreciousMetalAsset(a) {
     if (!a) return false;
     const id = String(a.id || '');
-    return a.subVenue === 'PHYSICAL_METAL' || a.subVenue === 'DARPHANE_S1' || id.includes('altin') || id.includes('gumus') || id.includes('platin') || id.includes('paladyum');
+    return a.subVenue === 'PHYSICAL_METAL' || a.subVenue === 'DARPHANE_S1' || id === 'fon-degisken-isglk' || id.includes('altin') || id.includes('gumus') || id.includes('platin') || id.includes('paladyum');
   }
 
   function isFxLinkedShieldAsset(a) {
@@ -1693,18 +1698,20 @@
     const r = asset?.bistRow;
     if (!r || !r.marketCapBillionTL || r.marketCapBillionTL <= 0) return null;
     if (isFinancialEntityRow(r)) return null;
+    if (r.ocfMillionTL == null && r.fcfMillionTL == null) return null;
 
     const baseAmt = Math.max(1000, Number(customAmountTL) || 100000);
     const mcapMillion = r.marketCapBillionTL * 1000;
     const ratio = (baseAmt / 1e6) / mcapMillion;
 
-    const annualOcfTL = Math.round((Number(r.ocfMillionTL) || 0) * 1e6 * ratio);
+    const rawOcfMillion = r.ocfMillionTL != null ? Number(r.ocfMillionTL) : Number(r.fcfMillionTL);
+    const annualOcfTL = Math.round(rawOcfMillion * 1e6 * ratio);
     const dailyOcfTL = +(annualOcfTL / 365).toFixed(1);
     const rawCapexAbsMillion = Math.abs(Number(r.capexMillionTL) || 0);
     const annualCapexTL = Math.round(rawCapexAbsMillion * 1e6 * ratio);
     const rawFcfMillion = r.fcfMillionTL != null
       ? Number(r.fcfMillionTL)
-      : ((Number(r.ocfMillionTL) || 0) - rawCapexAbsMillion);
+      : (rawOcfMillion - rawCapexAbsMillion);
     const annualFcfTL = Math.round(rawFcfMillion * 1e6 * ratio);
     const cashShareTL = Math.round((Number(r.cashMillionTL) || 0) * 1e6 * ratio);
     const debtShareTL = Math.round((Number(r.totalDebtMillionTL) || 0) * 1e6 * ratio);
@@ -1718,6 +1725,8 @@
       plainSummary = `${fmtBase} ₺ ortaklığa karşılık kasaya yılda +${fmtInt(annualOcfTL)} ₺ faaliyet nakdi ve yatırım harcamaları sonrası cebine +${fmtInt(annualFcfTL)} ₺ saf serbest nakit (FCF) kalıyor.`;
     } else if (annualOcfTL > 0 && annualFcfTL <= 0) {
       plainSummary = `${fmtBase} ₺ ortaklığa karşılık esas işten yılda +${fmtInt(annualOcfTL)} ₺ nakit giriyor; ancak şirket ${fmtInt(annualCapexTL)} ₺ yeni tesis yatırımı (CAPEX) yaptığı için serbest nakit henüz yatırıma harcanıyor.`;
+    } else if (annualOcfTL === 0) {
+      plainSummary = `${fmtBase} ₺ ortaklığa karşılık şirketin son 12 aylık esas faaliyet nakit akışı başabaş (~0 ₺) seyrediyor${debtShareTL > 0 ? ` (Sırtına binen borç payı: ${fmtInt(debtShareTL)} ₺)` : ''}.`;
     } else {
       plainSummary = `Dikkat: ${fmtBase} ₺ ortaklığa karşılık şirketin esas faaliyet kasasından yılda ${fmtInt(Math.abs(annualOcfTL))} ₺ nakit eksiliyor (Sırtına binen borç payı: ${fmtInt(debtShareTL)} ₺).`;
     }
@@ -1960,7 +1969,9 @@
     // 2) REEL ŞİRKET / SANAYİ / HİZMET / GYO / HOLDİNG 5-BOYUTLU ADLİ RÖNTGENİ
     if (r) {
       const bk = computeBakery100kScale(asset, partnerTL);
-      const hasCashFlow = r.ocfMillionTL != null || r.fcfMillionTL != null || r.netIncomeMillionTL != null;
+      const hasOcf = r.ocfMillionTL != null || r.fcfMillionTL != null;
+      const hasNetInc = r.netIncomeMillionTL != null;
+      const hasCashFlow = hasOcf || hasNetInc;
       const hasBalanceSheet = r.cashMillionTL != null || r.totalDebtMillionTL != null || r.netDebtMillionTL != null;
       const ocf = Number(r.ocfMillionTL) || 0;
       const netInc = Number(r.netIncomeMillionTL) || 0;
@@ -1974,7 +1985,7 @@
       const ndEbitda = r.netDebtToEbitda != null ? Number(r.netDebtToEbitda) : null;
       const curRatio = r.currentRatio != null ? Number(r.currentRatio) : null;
       const sloan = r.sloanAccrualPct != null ? Number(r.sloanAccrualPct) : null;
-      const cashConv = r.cashConversionRatio != null ? Number(r.cashConversionRatio) : (netInc > 0 ? +(ocf / netInc).toFixed(2) : null);
+      const cashConv = r.cashConversionRatio != null ? Number(r.cashConversionRatio) : ((hasOcf && netInc > 0) ? +(ocf / netInc).toFixed(2) : null);
       const roic = r.roic != null ? Number(r.roic) : null;
       const evEbitda = r.evEbitda != null ? Number(r.evEbitda) : null;
       const cmf = Number(r.cmf20) || 0;
@@ -1982,22 +1993,26 @@
 
       // Sütun 1: Kasa & Serbest Nakit (OCF & FCF)
       let p1 = 55;
-      if (hasCashFlow) {
+      if (hasOcf) {
         if (ocf > 0 && fcf > 0) p1 = 92;
         else if (ocf > 0 && fcf <= 0) p1 = 74;
         else if (ocf <= 0 && fcf < 0) p1 = 26;
+      } else if (hasNetInc) {
+        p1 = netInc > 0 ? 68 : 38;
       }
 
       // Sütun 2: TMS-29 & VUK Gerçeklik Testi
-      let p2 = hasCashFlow ? 68 : 56;
-      let tmsExplain = hasCashFlow
+      let p2 = hasOcf ? 68 : (hasNetInc ? (netInc > 0 ? 66 : 42) : 56);
+      let tmsExplain = hasOcf
         ? 'Kâr ile kasaya giren nakit birbiriyle uyumlu seyrediyor.'
-        : 'Yeni kotasyon / tam dönem KAP finansalları bekleniyor; izahname ve VUK beyannamesi takip edilmeli.';
-      if (hasCashFlow) {
+        : (hasNetInc
+          ? 'Dönem net sonucu açıklandı; TMS-29 nakit dönüşüm kalitesi için KAP konsolide nakit akış dipnotu izlenmeli.'
+          : 'Yeni kotasyon / tam dönem KAP finansalları bekleniyor; izahname ve VUK beyannamesi takip edilmeli.');
+      if (hasOcf) {
         if (ocf > 0 && (sloan != null && sloan < -5 || (cashConv != null && cashConv >= 1.35))) {
           p2 = 94;
           tmsExplain = 'Gizli Nakit Kalitesi: Kasaya giren gerçek faaliyet nakdi, manşetteki kağıt net kârdan çok daha yüksek!';
-        } else if ((netInc > 0 && ocf < 0) || asset.isTms29Illusion || (sloan != null && sloan > 18)) {
+        } else if ((hasNetInc && netInc > 0 && ocf < 0) || asset.isTms29Illusion || (sloan != null && sloan > 18)) {
           p2 = 24;
           tmsExplain = 'Makyajlı Kâr Alarmı: Kağıt üstünde kâr görünüyor ama kasadan gerçek nakit çıkıyor (TMS-29 veya tahsil edilemeyen alacak etkisi)!';
         } else if (ocf < 0 && netInc <= 0) {
@@ -2011,18 +2026,19 @@
       const pb = r.pb != null ? Number(r.pb) : null;
       const pe = r.pe != null ? Number(r.pe) : null;
       const dd52 = Number(r.drawdown52WPct) || 0;
-      if ((pb != null && pb <= 1.5 || (evEbitda != null && evEbitda > 0 && evEbitda <= 7.5)) && ocf > 0) {
+      if ((pb != null && pb <= 1.5 || (evEbitda != null && evEbitda > 0 && evEbitda <= 7.5)) && (hasOcf ? ocf > 0 : netInc > 0)) {
         p3 = (roic != null && roic >= 15) ? 93 : 85;
       } else if (pb != null && pb > 6.5 && (roic == null || roic < 15)) {
         p3 = 34;
-      } else if (hasCashFlow && ocf <= 0 && pb != null && pb < 1.0) {
+      } else if (hasOcf && ocf <= 0 && pb != null && pb < 1.0) {
         p3 = 40; // Ucuz görünümlü değer tuzağı!
       }
 
       // Sütun 4: Borç & Yüksek Faiz Zırhı
       let p4 = hasBalanceSheet ? 66 : 56;
       if (hasBalanceSheet) {
-        if (cash >= debt || netDebt <= 0) p4 = 95;
+        if (netDebt < 0 || (cash > debt && cash > 0)) p4 = 95;
+        else if (netDebt === 0) p4 = (curRatio != null && curRatio < 0.85) ? 58 : 86;
         else if (ndEbitda != null && ndEbitda > 0 && ndEbitda <= 2.2 && (curRatio == null || curRatio >= 1.2)) p4 = 84;
         else if ((ndEbitda != null && ndEbitda >= 4.5) || (curRatio != null && curRatio < 0.85 && debt > cash * 2)) p4 = 28;
       }
@@ -2041,9 +2057,9 @@
         : '⚖️ Dengeli Fiyatlama: Çarpanları ile nakit üretimi paralel seyrediyor.';
       if (overallScore >= 82 && dd52 <= -20 && ocf > 0) {
         valueTrapVerdict = `🔥 Gerçek Yangın Yeri Hazinesi: Zirvesinden %${Math.abs(Math.round(dd52))} düşmüş olmasına rağmen kasası gerçek nakit basıyor!`;
-      } else if ((pb != null && pb < 1.1 || dd52 <= -35) && ocf < 0) {
+      } else if ((pb != null && pb < 1.1 || dd52 <= -35) && hasOcf && ocf < 0) {
         valueTrapVerdict = '⛔ Çürük Ucuz (Değer Tuzağı Riski): Fiyatı çok düşmüş veya PD/DD düşük görünüyor ama kasadan nakit yaktığı için ucuzluk yanıltıcı olabilir!';
-      } else if (pb != null && pb > 6 && hasCashFlow && ocf <= 0) {
+      } else if (pb != null && pb > 6 && hasOcf && ocf <= 0) {
         valueTrapVerdict = '⛔ Aşırı Pahalı Hikaye: Kasada nakit üretimi yokken çok yüksek çarpanla fiyatlanıyor.';
       } else if (overallScore >= 80) {
         valueTrapVerdict = '🟢 Kaliteli Bileşik Kasa: Sağlam nakit üretimi ve kontrol altındaki borç yapısıyla uzun vadeli ortaklığa uygun.';
@@ -2060,21 +2076,31 @@
           {
             label: '1. Mahalle Fırını & Serbest Nakit (FCF)',
             score: p1,
-            metric: !hasCashFlow
-              ? 'İlk KAP Nakit Tablosu Bekleniyor'
-              : `OCF ${ocf >= 0 ? '+' : ''}${ocf.toLocaleString('tr-TR')}M ₺ · FCF ${fcf >= 0 ? '+' : ''}${fcf.toLocaleString('tr-TR')}M ₺`,
-            explain: !hasCashFlow
-              ? 'Yeni kotasyon tahtası; ilk tam yıllık KAP nakit akış tablosu ve fon kullanım raporu izlenmeli.'
+            metric: !hasOcf
+              ? (hasNetInc ? `KAP Konsolide OCF Bekleniyor · Net Kâr ${netInc >= 0 ? '+' : ''}${netInc.toLocaleString('tr-TR')}M ₺` : 'İlk KAP Nakit Tablosu Bekleniyor')
+              : (ocf === 0 && fcf === 0
+                ? 'Başabaş Kasa (~0M ₺ OCF / FCF)'
+                : `OCF ${ocf >= 0 ? '+' : ''}${ocf.toLocaleString('tr-TR')}M ₺ · FCF ${fcf >= 0 ? '+' : ''}${fcf.toLocaleString('tr-TR')}M ₺`),
+            explain: !hasOcf
+              ? (hasNetInc
+                ? 'Bilançoda net dönem sonucu açıklandı; konsolide esas faaliyet nakit akışı KAP dipnotundan teyit edilmelidir.'
+                : 'Yeni kotasyon tahtası; ilk tam yıllık KAP nakit akış tablosu ve fon kullanım raporu izlenmeli.')
               : (fcf > 0
                 ? `Fabrika bakım/yatırım masrafı (${capexAbs.toLocaleString('tr-TR')}M ₺) ödendiği halde kasada net serbest nakit kalıyor.`
-                : (ocf > 0 ? 'Esas işten nakit giriyor ama tamamı yeni tesis yatırımına (CAPEX) harcanıyor.' : 'Esas faaliyetten nakit üretilemiyor; kasa nakit yakıyor.'))
+                : (ocf > 0
+                  ? 'Esas işten nakit giriyor ama tamamı yeni tesis yatırımına (CAPEX) harcanıyor.'
+                  : (ocf === 0 && fcf === 0
+                    ? 'Esas faaliyet nakit akışı başabaş (~0M ₺) düzeyinde; henüz belirgin serbest nakit fazlası oluşmadı.'
+                    : 'Esas faaliyetten nakit üretilemiyor; kasa nakit yakıyor.')))
           },
           {
             label: '2. TMS-29 & VUK Gerçeklik Testi',
             score: p2,
             metric: !hasCashFlow
               ? 'KAP / VUK Dönem Beyanı Bekleniyor'
-              : `Net Kâr ${netInc.toLocaleString('tr-TR')}M ₺${cashConv != null ? ` · Nakit/Kâr ${cashConv}x` : ''}${sloan != null ? ` · Sloan %${sloan}` : ''}`,
+              : (!hasOcf
+                ? `Net Kâr ${netInc >= 0 ? '+' : ''}${netInc.toLocaleString('tr-TR')}M ₺ · OCF Dipnotu Bekleniyor`
+                : `Net Kâr ${hasNetInc ? netInc.toLocaleString('tr-TR') + 'M ₺' : '-'}${cashConv != null ? ` · Nakit/Kâr ${cashConv}x` : ''}${sloan != null ? ` · Sloan %${sloan}` : ''}`),
             explain: tmsExplain
           },
           {
@@ -2090,14 +2116,18 @@
             score: p4,
             metric: !hasBalanceSheet
               ? 'KAP Bilanço Borç/Nakit Dipnotu Bekleniyor'
-              : (netDebt <= 0
+              : (netDebt < 0
                 ? `Net Nakit +${Math.abs(netDebt).toLocaleString('tr-TR')}M ₺ · Cari Oran ${curRatio ?? '-'}`
-                : `Net Borç ${netDebt.toLocaleString('tr-TR')}M ₺${ndEbitda != null ? ` (${ndEbitda}x FAVÖK)` : ''} · Cari ${curRatio ?? '-'}`),
+                : (netDebt === 0
+                  ? `Finansal Borçsuz Kasa (Net Borç 0M ₺) · Cari Oran ${curRatio ?? '-'}`
+                  : `Net Borç ${netDebt.toLocaleString('tr-TR')}M ₺${ndEbitda != null && ndEbitda > 0 ? ` (${ndEbitda}x FAVÖK)` : ''} · Cari ${curRatio ?? '-'}`)),
             explain: !hasBalanceSheet
               ? 'Yeni kotasyon / ara dönem borç-nakit kırılımı KAP dipnotlarından teyit edilmelidir.'
-              : (netDebt <= 0
+              : (netDebt < 0
                 ? 'Kasadaki hazır nakit tüm banka borçlarından fazla! Yüksek faiz kışında faiz ödemez, faiz kazanır.'
-                : (ndEbitda != null && ndEbitda > 4 ? 'Dikkat: Net borcunu 4 yıldan uzun sürede kapatabiliyor; yüksek faiz kârı kemirir.' : 'Borç seviyesi faaliyet kârıyla yönetilebilir sınırda.'))
+                : (netDebt === 0
+                  ? 'Şirketin net finansal banka borcu bulunmuyor; faiz yükü baskısı taşımıyor.'
+                  : (ndEbitda != null && ndEbitda > 4 ? 'Dikkat: Net borcunu 4 yıldan uzun sürede kapatabiliyor; yüksek faiz kârı kemirir.' : 'Borç seviyesi faaliyet kârıyla yönetilebilir sınırda.')))
           },
           {
             label: '5. MKK Takas & Akıllı Para İzi',
@@ -2977,6 +3007,10 @@
           if (bk) {
             annualPartnerOcfTL += bk.annualOcfTL;
             annualPartnerFcfTL += bk.annualFcfTL;
+          } else if (a.bistRow.netIncomeMillionTL != null && a.bistRow.marketCapBillionTL > 0) {
+            const npShare = Math.round(Number(a.bistRow.netIncomeMillionTL) * 1e6 * ((it.netValTL / 1e6) / (a.bistRow.marketCapBillionTL * 1000)));
+            annualPartnerOcfTL += npShare;
+            annualPartnerFcfTL += npShare;
           }
         } else {
           const fn = computeFinancial100kScale(a, it.netValTL);
@@ -3089,20 +3123,50 @@
   }
 
   function computeRange52W(asset) {
-    const r = asset?.bistRow;
-    if (r && r.low52W > 0 && r.high52W > r.low52W && asset.priceTL > 0) {
-      const pct = Math.max(0, Math.min(100, Math.round(((asset.priceTL - r.low52W) / (r.high52W - r.low52W)) * 100)));
+    if (!asset || asset.isRateInstrument || !(asset.priceTL > 0)) return null;
+    const r = asset.bistRow;
+    if (r && r.low52W > 0 && r.high52W > r.low52W) {
+      const low = +Math.min(Number(r.low52W), asset.priceTL).toFixed(2);
+      const high = +Math.max(Number(r.high52W), asset.priceTL).toFixed(2);
+      const pct = Math.max(0, Math.min(100, Math.round(((asset.priceTL - low) / Math.max(0.01, high - low)) * 100)));
       return {
-        low: r.low52W,
-        high: r.high52W,
+        low,
+        high,
         pct,
-        drawdownPct: Number(r.drawdown52WPct) || +(((asset.priceTL / r.high52W) - 1) * 100).toFixed(1)
+        drawdownPct: +(((asset.priceTL / high) - 1) * 100).toFixed(1)
       };
     }
-    const td = asset?.trainedDaily;
-    if (td && td.low52w > 0 && td.high52w > td.low52w && asset.priceTL > 0) {
-      const low = asset.isForeignUsd ? +(td.low52w * global.AetherKernelV10.getUsdTry()).toFixed(2) : td.low52w;
-      const high = asset.isForeignUsd ? +(td.high52w * global.AetherKernelV10.getUsdTry()).toFixed(2) : td.high52w;
+    const usdTry = global.AetherKernelV10?.getUsdTry ? global.AetherKernelV10.getUsdTry() : 50.44;
+    const scale = asset.isForeignUsd ? usdTry : 1;
+    const fn = asset.fundamentals;
+    if (fn && Number(fn.low52W) > 0 && Number(fn.high52W) > Number(fn.low52W)) {
+      const low = +Math.min(Number(fn.low52W) * scale, asset.priceTL).toFixed(2);
+      const high = +Math.max(Number(fn.high52W) * scale, asset.priceTL).toFixed(2);
+      const pct = Math.max(0, Math.min(100, Math.round(((asset.priceTL - low) / Math.max(0.01, high - low)) * 100)));
+      return {
+        low,
+        high,
+        pct,
+        drawdownPct: +(((asset.priceTL / high) - 1) * 100).toFixed(1)
+      };
+    }
+    // Spot Döviz / Fiziki Altın-Gümüş / TCMB Konut için gerçek tarihsel getiri + ampirik kanaldan 52H aralığı türet
+    const pts = [asset.priceTL];
+    for (const pf of [asset.perf1W, asset.perf1M, asset.perf3M, asset.perf6M, asset.perf1Y]) {
+      if (pf != null && Number.isFinite(Number(pf)) && (1 + Number(pf) / 100) > 0.15) {
+        pts.push(asset.priceTL / (1 + Number(pf) / 100));
+      }
+    }
+    const emp = asset.trainedDaily?.empiricalRules;
+    if (emp) {
+      const eSup = Number(emp.supportPrice) * scale;
+      const eRes = Number(emp.resistancePrice) * scale;
+      if (eSup > asset.priceTL * 0.35 && eSup < asset.priceTL * 2.2) pts.push(eSup);
+      if (eRes > asset.priceTL * 0.35 && eRes < asset.priceTL * 2.2) pts.push(eRes);
+    }
+    const low = +Math.min(...pts).toFixed(2);
+    const high = +Math.max(...pts).toFixed(2);
+    if (high > low * 1.002) {
       const pct = Math.max(0, Math.min(100, Math.round(((asset.priceTL - low) / Math.max(0.01, high - low)) * 100)));
       return {
         low,
@@ -3239,10 +3303,26 @@
           oneLiner: `100B ₺ ortaklığa karşılık esas faaliyetten yılda ${fmtInt(Math.abs(bk.annualOcfTL))} ₺ nakit eksiliyor.`
         };
       }
+      if (bk.annualOcfTL === 0) {
+        return {
+          badge: '⚖️ Başabaş Kasa',
+          tone: 'neutral',
+          oneLiner: `Son 12 ayda esas faaliyet nakit akışı başabaş (~0 ₺) seyrediyor.`
+        };
+      }
       return {
         badge: (asset.bistRow?.dividendYield || 0) >= 2.5 ? '💧 Temettü & Kasa' : '📊 Reel Üretim Kasası',
         tone: 'info',
         oneLiner: `100B ₺ ortaklığa yılda +${fmtInt(bk.annualOcfTL)} ₺ faaliyet nakdi giriyor.`
+      };
+    }
+
+    if (asset.bistRow && asset.bistRow.netIncomeMillionTL > 0 && asset.bistRow.marketCapBillionTL > 0) {
+      const np100k = Math.round(Number(asset.bistRow.netIncomeMillionTL) * 1e6 * ((100000 / 1e6) / (asset.bistRow.marketCapBillionTL * 1000)));
+      return {
+        badge: (asset.bistRow.dividendYield || 0) >= 2.5 ? '💧 Kârlı & Temettü' : `📊 Kârlı Ortaklık (PD/DD ${asset.bistRow.pb ?? '-'}x)`,
+        tone: 'info',
+        oneLiner: `100B ₺ ortaklığa yılda +${fmtInt(np100k)} ₺ net dönem kârı düşüyor.`
       };
     }
 
@@ -3259,70 +3339,149 @@
   function extractQuantitativePassport(asset) {
     const td = asset?.trainedDaily;
     const K = global.AetherKernelV10;
-    if (td && !td.isRateAnalysis) {
+    const buildAnalogs = (src) => {
+      const arr = [];
+      if (src?.analogs1W) {
+        arr.push({
+          horizon: '1 Hafta',
+          sampleCount: src.analogs1W.sampleCount || 25,
+          winRatePct: src.analogs1W.winRatePct,
+          hurdleWinPct: src.analogs1W.hurdleWinRatePct,
+          expectedPct: src.analogs1W.expectedPct,
+          medianPct: src.analogs1W.medianPct
+        });
+      }
+      if (src?.analogs1M) {
+        arr.push({
+          horizon: '1 Ay',
+          sampleCount: src.analogs1M.sampleCount || 25,
+          winRatePct: src.analogs1M.winRatePct,
+          hurdleWinPct: src.analogs1M.hurdleWinRatePct,
+          expectedPct: src.analogs1M.expectedPct,
+          medianPct: src.analogs1M.medianPct
+        });
+      }
+      if (src?.analogs3M) {
+        arr.push({
+          horizon: '3 Ay',
+          sampleCount: src.analogs3M.sampleCount || 25,
+          winRatePct: src.analogs3M.winRatePct,
+          hurdleWinPct: src.analogs3M.hurdleWinRatePct,
+          expectedPct: src.analogs3M.expectedPct,
+          medianPct: src.analogs3M.medianPct
+        });
+      }
+      return arr;
+    };
+
+    if (td && td.isRateAnalysis) {
       const rad = td.radar || {};
       const emp = td.empiricalRules || {};
       const wf = td.walkForward || null;
+      const inf = K?.getAnnualInflationPct ? K.getAnnualInflationPct() : 29.8;
+      const usdTry = K?.getUsdTry ? K.getUsdTry() : 50.44;
+      const netAnnualPct = +(asset.annualGrossRatePct * (1 - (asset.stopajPct || 0) / 100)).toFixed(2);
+      const fisherSpreadPct = +(netAnnualPct - inf).toFixed(2);
+      const usdBreakeven1M = +(usdTry * (1 + (netAnnualPct / 100) * (30 / 365))).toFixed(2);
+      return {
+        kind: 'RATE_EMPIRICAL_10Y',
+        title: '10 Yıllık Reel Faiz & Carry Başabaş Testi',
+        badgeTag: `${td.totalBars || 2500}G`,
+        totalBars: td.totalBars || 0,
+        dateRange: td.firstDate && td.lastDate ? `${td.firstDate} -> ${td.lastDate}` : (td.selectedModelName || ''),
+        modelName: td.selectedModelName || '',
+        regimeLabel: td.currentState?.regimeLabel || '',
+        walkForwardHitPct: wf?.hitRatePct ?? null,
+        walkForwardTests: wf?.testCount ?? null,
+        intrinsicPriceTL: null,
+        marginOfSafetyPct: null,
+        valuationMethodLabel: td.selectedModelName || null,
+        piotroskiScore: null,
+        kellyPct: rad.kellyPct ?? null,
+        cvar95Pct: 0,
+        hurst: rad.hurst ?? null,
+        supportTL: null,
+        resistanceTL: null,
+        netAnnualPct,
+        fisherSpreadPct,
+        usdBreakeven1M,
+        verdictBadge: emp.verdictBadge || rad.boardBadge || null,
+        preRallyHistoryText: rad.preRallyHistoryText || null,
+        whyItMoves: rad.whyItMoves || null,
+        bullCondition: emp.bullCondition || rad.boardActionText || null,
+        bearCondition: emp.bearCondition || rad.kitchenBlueprint?.hiddenRiskToWatch || null,
+        analogs: buildAnalogs(td)
+      };
+    }
+
+    if (td && !td.isRateAnalysis) {
+      const isGoldByf = asset.id === 'altin-fonu-zgold' || asset.id === 'altin-fonu-gldtr' || asset.id === 'fon-degisken-isglk';
+      const isSilverByf = asset.id === 'gumus-fonu-gmstr';
+      const gramSpot = (isGoldByf && K?.getAsset) ? K.getAsset('gram-altin-spot') : null;
+      const silverSpot = (isSilverByf && K?.getAsset) ? K.getAsset('gram-gumus-spot') : null;
+      const effTd = (asset.id === 'fon-degisken-isglk' && gramSpot?.trainedDaily) ? gramSpot.trainedDaily : td;
+      const rad = effTd.radar || {};
+      const emp = effTd.empiricalRules || {};
+      const wf = effTd.walkForward || null;
       const usdTry = K?.getUsdTry ? K.getUsdTry() : 50.44;
       const scaleTL = asset.isForeignUsd ? usdTry : 1;
+      const r52 = computeRange52W(asset);
 
-      const analogs = [];
-      if (td.analogs1W) {
-        analogs.push({
-          horizon: '1 Hafta',
-          sampleCount: td.analogs1W.sampleCount || 25,
-          winRatePct: td.analogs1W.winRatePct,
-          hurdleWinPct: td.analogs1W.hurdleWinRatePct,
-          expectedPct: td.analogs1W.expectedPct,
-          medianPct: td.analogs1W.medianPct
-        });
+      const candInt = rad.intrinsicPrice > 0 ? +(rad.intrinsicPrice * scaleTL).toFixed(2) : null;
+      let intrinsicPriceTL = candInt;
+      if (isGoldByf && gramSpot?.priceTL > 0 && gramSpot?.trainedDaily?.radar?.intrinsicPrice > 0) {
+        intrinsicPriceTL = +(asset.priceTL * (gramSpot.trainedDaily.radar.intrinsicPrice / gramSpot.priceTL)).toFixed(2);
+      } else if (isSilverByf && silverSpot?.priceTL > 0 && silverSpot?.trainedDaily?.radar?.intrinsicPrice > 0) {
+        intrinsicPriceTL = +(asset.priceTL * (silverSpot.trainedDaily.radar.intrinsicPrice / silverSpot.priceTL)).toFixed(2);
+      } else if (candInt != null && asset.priceTL > 0 && (candInt / asset.priceTL > 3.2 || candInt / asset.priceTL < 0.14)) {
+        intrinsicPriceTL = (rad.marginOfSafetyPct != null && Math.abs(Number(rad.marginOfSafetyPct)) <= 80)
+          ? +(asset.priceTL * (1 + Number(rad.marginOfSafetyPct) / 100)).toFixed(2)
+          : null;
       }
-      if (td.analogs1M) {
-        analogs.push({
-          horizon: '1 Ay',
-          sampleCount: td.analogs1M.sampleCount || 25,
-          winRatePct: td.analogs1M.winRatePct,
-          hurdleWinPct: td.analogs1M.hurdleWinRatePct,
-          expectedPct: td.analogs1M.expectedPct,
-          medianPct: td.analogs1M.medianPct
-        });
+
+      const marginOfSafetyPct = (intrinsicPriceTL != null && asset.priceTL > 0)
+        ? +(((intrinsicPriceTL / asset.priceTL) - 1) * 100).toFixed(1)
+        : null;
+
+      const candSup = emp.supportPrice > 0 ? +(emp.supportPrice * scaleTL).toFixed(2) : null;
+      const candRes = emp.resistancePrice > 0 ? +(emp.resistancePrice * scaleTL).toFixed(2) : null;
+      const scaleOk = candSup != null && candRes != null && candRes > candSup && asset.priceTL > 0 &&
+        candSup >= asset.priceTL * 0.30 && candSup <= asset.priceTL * 2.2 &&
+        candRes >= asset.priceTL * 0.40 && candRes <= asset.priceTL * 3.0;
+      let supportTL = scaleOk ? candSup : (r52 ? r52.low : (asset.priceTL > 0 ? +(asset.priceTL * 0.90).toFixed(2) : null));
+      let resistanceTL = scaleOk ? candRes : (r52 ? r52.high : (asset.priceTL > 0 ? +(asset.priceTL * 1.15).toFixed(2) : null));
+      if (supportTL != null && asset.priceTL > 0 && supportTL > asset.priceTL) {
+        supportTL = r52 ? +Math.min(r52.low, asset.priceTL * 0.97).toFixed(2) : +(asset.priceTL * 0.95).toFixed(2);
       }
-      if (td.analogs3M) {
-        analogs.push({
-          horizon: '3 Ay',
-          sampleCount: td.analogs3M.sampleCount || 25,
-          winRatePct: td.analogs3M.winRatePct,
-          hurdleWinPct: td.analogs3M.hurdleWinRatePct,
-          expectedPct: td.analogs3M.expectedPct,
-          medianPct: td.analogs3M.medianPct
-        });
+      if (resistanceTL != null && asset.priceTL > 0 && resistanceTL < asset.priceTL) {
+        resistanceTL = r52 ? +Math.max(r52.high, asset.priceTL * 1.03).toFixed(2) : +(asset.priceTL * 1.06).toFixed(2);
       }
 
       return {
         kind: 'TRAINED_10Y',
         title: '10 Yıllık Ampirik İkiz Günler & Adil Değer Testi',
-        badgeTag: `${td.totalBars || 2500}G`,
-        totalBars: td.totalBars || 0,
-        dateRange: td.firstDate && td.lastDate ? `${td.firstDate} -> ${td.lastDate}` : '',
-        modelName: td.selectedModelName || '',
-        regimeLabel: td.currentState?.regimeLabel || '',
+        badgeTag: `${effTd.totalBars || 2500}G`,
+        totalBars: effTd.totalBars || 0,
+        dateRange: effTd.firstDate && effTd.lastDate ? `${effTd.firstDate} -> ${effTd.lastDate}` : '',
+        modelName: effTd.selectedModelName || '',
+        regimeLabel: effTd.currentState?.regimeLabel || '',
         walkForwardHitPct: wf?.hitRatePct ?? null,
         walkForwardTests: wf?.testCount ?? null,
-        intrinsicPriceTL: rad.intrinsicPrice > 0 ? +(rad.intrinsicPrice * scaleTL).toFixed(2) : null,
-        marginOfSafetyPct: rad.marginOfSafetyPct ?? null,
+        intrinsicPriceTL,
+        marginOfSafetyPct,
         valuationMethodLabel: rad.valuationMethodLabel || null,
         piotroskiScore: rad.piotroskiScore ?? null,
         kellyPct: rad.kellyPct ?? null,
         cvar95Pct: rad.cvar95Pct ?? null,
         hurst: rad.hurst ?? null,
-        supportTL: emp.supportPrice > 0 ? +(emp.supportPrice * scaleTL).toFixed(2) : null,
-        resistanceTL: emp.resistancePrice > 0 ? +(emp.resistancePrice * scaleTL).toFixed(2) : null,
+        supportTL,
+        resistanceTL,
         verdictBadge: emp.verdictBadge || rad.boardBadge || null,
         preRallyHistoryText: rad.preRallyHistoryText || null,
         whyItMoves: rad.whyItMoves || null,
         bullCondition: emp.bullCondition || null,
         bearCondition: emp.bearCondition || null,
-        analogs
+        analogs: buildAnalogs(effTd)
       };
     }
 
@@ -3370,6 +3529,9 @@
       if (pb != null && netInc > 0) {
         const bookEq = mcapM / pb;
         estimates.push(Math.sqrt(Math.max(1, netInc * 8.5 * bookEq * 1.25)));
+        if (r.ocfMillionTL == null && r.ebitdaMillionTL == null && (r.opMarginPct || 0) >= 8) {
+          estimates.push(bookEq * 0.9);
+        }
       } else if (pb != null && estimates.length === 0) {
         estimates.push((mcapM / pb) * (ocf > 0 ? 1.0 : 0.65));
       }
@@ -3413,8 +3575,8 @@
       kellyPct = +Math.max(0, Math.min(22, (foren - 54) * 0.42 + mosBoost)).toFixed(1);
     }
 
-    const low52 = Number(r.low52W) > 0 ? +Number(r.low52W).toFixed(2) : +(price * 0.85).toFixed(2);
-    const high52 = Number(r.high52W) > 0 ? +Number(r.high52W).toFixed(2) : +(price * 1.25).toFixed(2);
+    const low52 = Number(r.low52W) > 0 ? +Math.min(Number(r.low52W), price).toFixed(2) : +(price * 0.85).toFixed(2);
+    const high52 = Number(r.high52W) > 0 ? +Math.max(Number(r.high52W), price).toFixed(2) : +(price * 1.25).toFixed(2);
     const cmf = Number(r.cmf20) || 0;
 
     return {
@@ -3488,7 +3650,9 @@
           : 'Yeni Kotasyon';
         const floatStr = r.floatPct != null ? `%${Number(r.floatPct).toFixed(1)}` : '%35';
         const isFin = isFinancialEntityRow(r);
-        const hasCashFlow = r.ocfMillionTL != null || r.fcfMillionTL != null || r.netIncomeMillionTL != null;
+        const hasOcf = r.ocfMillionTL != null || r.fcfMillionTL != null;
+        const hasNetInc = r.netIncomeMillionTL != null;
+        const hasCashFlow = hasOcf || hasNetInc;
         const hasBalanceSheet = r.cashMillionTL != null || r.totalDebtMillionTL != null || r.netDebtMillionTL != null;
         const ocfM = Number(r.ocfMillionTL) || 0;
         const fcfM = r.fcfMillionTL != null ? Number(r.fcfMillionTL) : (ocfM - Math.abs(Number(r.capexMillionTL) || 0));
@@ -3503,11 +3667,30 @@
           ? `${asset.name} (${asset.ticker}), ${subInd.model} alanında (${mcapStr}) faaliyet gösterir.`
           : `${asset.name} (${asset.ticker}), ${r.sector || 'Borsa İstanbul'} alanında (${mcapStr}) faaliyet gösterir. ${secDef?.how || ''}`;
 
-        const liveKasaFact = (!hasCashFlow && !hasBalanceSheet && r.roe == null)
-          ? `Yeni kotasyon döneminde işlem görüyor; ilk tam yıllık KAP finansal tabloları ve izahname fon kullanım raporları takip edilmelidir.`
-          : (isFin
+        let liveKasaFact = '';
+        if (!hasCashFlow && !hasBalanceSheet && r.roe == null) {
+          liveKasaFact = 'Yeni kotasyon döneminde işlem görüyor; ilk tam yıllık KAP finansal tabloları ve izahname fon kullanım raporları takip edilmelidir.';
+        } else if (isFin) {
+          liveKasaFact = hasNetInc
             ? `Son 12 aylık bilançoda ${netIncM >= 0 ? '+' : ''}${netIncM.toLocaleString('tr-TR')} Milyon ₺ net kâr${r.roe != null ? `, %${Number(r.roe).toFixed(1)} özsermaye kârlılığı (ROE)` : ''} ve ${r.pb ?? '-'}x PD/DD çarpanıyla işlem görüyor.`
-            : `Son 12 ayda esas faaliyet kasasında ${ocfM >= 0 ? '+' : ''}${ocfM.toLocaleString('tr-TR')} Milyon ₺ nakit (yatırımlar sonrası FCF: ${fcfM >= 0 ? '+' : ''}${fcfM.toLocaleString('tr-TR')}M ₺) üretti; kasa durumu ${netDebtM <= 0 ? `+${Math.abs(netDebtM).toLocaleString('tr-TR')}M ₺ Net Nakit zırhındadır` : `${netDebtM.toLocaleString('tr-TR')}M ₺ Net Borç (${r.netDebtToEbitda != null ? r.netDebtToEbitda + 'x FAVÖK' : 'izlenmeli'}) seviyesindedir`}.`);
+            : `KAP dönem bilançosu bekleniyor; güncel tahtada ${r.pb ?? '-'}x PD/DD çarpanıyla işlem görüyor.`;
+        } else {
+          const flowClause = hasOcf
+            ? (ocfM === 0 && fcfM === 0
+              ? 'Son 12 ayda esas faaliyet nakit akışı başabaş (~0M ₺ OCF) düzeyinde seyretti'
+              : `Son 12 ayda esas faaliyet kasasında ${ocfM >= 0 ? '+' : ''}${ocfM.toLocaleString('tr-TR')} Milyon ₺ nakit (yatırımlar sonrası FCF: ${fcfM >= 0 ? '+' : ''}${fcfM.toLocaleString('tr-TR')}M ₺) üretti`)
+            : (hasNetInc
+              ? `Son 12 aylık bilançoda ${netIncM >= 0 ? '+' : ''}${netIncM.toLocaleString('tr-TR')} Milyon ₺ net dönem sonucu açıkladı (konsolide nakit akış dipnotu KAP'tan izlenmeli)`
+              : 'Konsolide KAP nakit akış ve gelir tablosu bekleniyor');
+          const debtClause = !hasBalanceSheet
+            ? 'borç/nakit kırılımı KAP dipnotlarından takip edilmelidir'
+            : (netDebtM < 0
+              ? `kasa durumu +${Math.abs(netDebtM).toLocaleString('tr-TR')}M ₺ Net Nakit zırhındadır`
+              : (netDebtM === 0
+                ? 'finansal banka borcu bulunmayan dengeli kasa yapısındadır'
+                : `kasa durumu ${netDebtM.toLocaleString('tr-TR')}M ₺ Net Borç (${r.netDebtToEbitda != null && r.netDebtToEbitda > 0 ? r.netDebtToEbitda + 'x FAVÖK' : 'izlenmeli'}) seviyesindedir`));
+          liveKasaFact = `${flowClause}; ${debtClause}.`;
+        }
 
         howItWorks = `${baseModel} ${liveKasaFact}`;
 
@@ -3620,7 +3803,7 @@
         smartMoneyNote,
         financial100k
       };
-    } else if (r && (r.ocfMillionTL != null || r.netIncomeMillionTL != null)) {
+    } else if (r && bakery100k) {
       const ocf = Number(r.ocfMillionTL) || 0;
       const netInc = Number(r.netIncomeMillionTL) || 0;
       const cash = Number(r.cashMillionTL) || 0;

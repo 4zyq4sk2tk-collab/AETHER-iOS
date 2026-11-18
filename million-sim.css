@@ -567,13 +567,15 @@ button {
   display: flex;
   align-items: center;
   gap: 7px;
+  min-width: 0;
+  max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
   -webkit-overflow-scrolling: touch;
   padding: 2px 2px 6px;
-  margin: 0 -2px;
+  margin: 0;
 }
 
 .ae-hscroll::-webkit-scrollbar {
@@ -716,6 +718,8 @@ button {
   padding: 14px;
   box-shadow: var(--card-shadow);
   margin-bottom: 12px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .ae-hero-card {
@@ -725,6 +729,8 @@ button {
   padding: 16px;
   box-shadow: var(--card-shadow);
   margin-bottom: 12px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .ae-search-bar {
@@ -1180,7 +1186,9 @@ button {
 /* Satır Listeleri */
 .ms-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 9px;
+  min-width: 0;
 }
 
 .ms-list-row {
@@ -1193,6 +1201,8 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 9px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .ms-alert {
@@ -1554,7 +1564,9 @@ button {
 
 .ae-pillar-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
+  min-width: 0;
 }
 
 .ae-pillar-card {
@@ -1562,6 +1574,7 @@ button {
   border: 1px solid var(--line-subtle);
   border-radius: 13px;
   padding: 9px 11px;
+  min-width: 0;
 }
 
 .ae-pillar-top {
@@ -1604,8 +1617,10 @@ button {
 
 .ae-choice-stack {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 7px;
   margin-top: 9px;
+  min-width: 0;
 }
 
 .ae-choice-btn {

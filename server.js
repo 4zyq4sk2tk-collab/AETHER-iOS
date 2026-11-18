@@ -2682,7 +2682,7 @@ const server = http.createServer(async (req, res) => {
       <key>PayloadUUID</key>
       <string>556F026D-7AD7-4665-B85F-B5C8A49F9EE9</string>
       <key>PayloadVersion</key>
-      <integer>4</integer>
+      <integer>6</integer>
       <key>Precomposed</key>
       <true/>
       <key>URL</key>
@@ -2704,7 +2704,7 @@ const server = http.createServer(async (req, res) => {
   <key>PayloadUUID</key>
   <string>9A4E1120-7AD7-4665-B85F-B5C8A49F9ED5</string>
   <key>PayloadVersion</key>
-  <integer>4</integer>
+  <integer>6</integer>
 </dict>
 </plist>`;
       res.writeHead(200, {
