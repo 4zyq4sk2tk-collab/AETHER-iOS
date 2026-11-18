@@ -177,23 +177,59 @@
   };
 
   const SECTOR_DEFAULTS = {
-    'Bankacılık & Mevduat': {
-      how: 'Mevduat toplayıp ticari/bireysel kredi satarak faiz makası ve komisyon nakdi üretir.',
-      inputs: ['TCMB Politika Faizi', 'Ülke Risk Primi (CDS)', 'Batık Kredi Oranı'],
-      rise: 'Enflasyon düşüp faiz indirim döngüsü ve yabancı girişi başladığında.',
-      fall: 'Fonlama maliyeti kredi faizini geçtiğinde veya tahsilatlar bozulduğunda.'
+    'Bankacılık': {
+      how: 'Mevduat toplayıp ticari ve bireysel kredi vererek net faiz marjı, tahvil portföyü ve işlem komisyonu kârı üretir.',
+      inputs: ['TCMB Politika Faizi', 'Ülke Risk Primi (CDS)', 'Kredi - Mevduat Faiz Makası'],
+      rise: 'Enflasyon düşüp faiz indirim döngüsü başladığında ve yabancı sermaye girişi hızlandığında.',
+      fall: 'Mevduat fonlama maliyeti kredi faizini aştığında veya tahsili gecikmiş alacaklar arttığında.'
+    },
+    'Sigorta & Emeklilik': {
+      how: 'Milyonlarca poliçeden peşin prim toplar; hasar ödemesine kadar bu dev nakit havuzunu yüksek faizde çalıştırarak çift yönlü kazanır!',
+      inputs: ['TCMB Mevduat/Tahvil Faizi', 'Kasko & Sağlık Poliçe Hacmi', 'Hasar/Prim Oranı'],
+      rise: 'Yüksek faiz ortamında teknik nakit havuzu büyüdüğünde ve poliçe fiyatları güncellendiğinde.',
+      fall: 'Büyük doğal afet hasarlarında veya yedek parça maliyeti poliçe artışını geçtiğinde.'
+    },
+    'Aracı Kurum & Finansman': {
+      how: 'Borsa işlem hacminden komisyon ve yatırımcılara kullandırılan kredili işlem / VİOP teminat faizinden yüksek nakit üretir.',
+      inputs: ['Borsa İstanbul Günlük İşlem Hacmi', 'Kredili İşlem Faiz Oranı', 'Halka Arz & Yatırımcı Sayısı'],
+      rise: 'Borsada işlem hacmi ve yatırımcı iştahı canlandığında, yüksek faizle nemalandırma geliri büyüdüğünde.',
+      fall: 'Borsa işlem hacimleri kuruduğunda.'
+    },
+    'Petrol, Rafineri & Doğalgaz': {
+      how: 'Ham petrol ve enerji girdilerini işleyip mazot, benzin, jet yakıtı ve doğalgaz olarak sanayiye ve ulaşıma satar.',
+      inputs: ['Brent Ham Petrol ($)', 'Akdeniz Rafineri Marjı', 'Dolar / TL Kuru'],
+      rise: 'Dizel ve jet yakıtı marjları açıldığında, stok değerlemesi güçlendiğinde.',
+      fall: 'Küresel durgunlukta yakıt talebi ve rafineri marjı daraldığında.'
+    },
+    'Havacılık & Lojistik': {
+      how: 'Yolcu bileti ve uluslararası kargoyu dövizle satar; en kritik maliyet kalemi uçak/gemi yakıtıdır.',
+      inputs: ['Brent Petrol & Jet Yakıtı', 'Turizm & Küresel Kargo Talebi', 'Euro / Dolar Paritesi'],
+      rise: 'Yaz turizm sezonunda ve petrol fiyatları gerileyip yakıt faturası düştüğünde.',
+      fall: 'Petrol sert fırladığında veya jeopolitik hava sahası kapanmaları yaşandığında.'
+    },
+    'Market & Perakende': {
+      how: 'Temel tüketim ürünlerini müşteriden kasada peşin tahsil eder, tedarikçiye vadeli ödeyerek sıcak nakit döngüsü kurar.',
+      inputs: ['Gıda Enflasyonu', 'Soğuk Zincir Mazot Gideri', 'Mağaza Sepet Büyümesi'],
+      rise: 'Enflasyonist ortamda raf devir hızı ve kasadaki peşin nakit büyüdüğünde.',
+      fall: 'Asgari ücret ve kira giderleri sepet büyümesinden hızlı arttığında.'
     },
     'Otomotiv & Yan Sanayi': {
-      how: 'Çelik ve yan sanayi parçalarını işleyip iç pazara ve Avrupa’ya araç ihraç eder.',
+      how: 'Çelik ve yan sanayi parçalarını işleyip iç pazara ve ağırlıkla Avrupa’ya dövizle araç ihraç eder.',
       inputs: ['Yassı Çelik ve Alüminyum', 'Euro / TL Kuru', 'Avrupa Araç Talebi'],
-      rise: 'Avrupa siparişleri ve Euro kuru güçlendiğinde.',
-      fall: 'Kredi faizleri iç talebi kestiğinde veya Avrupa yavaşladığında.'
+      rise: 'Avrupa siparişleri ve Euro kuru güçlendiğinde, iç pazarda taşıt kredileri gevşediğinde.',
+      fall: 'Kredi faizleri iç talebi kestiğinde veya Avrupa sanayisi yavaşladığında.'
     },
-    'Enerji, Elektrik & Gaz': {
-      how: 'Baraj, rüzgâr, güneş veya doğalgaz santrallerinde elektrik üretip günlük sıcak nakit toplar.',
-      inputs: ['Baraj Yağış Oranları (Kuraklık)', 'Doğalgaz & Kömür Fiyatı', 'EPİAŞ Elektrik Fiyatı'],
-      rise: 'Yağışlar ve elektrik tüketimi güçlü, yatırım borcu düşük olduğunda.',
-      fall: 'Kuraklık barajları vurduğunda veya döviz kredi borcu faizi kârı yediğinde.'
+    'Elektrik & Yenilenebilir Enerji': {
+      how: 'Baraj, rüzgâr, güneş santrallerinde elektrik veya şebeke trafosu/paneli üreterek enerji dönüşümünden kazanır.',
+      inputs: ['Baraj Yağış Oranları (Kuraklık)', 'Bakır & Gümüş Maliyeti', 'EPİAŞ Elektrik Fiyatı'],
+      rise: 'Yağışlar ve şebeke yatırımları güçlü, döviz yatırım borcu düşük olduğunda.',
+      fall: 'Kuraklık barajları vurduğunda veya ağır yatırım kredisi faizi kârı yediğinde.'
+    },
+    'Demir-Çelik & Metal': {
+      how: 'Cevher ve hurdayı eritip otomotiv, beyaz eşya ve inşaatın ana hammaddesi olan çeliği üretir; döngüsel sektördür.',
+      inputs: ['Demir Cevheri & Hurda ($)', 'Kok Kömürü & Elektrik', 'Dünya Sıcak Sac (HRC) Fiyatı'],
+      rise: 'Küresel altyapı ve sanayi döngüsü yukarı döndüğünde.',
+      fall: 'Çin dünyaya ucuz çelik döktüğünde ve enerji maliyetleri şiştiğinde.'
     },
     'Gıda, İçecek & Tarım': {
       how: 'Tarladan çıkan ürünü işleyip market rafına koyar; krizde de talep gören savunma sektörüdür.',
@@ -201,11 +237,89 @@
       rise: 'Yaz turizm sezonunda ve gıda enflasyonunu rafa yansıtabildiğinde.',
       fall: 'Kuraklık yüzünden hammadde maliyeti satış fiyatından hızlı fırladığında.'
     },
-    'Teknoloji, Yazılım & Savunma': {
-      how: 'Yazılım lisansı ve savunma elektroniği sözleşmeleriyle yüksek katma değer üretir.',
-      inputs: ['Mühendislik Gücü', 'Yarı İletken Çip', 'Savunma & İhracat İhaleleri'],
-      rise: 'Döviz bazlı sipariş defteri büyüyüp nakit tahsilata döndüğünde.',
-      fall: 'Sırf popüler diye kazancının 40-50 katı fiyattan alındığında.'
+    'Savunma & Havacılık Sanayi': {
+      how: 'Radar, haberleşme ve savunma sistemlerini yıllara yayılan döviz bazlı sipariş defteriyle (backlog) üretir.',
+      inputs: ['Yarı İletken Çip', 'Ar-Ge Mühendisliği', 'Uluslararası Savunma İhaleleri'],
+      rise: 'Yeni ihracat sözleşmeleri imzalanıp nakit hak ediş tahsilatları hızlandığında.',
+      fall: 'Tahsilat vadeleri uzayıp işletme sermayesi ihtiyacı arttığında.'
+    },
+    'Yazılım, Teknoloji & Telekom': {
+      how: 'Milyonlarca aboneye veri/iletişim hizmeti veya kurumsal yazılım lisansı satarak tekrarlayan gelir üretir.',
+      inputs: ['Abone & Veri Trafiği', '5G/Fiber Altyapı Yatırımı', 'Bilişim Mühendisliği Maliyeti'],
+      rise: 'Enflasyon üstü tarife güncellemeleri bilançoya yansıdığında ve döviz yazılım ihracatı büyüdüğünde.',
+      fall: 'Yüksek çarpanla şişmiş hisselerde büyüme beklentisi yavaşladığında.'
+    },
+    'Gayrimenkul & GYO': {
+      how: 'Konut projeleri geliştirir veya AVM, depo ve ofis mülklerinden düzenli kira nakdi toplar.',
+      inputs: ['TCMB & Konut Kredisi Faizleri', 'İnşaat Maliyet Endeksi', 'Ticari Kira Doluluk Oranı'],
+      rise: 'Faiz indirim döngüsü başladığında ve net aktif değer iskontosu kapandığında.',
+      fall: 'Politika ve kredi faizleri uzun süre yüksek kaldığında.'
+    },
+    'Çimento, Cam & Seramik': {
+      how: 'Yüksek ısıda kireçtaşı ve silis kumunu işleyerek inşaat ve otomotiv/ambalaj sanayisine temel malzeme verir.',
+      inputs: ['Doğalgaz, Petrokok & Elektrik', 'Kentsel Dönüşüm & Altyapı', 'İhracat Navlunu'],
+      rise: 'Enerji fiyatları gerilerken konut ve altyapı şantiyeleri hızlandığında.',
+      fall: 'Doğalgaz/elektrik faturası sıçrayıp inşaat sektörü durgunlaştığında.'
+    },
+    'Kimya, Gübre & Kağıt': {
+      how: 'Petrokimya türevleri, tarımsal gübre ve ambalaj hammaddesi üreterek sanayi ve tarımı besler.',
+      inputs: ['Petrol & Doğalgaz Türevleri', 'Tarımsal Ekim Sezonu', 'Döviz Kuru'],
+      rise: 'Ekim sezonları öncesinde ve petrokimya ürün makasları açıldığında.',
+      fall: 'İthal ucuz ürün rekabeti ve ağır döviz kredi borcu birleştiğinde.'
+    },
+    'Beyaz Eşya & Mobilya': {
+      how: 'Çelik, plastik ve bakırı işleyip hem iç pazara hem Avrupa’ya buzdolabı, çamaşır makinesi ve mobilya satar.',
+      inputs: ['Yassı Çelik, Bakır & Plastik', 'Euro / Dolar Paritesi', 'Tüketici Taksit Sınırları'],
+      rise: 'Avrupa konut/yenileme talebi canlandığında ve hammadde ucuzladığında.',
+      fall: 'Kredi kartı taksit kısıtlamaları ve Avrupa durgunluğu aynı anda vurduğunda.'
+    },
+    'İlaç & Sağlık': {
+      how: 'İlaç üretimi, ecza deposu dağıtımı veya özel hastane hizmetiyle ekonomik döngüden bağımsız sağlık talebini karşılar.',
+      inputs: ['Resmi İlaç Euro Kuru Güncellemesi', 'SGK ve Özel Sağlık Talebi', 'Etken Madde İthalatı'],
+      rise: 'İlaç referans Euro kuru güncellendiğinde ve sağlık turizmi büyüdüğünde.',
+      fall: 'İthal maliyetler artarken resmi fiyat güncellemesi geciktiğinde.'
+    },
+    'Madencilik & Altın': {
+      how: 'Yer altındaki altın, bakır, çinko ve krom cevherini çıkarıp dünya dolar fiyatlarıyla satar.',
+      inputs: ['Ons Altın & Bakır Fiyatı ($)', 'Dolar / TL Kuru', 'Rezerv & Maden İzni'],
+      rise: 'Ons altın ve emtia fiyatları yükselirken kasadaki net nakit büyüdüğünde.',
+      fall: 'Üretim tenörü düştüğünde veya maden sahası duruşları yaşandığında.'
+    },
+    'Holding & Çoklu Yatırım': {
+      how: 'Enerji, banka, sanayi ve perakende gibi farklı sektörlerdeki dev şirketleri tek çatı altında toplar.',
+      inputs: ['İştiraklerden Gelen Temettüler', 'Holding Net Nakit Pozisyonu', 'Yabancı Yatırımcı Girişi'],
+      rise: 'İştiraklerinin toplam değerine göre iskontosu açıldığında ve yabancı girişi başladığında.',
+      fall: 'Ülke risk primi yükselip ana sanayi kolları aynı anda yavaşladığında.'
+    },
+    'Makine & Sanayi Üretimi': {
+      how: 'Traktör, iş makinesi ve sanayi ekipmanları üreterek tarım ve fabrikaların üretim gücünü kurar.',
+      inputs: ['Çelik & Motor Parçaları', 'Tarım ve Yatırım Kredisi Faizi', 'İhracat Siparişleri'],
+      rise: 'Sübvanse tarım/yatırım kredileri açıldığında ve ihracat siparişleri büyüdüğünde.',
+      fall: 'Yüksek faiz ortamında çiftçi ve sanayici makine yenilemeyi ertelediğinde.'
+    },
+    'İnşaat & Taahhüt': {
+      how: 'Yurt içinde ve yurt dışında baraj, otoyol, havalimanı ve enerji santrali müteahhitliği yaparak döviz hak ediş toplar.',
+      inputs: ['Demir & Çimento Maliyeti', 'Yurt Dışı Altyapı İhaleleri', 'Döviz Kuru'],
+      rise: 'Petrol üreticisi ülkelerde ve Avrupa’da büyük dövizli taahhüt projeleri alındığında.',
+      fall: 'Hak ediş ödemeleri geciktiğinde veya şantiye maliyetleri öngörüyü aştığında.'
+    },
+    'Tekstil & Hazır Giyim': {
+      how: 'Pamuk ve ipliği işleyip iç pazara ve Avrupa mağaza zincirlerine hazır giyim/ev tekstili satar.',
+      inputs: ['Pamuk & Polyester İplik', 'İşçilik Maliyeti', 'Euro / TL Kuru'],
+      rise: 'Kur rekabetçi olduğunda ve markalı perakende mağazaları peşin nakit ürettiğinde.',
+      fall: 'TL değerli kalıp işçilik maliyeti dolar bazında rakipleri geçtiğinde.'
+    },
+    'Turizm, Medya & Hizmet': {
+      how: 'Otel konaklaması, araç kiralama ve hizmet gelirleriyle özellikle yaz döviz akışından beslenir.',
+      inputs: ['Yabancı Turist Sayısı', 'Euro & Dolar Kuru', 'Konaklama Doluluk Oranı'],
+      rise: 'İlkbahar sonundan itibaren yaz rezervasyonları ve döviz gelirleri zirve yaptığında.',
+      fall: 'Kış ölü sezonunda veya bölgesel jeopolitik gerginliklerde.'
+    },
+    'Girişim & Yatırım Ortaklığı': {
+      how: 'Büyüme aşamasındaki teknoloji, enerji ve gıda girişimlerine erken aşamada ortak olup değerlenince çıkış yapar.',
+      inputs: ['Girişim Değerlemeleri', 'Halka Arz Piyasası İştahı', 'Sermaye Maliyeti'],
+      rise: 'İştirak ettiği şirketler halka arz edildiğinde veya stratejik satış yaptığında.',
+      fall: 'Sermaye piyasalarında risk iştahı kapandığında.'
     }
   };
 
@@ -389,7 +503,7 @@
         step2: 'Trafo ve Güneş Paneli Üreticileri (Astor, CW Enerji)',
         step3: 'Elektrik Dağıtım & Sanayi Üretimi (Enerjisa)',
         insight: 'Kış gelmeden odun-kömür stoklayan köylü gibi, faiz ve mevsim döngüleri dönmeden önce şebeke yenileme ve enerji altyapı darboğazlarını okuyan yatırımcı sürüden önce pozisyon alır.',
-        assetKeys: ['reel-enerji-astor', 'reel-enerji-cwene', 'gram-gumus-spot', 'bist-enjsa', 'bist-smrtg']
+        assetKeys: ['reel-enerji-astor', 'reel-enerji-cwene', 'gram-gumus-spot', 'bist-enjsa', 'reel-enerji-smrtg']
       },
       {
         id: 'chain-export',
@@ -546,12 +660,16 @@
   }
 
   // --------------------------------------------------------------------------
-  // 5. MAHALLE FIRINI SOMUTLAŞTIRMASI (100.000 ₺ ORTAKLIK HESABI) & 52H TERMOMETRE
+  // 5. MAHALLE FIRINI / BANKA KASASI SOMUTLAŞTIRMASI (100.000 ₺ ORTAKLIK) & DÖNGÜ
   // --------------------------------------------------------------------------
+  function isFinancialEntityRow(r) {
+    return Boolean(r && (r.entityKind === 'bank' || r.entityKind === 'insurance' || r.entityKind === 'fin_other'));
+  }
+
   function computeBakery100kScale(asset) {
     const r = asset?.bistRow;
     if (!r || !r.marketCapBillionTL || r.marketCapBillionTL <= 0) return null;
-    if (r.entityKind === 'bank' || r.entityKind === 'insurance') return null;
+    if (isFinancialEntityRow(r)) return null;
 
     const mcapMillion = r.marketCapBillionTL * 1000;
     const ratio = 0.1 / mcapMillion; // 100.000 TL = 0.1 Milyon TL ortaklık payı
@@ -568,7 +686,7 @@
     } else if (annualOcfTL > 0) {
       plainSummary = `100.000 ₺ ortaklığa karşılık kasaya yılda +${annualOcfTL.toLocaleString('tr-TR')} ₺ (günde +${dailyOcfTL.toLocaleString('tr-TR')} ₺) sıcak faaliyet nakdi giriyor.`;
     } else {
-      plainSummary = `Dikkat: 100.000 ₺ ortaklığa karşılık şirketin esas faaliyet kasasından yılda ${annualOcfTL.toLocaleString('tr-TR')} ₺ nakit çıkıyor (Sırtına binen borç payı: ${debtShareTL.toLocaleString('tr-TR')} ₺).`;
+      plainSummary = `Dikkat: 100.000 ₺ ortaklığa karşılık şirketin esas faaliyet kasasından yılda ${Math.abs(annualOcfTL).toLocaleString('tr-TR')} ₺ nakit eksiliyor (Sırtına binen borç payı: ${debtShareTL.toLocaleString('tr-TR')} ₺).`;
     }
 
     return {
@@ -579,6 +697,82 @@
       annualNetDivTL,
       plainSummary
     };
+  }
+
+  function computeFinancial100kScale(asset) {
+    const r = asset?.bistRow;
+    if (!r || !isFinancialEntityRow(r) || !r.marketCapBillionTL || r.marketCapBillionTL <= 0) return null;
+    const mcapMillion = r.marketCapBillionTL * 1000;
+    const ratio = 0.1 / mcapMillion;
+    const annualNetProfitTL = Math.round((Number(r.netIncomeMillionTL) || 0) * 1e6 * ratio);
+    const dailyNetProfitTL = +(annualNetProfitTL / 365).toFixed(1);
+    const annualNetDivTL = Math.round(100000 * ((Number(r.dividendYield) || 0) / 100) * 0.85);
+    const roePct = r.roe != null ? +Number(r.roe).toFixed(1) : null;
+    const plainSummary = annualNetProfitTL > 0
+      ? `100.000 ₺ ortak olduğunda kurum senin payına yılda +${annualNetProfitTL.toLocaleString('tr-TR')} ₺ (günde +${dailyNetProfitTL.toLocaleString('tr-TR')} ₺) net dönem kârı üretiyor${roePct != null ? ` (Özsermaye Kârlılığı: %${roePct})` : ''}.`
+      : `Dikkat: 100.000 ₺ ortaklığa karşılık kurum son 12 ayda ${Math.abs(annualNetProfitTL).toLocaleString('tr-TR')} ₺ net zarar yazdı.`;
+
+    return {
+      annualNetProfitTL,
+      dailyNetProfitTL,
+      annualNetDivTL,
+      roePct,
+      pe: r.pe,
+      pb: r.pb,
+      plainSummary
+    };
+  }
+
+  function computeMultiHorizonRealTable(asset) {
+    const K = global.AetherKernelV10;
+    if (!asset || !K) return null;
+    const md = K.getMarketData() || {};
+    const infBench = md.inflationBenchmarks || {
+      perf1W: 0.6, perf1M: 2.58, perf3M: 6.73, perf6M: 13.92, perf1Y: 29.77, perf3Y: 145.24, perf5Y: 563.78
+    };
+
+    const rawHorizons = [
+      { key: '1H', label: '1 Hafta', nom: asset.perf1W, inf: infBench.perf1W },
+      { key: '1A', label: '1 Ay', nom: asset.perf1M, inf: infBench.perf1M },
+      { key: '3A', label: '3 Ay', nom: asset.perf3M, inf: infBench.perf3M },
+      { key: '6A', label: '6 Ay', nom: asset.perf6M, inf: infBench.perf6M },
+      { key: '1Y', label: '1 Yıl', nom: asset.perf1Y, inf: infBench.perf1Y },
+      { key: '3Y', label: '3 Yıl', nom: asset.perf3Y, inf: infBench.perf3Y },
+      { key: '5Y', label: '5 Yıl', nom: asset.perf5Y, inf: infBench.perf5Y }
+    ];
+
+    const horizons = [];
+    for (const h of rawHorizons) {
+      if (h.nom == null || Number.isNaN(Number(h.nom))) continue;
+      if ((h.key === '3Y' || h.key === '5Y') && asset.perf3Y == null && asset.perf5Y == null) continue;
+      const nomPct = +Number(h.nom).toFixed(1);
+      const infPct = +Number(h.inf || 0).toFixed(1);
+      const realPct = +((((1 + nomPct / 100) / Math.max(0.05, 1 + infPct / 100)) - 1) * 100).toFixed(1);
+      horizons.push({
+        key: h.key,
+        label: h.label,
+        nominalPct: nomPct,
+        inflationPct: infPct,
+        realPct
+      });
+    }
+
+    let sparklinePts = asset.trainedDaily?.radar?.sparklinePts || null;
+    if ((!Array.isArray(sparklinePts) || sparklinePts.length < 6) && !asset.isRateInstrument) {
+      const cur = 100;
+      const p1w = cur / Math.max(0.15, 1 + (Number(asset.perf1W) || 0) / 100);
+      const p1m = cur / Math.max(0.15, 1 + (Number(asset.perf1M) || 0) / 100);
+      const p3m = cur / Math.max(0.15, 1 + (Number(asset.perf3M) || 0) / 100);
+      const p6m = cur / Math.max(0.15, 1 + (Number(asset.perf6M || asset.perf3M) || 0) / 100);
+      const p1y = cur / Math.max(0.15, 1 + (Number(asset.perf1Y) || 0) / 100);
+      const anchors = [p1y, (p1y + p6m) / 2, p6m, (p6m + p3m) / 2, p3m, (p3m + p1m) / 2, p1m, (p1m + p1w) / 2, p1w, cur];
+      const mn = Math.min(...anchors);
+      const mx = Math.max(...anchors);
+      const span = Math.max(0.5, mx - mn);
+      sparklinePts = anchors.map((v) => +(((v - mn) / span) * 84 + 8).toFixed(1));
+    }
+
+    return { horizons, sparklinePts };
   }
 
   function computeRange52W(asset) {
@@ -632,6 +826,29 @@
       };
     }
 
+    const fin = computeFinancial100kScale(asset);
+    if (fin) {
+      if (fin.annualNetProfitTL > 0 && (asset.bistRow?.dividendYield || 0) >= 3.0) {
+        return {
+          badge: '💧 Finans & Temettü Kasası',
+          tone: 'good',
+          oneLiner: `100.000 ₺ ortaklığa yılda +${fin.annualNetProfitTL.toLocaleString('tr-TR')} ₺ net kâr · Temettü %${asset.bistRow.dividendYield.toFixed(1)}.`
+        };
+      }
+      if (fin.annualNetProfitTL > 0) {
+        return {
+          badge: '🏦 Karlı Finans Kurumu',
+          tone: 'info',
+          oneLiner: `100.000 ₺ ortaklığa yılda +${fin.annualNetProfitTL.toLocaleString('tr-TR')} ₺ net kâr (PD/DD: ${fin.pb ?? '-'}).`
+        };
+      }
+      return {
+        badge: '⚠️ Kârlılık Baskısı',
+        tone: 'warn',
+        oneLiner: fin.plainSummary
+      };
+    }
+
     if (asset.isPumpAnomaly || asset.isTms29Illusion || asset.distributionTrap || asset.isPatronSelling) {
       let why = 'Kurumsal para çıkışı veya bilanço zayıflığı tespit edildi.';
       if (asset.isPumpAnomaly) why = 'Sosyal medya / olağandışı hacim şişmesi uyarısı — sürü coşkusuna dikkat!';
@@ -658,6 +875,13 @@
 
     const bk = computeBakery100kScale(asset);
     if (bk) {
+      if (asset.isShareBuyback && bk.annualOcfTL > 0) {
+        return {
+          badge: '🛡️ Geri Alım & Sağlam Kasa',
+          tone: 'good',
+          oneLiner: `Şirket kendi paylarını topluyor · 100.000 ₺'ye yılda +${bk.annualOcfTL.toLocaleString('tr-TR')} ₺ sıcak nakit üretir.`
+        };
+      }
       if (bk.annualOcfTL > 0 && bk.cashShareTL >= bk.debtShareTL * 0.8) {
         return {
           badge: '🥖 Sağlam Kasa',
@@ -669,7 +893,7 @@
         return {
           badge: '⚠️ Nakit Yakıyor',
           tone: 'warn',
-          oneLiner: `100.000 ₺ ortaklığa karşılık kasadan yılda ${bk.annualOcfTL.toLocaleString('tr-TR')} ₺ nakit eksiliyor.`
+          oneLiner: `100.000 ₺ ortaklığa karşılık kasadan yılda ${Math.abs(bk.annualOcfTL).toLocaleString('tr-TR')} ₺ nakit eksiliyor.`
         };
       }
       return {
@@ -694,8 +918,10 @@
 
     const custom = ASSET_PROFILES[asset.key] || ASSET_PROFILES[asset.id] || null;
     const r = asset.bistRow || null;
-    const secDef = SECTOR_DEFAULTS[asset.categoryName] || null;
+    const secDef = SECTOR_DEFAULTS[r?.sector || asset.categoryName] || null;
     const bakery100k = computeBakery100kScale(asset);
+    const financial100k = computeFinancial100kScale(asset);
+    const multiHorizon = computeMultiHorizonRealTable(asset);
     const range52W = computeRange52W(asset);
     const quickSignal = getCardQuickSignal(asset);
 
@@ -715,7 +941,7 @@
         fallsWhen = 'Enflasyon veya kur net faizin üzerinde sıçradığında.';
         relatedKeys = ['kira-sertifikasi-sukuk', 'para-piyasasi-fonu', 'mevduat-ust'];
       } else if (r) {
-        shortDesc = `${r.sector || 'Borsa İstanbul'} sektöründe faaliyet gösteren gerçek şirket (${asset.ticker}).`;
+        shortDesc = `${r.sector || 'Borsa İstanbul'} sektöründe faaliyet gösteren gerçek kurum (${asset.ticker}).`;
         howItWorks = secDef?.how || `${asset.name}, kendi alanında üretim ve satış yaparak kasasına gerçek faaliyet nakdi sokmayı hedefler.`;
         rawInputs = secDef?.inputs || ['Enerji & Hammadde Maliyeti', 'Kredi Faizleri', 'İç ve İhracat Talebi'];
         risesWhen = secDef?.rise || 'Satışları ve kasasına giren gerçek faaliyet nakdi büyürken borçluluğu düşük kaldığında.';
@@ -738,15 +964,15 @@
 
     let executionRule = '';
     if (asset.venue === 'BIST') {
-      executionRule = `Hafta içi 10:00–18:00 arası anında eşleşir (kapalı saatte girilen emir sabah 10:00 açılış ziline yazılır). Satışta para gerçek T+2 takas kuralıyla 2 iş günü sonra çekilebilir nakde döner.${asset.stopajPct > 0 ? ` Kârdan %${asset.stopajPct} stopaj kesilir.` : ' Hisse alım-satım kazancında %0 stopaj uygulanır.'}`;
+      executionRule = `Hafta içi 10:00–18:00 arası anında eşleşir (kapalı saatte girilen emir sabah 10:00 açılış ziline yazılır; 09:50–10:00 eşleşmesinde iptal kilitlenir). Satışta para gerçek T+2 takas kuralıyla 2 iş günü sonra çekilebilir nakde döner.${asset.stopajPct > 0 ? ` Kârdan %${asset.stopajPct} stopaj kesilir.` : ' Hisse alım-satım kazancında %0 stopaj uygulanır.'}`;
     } else if (asset.venue === 'TEFAS') {
-      executionRule = `İş günleri 13:30 valör sınırından önce verilen emir gününde işlenir; 13:30 sonrası verilen emir +1 iş günü valör bekler. Stopaj: %${asset.stopajPct}.`;
+      executionRule = `İş günleri 13:30 valör sınırından önce verilen emir gününde işlenir; 13:30 sonrası alım ve bozum emirleri +1/+2 iş günü valör bekler. Stopaj: %${asset.stopajPct}.`;
     } else if (asset.venue === 'TWO_DOOR') {
       executionRule = `Kapalıçarşı (Pzt–Cmt 09:30–18:30, dar makas, %0 vergi) ile Mobil Banka (7/24 açık; ancak akşam 17:30 sonrası ve hafta sonu makas %3,60 açılır + %0,2 kambiyo vergisi kesilir) arasında gerçek seçim yaparsın.`;
     } else if (asset.subVenue === 'TERM_DEPOSIT') {
       executionRule = `Vade sonuna kadar (32/181/366 gün) kilitlenir. 6 aya kadar %17,5, 1 yıla kadar %15, 1 yıl üstü %10 stopaj kesilir. Vadeden önce bozarsan biriken faizin tamamı yanar!`;
     } else if (asset.isGvk80) {
-      executionRule = `Satış anında alıştan bu yana Yİ-ÜFE üretici enflasyonu %10'u geçtiyse TL maliyetin enflasyonla yükseltilir; kalan reel kazanç beyana tabidir.`;
+      executionRule = `ABD/Avrupa borsaları hafta sonu kapalıdır. Satış anında alıştan bu yana Yİ-ÜFE üretici enflasyonu %10'u geçtiyse TL maliyetin enflasyonla yükseltilir; kalan reel kazanç üzerinden GVK Mükerrer 80 beyan vergisi karşılığı ayrılır.`;
     } else {
       executionRule = `7/24 kesintisiz anlık piyasa fiyatıyla işlem görür (%0,10 işlem komisyonu).`;
     }
@@ -758,9 +984,40 @@
       else if (r.cmf20 <= -0.15) smartMoneyNote = `Dikkat: Tahtada kurumsal para çıkışı / mal dağıtımı izi var (CMF-20: ${r.cmf20.toFixed(2)}).`;
       else smartMoneyNote = `Tahtada alıcı ve satıcı dengeli seyrediyor (CMF-20: ${r.cmf20.toFixed(2)}).`;
     }
+    if (asset.isShareBuyback) {
+      smartMoneyNote = (smartMoneyNote ? smartMoneyNote + ' ' : '') + 'MKK kayıtlarında dolaşımdaki pay adedi azaldı (geri alım / pay çekilmesi desteği).';
+    }
 
     let health = null;
-    if (r && (r.ocfMillionTL != null || r.netIncomeMillionTL != null)) {
+    if (r && isFinancialEntityRow(r)) {
+      const netInc = Number(r.netIncomeMillionTL) || 0;
+      const roe = r.roe != null ? +Number(r.roe).toFixed(1) : null;
+      const inf = K.getAnnualInflationPct();
+      let status = 'NEUTRAL';
+      let verdict = 'Dengeli finansal kurum bilançosu.';
+      if (netInc > 0 && (roe == null || roe >= inf * 0.8)) {
+        status = 'GOOD';
+        verdict = `Güçlü Özsermaye Çarkı: Kurum son 12 ayda +${netInc.toLocaleString('tr-TR')} Milyon ₺ net kâr üretti${roe != null ? ` ve özsermayesini yılda %${roe} büyütüyor` : ''}.`;
+      } else if (netInc > 0) {
+        status = 'NEUTRAL';
+        verdict = `Kurum +${netInc.toLocaleString('tr-TR')} Milyon ₺ net kârda; ancak özsermaye kârlılığının (%${roe ?? '-'}) enflasyonu (%${inf.toFixed(1)}) geçmesi takip edilmeli.`;
+      } else {
+        status = 'WARN';
+        verdict = 'Son 12 aylık dönem bilançosunda net kârlılık zayıf/eksi bölgede.';
+      }
+      health = {
+        kind: 'FINANCIAL',
+        status,
+        verdict,
+        netIncomeMillionTL: netInc,
+        roePct: roe,
+        pe: r.pe,
+        pb: r.pb,
+        dividendYield: r.dividendYield || 0,
+        smartMoneyNote,
+        financial100k
+      };
+    } else if (r && (r.ocfMillionTL != null || r.netIncomeMillionTL != null)) {
       const ocf = Number(r.ocfMillionTL) || 0;
       const netInc = Number(r.netIncomeMillionTL) || 0;
       const cash = Number(r.cashMillionTL) || 0;
@@ -835,6 +1092,8 @@
       range52W,
       quickSignal,
       bakery100k,
+      financial100k,
+      multiHorizon,
       smartMoneyNote,
       health
     };
@@ -848,6 +1107,8 @@
     getCardQuickSignal,
     computeRange52W,
     computeBakery100kScale,
+    computeFinancial100kScale,
+    computeMultiHorizonRealTable,
     CRISIS_SCENARIOS,
     simulatePortfolioCrisis
   };

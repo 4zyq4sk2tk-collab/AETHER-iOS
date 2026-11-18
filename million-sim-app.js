@@ -109,6 +109,9 @@
   // --------------------------------------------------------------------------
   // ÜST KOKPİT ÇUBUĞU (KİŞİSEL KASA + CANLI PİYASA SAATLERİ + CANLI KUR ŞERİDİ)
   // --------------------------------------------------------------------------
+  let lastHeaderPhaseSig = '';
+  let lastPortfolioFeedback = null;
+
   function renderHeader() {
     const K = global.AetherKernelV10;
     if (!K) return;
@@ -127,7 +130,8 @@
     const bist = K.getAsset('bist-100')?.priceTL || 11677;
     const inf = K.getAnnualInflationPct();
 
-    // Sekme üzerindeki canlı lig sayacını da güncelle
+    lastHeaderPhaseSig = `${clock.bistPhase}|${clock.grandBazaarOpen}|${clock.bankDaytimeTight}|${clock.tefasBeforeCutoff}|${clock.calendarAlerts.join(',')}`;
+
     const badgeEl = document.getElementById('msLeagueTabBadge');
     if (badgeEl) {
       badgeEl.textContent = String(Math.max(1, league.investorCount));
@@ -156,7 +160,7 @@
             <strong class="${pnlCls}">${pnlSign}${fmtTL(snap.nominalPnlTL)} (${pnlSign}%${snap.nominalPnlPct})</strong>
           </div>
           <div class="ms-bal-item">
-            <span>Boş Nakit</span>
+            <span>Boş Nakit${snap.autoOvernightRepo ? ' (O/N)' : ''}</span>
             <strong>${fmtTL(snap.cashTL)}</strong>
           </div>
           ${snap.marginDebtTL > 0 ? `
@@ -171,13 +175,13 @@
       <div class="ms-clock-ribbon">
         <span class="ms-clock-chip">
           <span class="ms-dot ${clock.bistCanMatchNow ? 'open' : 'closed'}"></span>
-          <strong>${esc(clock.timeStr)}</strong> · ${esc(clock.bistLabel)}
+          <strong id="msLiveClockTime">${esc(clock.timeStr)}</strong> · <span id="msLiveBistLabel">${esc(clock.bistLabel)}</span>
         </span>
         <span class="ms-clock-chip">
           <span class="ms-dot ${clock.grandBazaarOpen ? 'open' : ''}"></span>
           Çarşı Makas %${clock.bazaarSpreadPct.toFixed(2)} · Banka %${clock.bankSpreadPct.toFixed(2)}
         </span>
-        <span class="ms-clock-chip">
+        <span class="ms-clock-chip" id="msLiveTefasLabel">
           ${esc(clock.tefasLabel)}
         </span>
         <span style="margin-left:auto;font-weight:700;color:#e2e8f0">
@@ -194,6 +198,21 @@
     document.getElementById('msOpenProfileBtn')?.addEventListener('click', () => {
       openProfileModal();
     });
+  }
+
+  function tickHeaderClockOnly() {
+    const K = global.AetherKernelV10;
+    if (!K) return;
+    const clock = K.getTurkishClock();
+    const sig = `${clock.bistPhase}|${clock.grandBazaarOpen}|${clock.bankDaytimeTight}|${clock.tefasBeforeCutoff}|${clock.calendarAlerts.join(',')}`;
+    if (sig !== lastHeaderPhaseSig || !document.getElementById('msLiveClockTime')) {
+      renderHeader();
+      return;
+    }
+    const timeEl = document.getElementById('msLiveClockTime');
+    if (timeEl) timeEl.textContent = clock.timeStr;
+    const tefasEl = document.getElementById('msLiveTefasLabel');
+    if (tefasEl) tefasEl.textContent = clock.tefasLabel;
   }
 
   // --------------------------------------------------------------------------
@@ -733,9 +752,95 @@
     openModalShell();
   }
 
+  function renderCycleAndRealHorizonHtml(info) {
+    const mh = info?.multiHorizon;
+    const r52 = info?.range52W;
+    if (!mh || !Array.isArray(mh.horizons) || mh.horizons.length === 0) return '';
+
+    let sparkSvg = '';
+    if (Array.isArray(mh.sparklinePts) && mh.sparklinePts.length >= 4) {
+      const pts = mh.sparklinePts;
+      const w = 260;
+      const h = 48;
+      const coords = pts.map((val, i) => {
+        const x = +((i / Math.max(1, pts.length - 1)) * w).toFixed(1);
+        const y = +(h - (Math.max(0, Math.min(100, Number(val) || 50)) / 100) * (h - 8) - 4).toFixed(1);
+        return `${x},${y}`;
+      });
+      const isUp = pts[pts.length - 1] >= pts[0];
+      const stroke = isUp ? '#059669' : '#dc2626';
+      const fill = isUp ? 'rgba(16,185,129,0.12)' : 'rgba(220,38,38,0.10)';
+      const poly = `0,${h} ${coords.join(' ')} ${w},${h}`;
+      sparkSvg = `
+        <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:52px;display:block;margin-bottom:8px" preserveAspectRatio="none" aria-label="Fiyat Döngüsü">
+          <polygon points="${poly}" fill="${fill}"></polygon>
+          <polyline points="${coords.join(' ')}" fill="none" stroke="${stroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+        </svg>
+      `;
+    }
+
+    return `
+      <div class="ms-card" style="background:#f8fafc;margin:12px 0;padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px">
+          <strong style="font-size:13.6px">Zaman Döngüsü & Enflasyon Terazisi (Reel Alım Gücü)</strong>
+          ${r52 ? `<span style="font-size:11.6px;font-weight:700;color:#475569">52H Dip ${fmtUnitTL(r52.low)} · Zirve ${fmtUnitTL(r52.high)} (${r52.drawdownPct}%)</span>` : ''}
+        </div>
+        ${sparkSvg}
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:6px">
+          ${mh.horizons.map((hz) => `
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:9px;padding:7px 8px;text-align:center">
+              <span style="display:block;font-size:10.5px;font-weight:800;color:#64748b">${esc(hz.label)}</span>
+              <strong style="display:block;font-size:13px;color:#0f172a">${hz.nominalPct >= 0 ? '+' : ''}%${hz.nominalPct}</strong>
+              <small style="display:block;font-size:10.6px;font-weight:800" class="${hz.realPct >= 0 ? 'pos' : 'neg'}">
+                Reel ${hz.realPct >= 0 ? '+' : ''}%${hz.realPct}
+              </small>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
   function renderHealthAndBakeryHtml(info) {
     const h = info?.health;
     if (!h) return '';
+
+    if (h.kind === 'FINANCIAL') {
+      const fn = h.financial100k;
+      return `
+        <div class="ms-card" style="background:#f8fafc;margin:12px 0;padding:15px">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+            <strong style="font-size:14px">Banka & Finans Kasası (100.000 ₺ Ortaklıkta Senin Payın)</strong>
+            <span style="font-size:12px;font-weight:700;color:#475569">F/K: ${h.pe ?? '-'} · PD/DD: ${h.pb ?? '-'}${h.roePct != null ? ` · ROE: %${h.roePct}` : ''}</span>
+          </div>
+          ${fn ? `
+            <p style="margin:0 0 8px;font-size:13px;color:#1e293b">${esc(fn.plainSummary)}</p>
+            <div class="ms-bakery-grid" style="margin-bottom:10px">
+              <div class="ms-bakery-cell">
+                <span>Günlük Net Kâr Payın</span>
+                <strong class="${fn.dailyNetProfitTL >= 0 ? 'pos' : 'neg'}">${fn.dailyNetProfitTL >= 0 ? '+' : ''}${fn.dailyNetProfitTL.toLocaleString('tr-TR')} ₺/gün</strong>
+              </div>
+              <div class="ms-bakery-cell">
+                <span>Yıllık Net Kâr Payın</span>
+                <strong class="${fn.annualNetProfitTL >= 0 ? 'pos' : 'neg'}">${fn.annualNetProfitTL >= 0 ? '+' : ''}${fmtTL(fn.annualNetProfitTL)}</strong>
+              </div>
+              <div class="ms-bakery-cell">
+                <span>Özsermaye Kârlılığı (ROE)</span>
+                <strong>${fn.roePct != null ? '%' + fn.roePct : '-'}</strong>
+              </div>
+              <div class="ms-bakery-cell">
+                <span>Yıllık Net Temettü Payın</span>
+                <strong class="${fn.annualNetDivTL > 0 ? 'pos' : ''}">${fn.annualNetDivTL > 0 ? '+' + fmtTL(fn.annualNetDivTL) : 'Dağıtım Yok'}</strong>
+              </div>
+            </div>
+          ` : ''}
+          <div style="font-size:12.6px;color:#1e293b;margin-top:6px">
+            <strong>Bilanço Hükmü:</strong> ${esc(h.verdict)}
+            ${h.smartMoneyNote ? `<br/><strong>Tahta Para İzi:</strong> ${esc(h.smartMoneyNote)}` : ''}
+          </div>
+        </div>
+      `;
+    }
 
     if (h.kind === 'COMPANY') {
       const bk = h.bakery100k;
@@ -887,6 +992,8 @@
     const snap = K.evaluateMemberPortfolio(member);
     const micro = K.inspectBoardMicrostructure(asset);
     const existingPos = member.positions?.[asset.key] || null;
+    const existingTranches = snap.tranches.filter((t) => t.assetKey === asset.key);
+    const existingPending = (member.pendingOrders || []).filter((o) => o.assetKey === asset.key);
     const ripple = computeOrderRipplePreview(asset, draftOrderAmount);
 
     let channelPickerHtml = '';
@@ -982,6 +1089,7 @@
       ${lastDrawerFeedback ? `<div class="ms-alert ${lastDrawerFeedback.ok ? 'ok' : 'err'}">${esc(lastDrawerFeedback.text)}</div>` : ''}
       ${micro.statusNote ? `<div class="ms-alert warn">${esc(micro.statusNote)}</div>` : ''}
 
+      ${renderCycleAndRealHorizonHtml(info)}
       ${renderHealthAndBakeryHtml(info)}
 
       ${channelPickerHtml}
@@ -1034,6 +1142,35 @@
               <button type="button" class="ms-btn sm" data-sell-part="0.5">Yarısını Sat</button>
               <button type="button" class="ms-btn danger sm" data-sell-part="1">Tamamını Sat</button>
             </div>
+          </div>
+        ` : ''}
+
+        ${existingTranches.length > 0 ? `
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e2e8f0;display:grid;gap:8px">
+            <div style="font-size:12.8px;font-weight:800;color:#334155">Portföyümdeki Aktif Dilimler (${existingTranches.length}):</div>
+            ${existingTranches.map((tr) => {
+              const early = tr.isTermDeposit && !tr.isMatured;
+              return `
+                <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;background:#ffffff;border:1px solid #e2e8f0;border-radius:9px;padding:8px 10px;font-size:12.4px">
+                  <span>Anapara: <strong>${fmtTL(tr.principalTL)}</strong> · Net Biriken: <strong class="pos">+${fmtTL(tr.netInterestTL)}</strong>${early ? ` (${tr.remainingDays} gün kaldı)` : ''}</span>
+                  <button type="button" class="ms-btn ${early ? 'danger' : ''} sm" data-drawer-break-tr="${esc(tr.id)}">
+                    ${early ? `Erken Boz (${fmtTL(tr.forfeitedIfBrokenEarlyTL)} Yanar)` : 'Nakde Çevir'}
+                  </button>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        ` : ''}
+
+        ${existingPending.length > 0 ? `
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e2e8f0;display:grid;gap:8px">
+            <div style="font-size:12.8px;font-weight:800;color:#1e40af">Sırada Bekleyen Emirlerim (${existingPending.length}):</div>
+            ${existingPending.map((ord) => `
+              <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;padding:8px 10px;font-size:12.3px">
+                <span><strong>${ord.side === 'BUY' ? 'ALIM' : 'SATIŞ'}</strong> (${ord.side === 'BUY' ? fmtTL(ord.reservedTL) : ord.qty + ' adet'}) — ${esc(ord.note)}</span>
+                <button type="button" class="ms-btn danger sm" data-drawer-cancel-ord="${esc(ord.id)}">Emri İptal Et</button>
+              </div>
+            `).join('')}
           </div>
         ` : ''}
       </div>
@@ -1148,6 +1285,26 @@
         renderCurrentTab();
       });
     });
+
+    sheet.querySelectorAll('[data-drawer-break-tr]').forEach((b) => {
+      b.addEventListener('click', () => {
+        const res = K.executeOrder({ side: 'BREAK_TRANCHE', trancheId: b.getAttribute('data-drawer-break-tr') });
+        lastDrawerFeedback = { ok: res.ok, text: res.ok ? res.message : res.reason };
+        renderAssetDrawer();
+        renderHeader();
+        renderCurrentTab();
+      });
+    });
+
+    sheet.querySelectorAll('[data-drawer-cancel-ord]').forEach((b) => {
+      b.addEventListener('click', () => {
+        const res = K.executeOrder({ side: 'CANCEL_ORDER', orderId: b.getAttribute('data-drawer-cancel-ord') });
+        lastDrawerFeedback = { ok: res.ok, text: res.ok ? res.message : res.reason };
+        renderAssetDrawer();
+        renderHeader();
+        renderCurrentTab();
+      });
+    });
   }
 
   // --------------------------------------------------------------------------
@@ -1255,6 +1412,12 @@
             <input id="msProfRoom" class="ms-input" type="text" value="${esc(st.roomCode || 'ORTAK-LIG')}" />
           </div>
         </div>
+        <div style="padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:12.6px;font-weight:800;cursor:pointer">
+            <input id="msProfOvernightRepo" type="checkbox" ${me.autoOvernightRepo ? 'checked' : ''} />
+            <span>Aracı Kurum Otomatik Gecelik Nema (10.000 ₺ üstü nakit gecelik net %${K.getOvernightRepoNetAnnualPct()} çalışsın)</span>
+          </label>
+        </div>
         <div style="font-size:12px;color:#64748b">
           Aynı Lig Odası kodundaki (varsayılan <strong>ORTAK-LIG</strong>) uygulamayı yükleyen herkes Wi-Fi veya 4G/5G fark etmeksizin birbirini otomatik görür.
         </div>
@@ -1270,9 +1433,10 @@
       const exp = Number(document.getElementById('msProfExpense')?.value || 40000);
       const sav = Number(document.getElementById('msProfSavings')?.value || 0);
       const sday = Number(document.getElementById('msProfSalDay')?.value || 15);
+      const repoChk = Boolean(document.getElementById('msProfOvernightRepo')?.checked);
       const room = document.getElementById('msProfRoom')?.value || 'ORTAK-LIG';
       if (nm.trim().length >= 2) K.completeOnboarding(nm, rl);
-      K.updateHouseholdBaseline({ name: nm, roleLabel: rl, monthlyExpenseTL: exp, monthlySavingsTL: sav, salaryDay: sday, roomCode: room });
+      K.updateHouseholdBaseline({ name: nm, roleLabel: rl, monthlyExpenseTL: exp, monthlySavingsTL: sav, salaryDay: sday, autoOvernightRepo: repoChk, roomCode: room });
       closeModal();
       renderHeader();
       renderCurrentTab();
@@ -1288,12 +1452,15 @@
     const snap = K.evaluateMemberPortfolio(member);
     const mastery = K.evaluateInvestorMastery(member, snap);
     const idle = member.idleErosionLog || { cumulativeInflationLossTL: 0, missedSukukNetTL: 0 };
+    const repoNetAnnual = K.getOvernightRepoNetAnnualPct();
 
     const maxBench = Math.max(snap.totalNetWorthTL, snap.ifAllGoldTL, snap.ifAllDepositNetTL, snap.ifAllBist100TL, snap.inflationTargetTL, 1000000);
     const pctBar = (v) => Math.max(8, Math.round((v / maxBench) * 100));
     const dailyPassive = +(snap.monthlyPassiveIncomeTL / 30).toFixed(0);
 
     host.innerHTML = `
+      ${lastPortfolioFeedback ? `<div class="ms-alert ${lastPortfolioFeedback.ok ? 'ok' : 'err'}">${esc(lastPortfolioFeedback.text)}</div>` : ''}
+
       <div class="ms-kpi-grid">
         <div class="ms-kpi-box">
           <span>Güncel Net Portföy Değerin</span>
@@ -1330,6 +1497,16 @@
         </div>
       ` : ''}
 
+      ${snap.gvk80TaxPayableTL > 0 ? `
+        <div class="ms-alert warn" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <div>
+            <strong>Yurt Dışı Beyanname Vergi Karşılığı (GVK Mük. 80): -${fmtTL(snap.gvk80TaxPayableTL)}</strong>
+            <span style="font-weight:500"> · Yurt dışı satışlardan doğan Yİ-ÜFE endeksli reel kazanç vergi borcun net portföyünden düşülmüştür.</span>
+          </div>
+          ${snap.cashTL >= 100 ? `<button type="button" class="ms-btn sm" id="msPayGvkTaxBtn">Vergi Karşılığını Öde</button>` : ''}
+        </div>
+      ` : ''}
+
       <div class="ms-two-col">
         <!-- SOL SÜTUN: AÇIK POZİSYONLAR, VADELİ DİLİMLER, TAKAS VE İŞLEM GEÇMİŞİ -->
         <section class="ms-card">
@@ -1342,13 +1519,28 @@
 
           ${renderAllocRibbonHtml(snap.allocationBreakdown)}
 
+          <div style="margin:12px 0;padding:10px 12px;border-radius:11px;border:1px solid ${snap.autoOvernightRepo ? '#a7f3d0' : '#e2e8f0'};background:${snap.autoOvernightRepo ? '#ecfdf5' : '#f8fafc'};display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;font-size:12.5px">
+            <div>
+              <strong>Aracı Kurum Otomatik Gecelik Nema (O/N Repo):</strong>
+              ${snap.autoOvernightRepo
+                ? `<span class="pos">Açık (10.000 ₺ üstü nakit yıllık net %${repoNetAnnual} gecelik işliyor${snap.overnightRepoEarnedTL > 0 ? ` · Kazanılan: +${fmtTL(snap.overnightRepoEarnedTL)}` : ''})</span>`
+                : `<span style="color:#64748b">Kapalı (Boş nakit vadesiz %0 duruyor · Açarsan yıllık net %${repoNetAnnual} gecelik işler)</span>`}
+            </div>
+            <button type="button" class="ms-btn ${snap.autoOvernightRepo ? '' : 'primary'} sm" id="msToggleRepoBtn">
+              ${snap.autoOvernightRepo ? 'Kapat' : 'Gecelik Nemayı Aç'}
+            </button>
+          </div>
+
           <div style="margin-top:12px">
             ${(member.settlementQueue || []).map((q) => `
-              <div class="ms-alert warn"><strong>T+2 Takas Kum Saati:</strong> ${esc(q.ticker)} satışından ${fmtTL(q.grossTL)} — ${esc(q.note)}</div>
+              <div class="ms-alert warn"><strong>Takas / Valör Kum Saati:</strong> ${esc(q.ticker)} işleminden ${fmtTL(q.grossTL)} — ${esc(q.note)}</div>
             `).join('')}
 
             ${(member.pendingOrders || []).map((o) => `
-              <div class="ms-alert info"><strong>Sırada Bekleyen Emir:</strong> ${esc(o.name)} (${o.side === 'BUY' ? fmtTL(o.reservedTL) : o.qty + ' adet'}) — ${esc(o.note)}</div>
+              <div class="ms-alert info" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                <span><strong>Sırada Bekleyen Emir:</strong> ${esc(o.name)} (${o.side === 'BUY' ? fmtTL(o.reservedTL) : o.qty + ' adet'}) — ${esc(o.note)}</span>
+                <button type="button" class="ms-btn danger sm" data-cancel-ord="${esc(o.id)}">Emri İptal Et</button>
+              </div>
             `).join('')}
 
             ${(member.ipoRequests || []).map((r) => `
@@ -1479,14 +1671,39 @@
     `;
 
     document.getElementById('msRepayMarginBtn')?.addEventListener('click', () => {
-      K.executeOrder({ side: 'REPAY_MARGIN' });
+      const res = K.executeOrder({ side: 'REPAY_MARGIN' });
+      lastPortfolioFeedback = { ok: res.ok, text: res.message || res.reason || '' };
       renderHeader();
       renderPortfolioTab(host);
     });
 
+    document.getElementById('msPayGvkTaxBtn')?.addEventListener('click', () => {
+      const res = K.executeOrder({ side: 'PAY_GVK80_TAX' });
+      lastPortfolioFeedback = { ok: res.ok, text: res.message || res.reason || '' };
+      renderHeader();
+      renderPortfolioTab(host);
+    });
+
+    document.getElementById('msToggleRepoBtn')?.addEventListener('click', () => {
+      const res = K.executeOrder({ side: 'TOGGLE_OVERNIGHT_REPO' });
+      lastPortfolioFeedback = { ok: res.ok, text: res.message || res.reason || '' };
+      renderHeader();
+      renderPortfolioTab(host);
+    });
+
+    host.querySelectorAll('[data-cancel-ord]').forEach((b) => {
+      b.addEventListener('click', () => {
+        const res = K.executeOrder({ side: 'CANCEL_ORDER', orderId: b.getAttribute('data-cancel-ord') });
+        lastPortfolioFeedback = { ok: res.ok, text: res.message || res.reason || '' };
+        renderHeader();
+        renderPortfolioTab(host);
+      });
+    });
+
     host.querySelectorAll('[data-break-tr]').forEach((b) => {
       b.addEventListener('click', () => {
-        K.executeOrder({ side: 'BREAK_TRANCHE', trancheId: b.getAttribute('data-break-tr') });
+        const res = K.executeOrder({ side: 'BREAK_TRANCHE', trancheId: b.getAttribute('data-break-tr') });
+        lastPortfolioFeedback = { ok: res.ok, text: res.message || res.reason || '' };
         renderHeader();
         renderPortfolioTab(host);
       });
@@ -1498,6 +1715,7 @@
 
     document.getElementById('msReset1MBtn')?.addEventListener('click', () => {
       K.resetMemberOneMillion();
+      lastPortfolioFeedback = { ok: true, text: 'Portföyün temiz 1.000.000 ₺ sermaye ile sıfırdan başlatıldı.' };
       renderHeader();
       renderPortfolioTab(host);
     });
@@ -1574,7 +1792,25 @@
           </div>
         `).join('')}
 
-        ${snap.spotItems.length === 0 && snap.tranches.length === 0 ? `
+        ${(peer.pendingOrders || []).map((o) => `
+          <div class="ms-list-row">
+            <div>
+              <strong>⏳ Bekleyen Emir: ${esc(o.name)}</strong>
+              <div style="font-size:12.5px;color:#334155">${o.side === 'BUY' ? fmtTL(o.reservedTL) + ' bloke' : o.qty + ' adet satım'} · ${esc(o.note || '')}</div>
+            </div>
+          </div>
+        `).join('')}
+
+        ${(peer.ipoRequests || []).map((r) => `
+          <div class="ms-list-row">
+            <div>
+              <strong>🏛️ Halka Arz Talebi: ${esc(r.ticker)}</strong>
+              <div style="font-size:12.5px;color:#334155">${r.requestedLots} lot · ${fmtTL(r.blockedCashTL)} bloke</div>
+            </div>
+          </div>
+        `).join('')}
+
+        ${snap.spotItems.length === 0 && snap.tranches.length === 0 && (peer.pendingOrders || []).length === 0 && (peer.ipoRequests || []).length === 0 ? `
           <div style="font-size:13px;color:#64748b">Henüz pozisyon açmamış; tamamı nakitte bekliyor.</div>
         ` : ''}
       </div>
@@ -1702,6 +1938,8 @@
                 `).join('')}
                 ${snap.cashTL > 200 ? `<span class="ms-holding-chip">Nakit ${fmtTL(snap.cashTL)}</span>` : ''}
                 ${snap.unsettledTL > 0 ? `<span class="ms-holding-chip">T+2 Takas ${fmtTL(snap.unsettledTL)}</span>` : ''}
+                ${snap.pendingOrderTL > 0 ? `<span class="ms-holding-chip">Valör/Emir ${fmtTL(snap.pendingOrderTL)}</span>` : ''}
+                ${snap.ipoBlockedTL > 0 ? `<span class="ms-holding-chip">Halka Arz ${fmtTL(snap.ipoBlockedTL)}</span>` : ''}
               </div>
 
               <div style="font-size:12.3px;color:#334155">
@@ -1817,9 +2055,19 @@
 
     K.subscribe(() => {
       renderHeader();
-      // Kullanıcı arama kutusunda veya sohbet kutusunda yazı yazıyorsa imleci bozmamak için korumalı yenile
+      if (modalMode === 'PEER_XRAY' && inspectedPeerId) {
+        openPeerXrayModal(inspectedPeerId);
+      }
+      // Kullanıcı arama, sohbet, tatbikat seçimi veya halka arz lot kutusundaysa odak bozulmasın
       const activeId = document.activeElement?.id || '';
-      if (activeId === 'msSearchInp' || activeId === 'msBanterInp') return;
+      if (
+        activeId === 'msSearchInp' ||
+        activeId === 'msBanterInp' ||
+        activeId === 'msCrisisSelect' ||
+        activeId.startsWith('msIpoLots_')
+      ) {
+        return;
+      }
       renderCurrentTab();
     });
 
@@ -1835,7 +2083,7 @@
 
     renderHeader();
     renderCurrentTab();
-    setInterval(renderHeader, 1000);
+    setInterval(tickHeaderClockOnly, 1000);
 
     // İlk kez açan kullanıcıya 3 saniyelik net karşılama ekranı göster
     if (!K.getActiveMember().profileRegistered) {

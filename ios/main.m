@@ -13,7 +13,9 @@ static NSString * const kAetherNativeStateKey = @"aether_native_state_v13";
 
 @interface AetherViewController : UIViewController <WKNavigationDelegate, WKUIDelegate>
 @property (nonatomic, strong) WKWebView *webView;
+@property (nonatomic, strong) WKUserContentController *userContentController;
 - (void)handleScriptMessage:(WKScriptMessage *)message;
+- (void)refreshBootUserScript;
 @end
 
 @implementation AetherScriptBridge
@@ -32,8 +34,43 @@ static NSString * const kAetherNativeStateKey = @"aether_native_state_v13";
 
 @implementation AetherViewController
 
+- (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
 - (UIStatusBarStyle)preferredStatusBarStyle {
     return UIStatusBarStyleLightContent;
+}
+
+- (void)refreshBootUserScript {
+    if (!self.userContentController) return;
+    NSString *savedRaw = [[NSUserDefaults standardUserDefaults] stringForKey:kAetherNativeStateKey];
+    NSString *encodedSaved = @"null";
+    if (savedRaw && savedRaw.length > 0) {
+        NSData *arrData = [NSJSONSerialization dataWithJSONObject:@[savedRaw] options:0 error:nil];
+        if (arrData) {
+            NSString *arrJson = [[NSString alloc] initWithData:arrData encoding:NSUTF8StringEncoding];
+            encodedSaved = [NSString stringWithFormat:@"(%@)[0]", arrJson];
+        }
+    }
+
+    NSString *bootJs = [NSString stringWithFormat:
+        @"window.__AETHER_NATIVE_IOS_APP__ = true;"
+         "window.__AETHER_DEVICE_LABEL__ = 'iPhone Uygulaması';"
+         "window.__AETHER_NATIVE_SAVED_STATE__ = %@;",
+        encodedSaved];
+
+    [self.userContentController removeAllUserScripts];
+    WKUserScript *bootScript = [[WKUserScript alloc] initWithSource:bootJs
+                                                      injectionTime:WKUserScriptInjectionTimeAtDocumentStart
+                                                   forMainFrameOnly:YES];
+    [self.userContentController addUserScript:bootScript];
+}
+
+- (void)handleAppDidBecomeActive:(NSNotification *)note {
+    if (!self.webView) return;
+    [self.webView evaluateJavaScript:@"window.dispatchEvent(new Event('aetherNativeForeground'));"
+                   completionHandler:nil];
 }
 
 - (void)openExternalSafariSheet:(NSURL *)url {
@@ -60,6 +97,7 @@ static NSString * const kAetherNativeStateKey = @"aether_native_state_v13";
         if ([payload isKindOfClass:[NSString class]] && payload.length > 0) {
             [[NSUserDefaults standardUserDefaults] setObject:payload forKey:kAetherNativeStateKey];
             [[NSUserDefaults standardUserDefaults] synchronize];
+            [self refreshBootUserScript];
         }
         return;
     }
@@ -98,10 +136,12 @@ static NSString * const kAetherNativeStateKey = @"aether_native_state_v13";
             if ([response isKindOfClass:[NSHTTPURLResponse class]]) {
                 statusCode = ((NSHTTPURLResponse *)response).statusCode;
             }
-            NSString *b64 = data ? [data base64EncodedStringWithOptions:0] : @"";
+            NSString *utf8Str = data ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] : @"";
+            BOOL isRawText = (utf8Str != nil);
+            NSString *payloadOut = isRawText ? utf8Str : (data ? [data base64EncodedStringWithOptions:0] : @"");
             NSString *errStr = error ? (error.localizedDescription ?: @"err") : @"";
 
-            NSArray *args = @[reqId, @(statusCode), b64, errStr];
+            NSArray *args = @[reqId, @(statusCode), payloadOut, errStr, @(isRawText)];
             NSData *jsonArgsData = [NSJSONSerialization dataWithJSONObject:args options:0 error:nil];
             NSString *jsonArgs = jsonArgsData ? [[NSString alloc] initWithData:jsonArgsData encoding:NSUTF8StringEncoding] : @"[]";
 
@@ -131,27 +171,9 @@ static NSString * const kAetherNativeStateKey = @"aether_native_state_v13";
         [config setValue:@YES forKey:@"allowUniversalAccessFromFileURLs"];
     } @catch (NSException *e) {}
 
-    NSString *savedRaw = [[NSUserDefaults standardUserDefaults] stringForKey:kAetherNativeStateKey];
-    NSString *encodedSaved = @"null";
-    if (savedRaw && savedRaw.length > 0) {
-        NSData *arrData = [NSJSONSerialization dataWithJSONObject:@[savedRaw] options:0 error:nil];
-        if (arrData) {
-            NSString *arrJson = [[NSString alloc] initWithData:arrData encoding:NSUTF8StringEncoding];
-            encodedSaved = [NSString stringWithFormat:@"(%@)[0]", arrJson];
-        }
-    }
-
-    NSString *bootJs = [NSString stringWithFormat:
-        @"window.__AETHER_NATIVE_IOS_APP__ = true;"
-         "window.__AETHER_DEVICE_LABEL__ = 'iPhone Uygulaması';"
-         "window.__AETHER_NATIVE_SAVED_STATE__ = %@;",
-        encodedSaved];
-
     WKUserContentController *ucc = [[WKUserContentController alloc] init];
-    WKUserScript *bootScript = [[WKUserScript alloc] initWithSource:bootJs
-                                                      injectionTime:WKUserScriptInjectionTimeAtDocumentStart
-                                                   forMainFrameOnly:YES];
-    [ucc addUserScript:bootScript];
+    self.userContentController = ucc;
+    [self refreshBootUserScript];
     AetherScriptBridge *bridge = [[AetherScriptBridge alloc] initWithController:self];
     [ucc addScriptMessageHandler:bridge name:@"aetherBridge"];
     config.userContentController = ucc;
@@ -167,6 +189,11 @@ static NSString * const kAetherNativeStateKey = @"aether_native_state_v13";
     self.webView.UIDelegate = self;
     [self.view addSubview:self.webView];
 
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(handleAppDidBecomeActive:)
+                                                 name:UIApplicationDidBecomeActiveNotification
+                                               object:nil];
+
     NSURL *wwwDir = [[[NSBundle mainBundle] resourceURL] URLByAppendingPathComponent:@"www" isDirectory:YES];
     NSURL *indexUrl = [wwwDir URLByAppendingPathComponent:@"index.html"];
     if ([[NSFileManager defaultManager] fileExistsAtPath:[indexUrl path]]) {
@@ -177,6 +204,11 @@ static NSString * const kAetherNativeStateKey = @"aether_native_state_v13";
             [self.webView loadRequest:[NSURLRequest requestWithURL:cloudUrl]];
         }
     }
+}
+
+- (void)webViewWebContentProcessDidTerminate:(WKWebView *)webView {
+    [self refreshBootUserScript];
+    [webView reload];
 }
 
 - (void)webView:(WKWebView *)webView

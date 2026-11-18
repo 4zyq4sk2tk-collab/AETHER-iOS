@@ -2149,8 +2149,13 @@ function mergeMemberIntoRoom(roomObj, pkt) {
   const prevUpd = Number(prev?.updatedAt) || 0;
   const incSeen = Number(pkt.lastSeenAt) || incUpd;
   const prevSeen = Number(prev?.lastSeenAt) || prevUpd;
-  if (!prev || incRev > prevRev || (incRev === prevRev && (incUpd >= prevUpd || incSeen > prevSeen))) {
-    roomObj.members[pkt.id] = { ...prev, ...pkt, lastSeenAt: Math.max(incSeen, prevSeen) };
+  const incCreated = Number(pkt.createdAt) || 0;
+  const prevCreated = Number(prev?.createdAt) || 0;
+  const isFreshReset = incCreated > 0 && prevCreated > 0 && incCreated > (prevCreated + 1500) && incUpd >= prevUpd;
+  if (!prev || isFreshReset || incRev > prevRev || (incRev === prevRev && (incUpd >= prevUpd || incSeen > prevSeen))) {
+    roomObj.members[pkt.id] = isFreshReset
+      ? { ...pkt, lastSeenAt: incSeen }
+      : { ...prev, ...pkt, lastSeenAt: Math.max(incSeen, prevSeen) };
     return true;
   }
   return false;
@@ -2209,7 +2214,8 @@ function mqttSubscribeBuf(filter, pktId = 1) {
 }
 
 function serverBroadcastMqtt(topic, obj, retain = false) {
-  const pkt = mqttPublishBuf(topic, JSON.stringify(obj), retain);
+  const rawPayload = (obj === null || obj === '') ? '' : (typeof obj === 'string' ? obj : JSON.stringify(obj));
+  const pkt = mqttPublishBuf(topic, rawPayload, retain);
   for (const st of serverMeshSockets.values()) {
     if (st.connected && st.ws && st.ws.readyState === 1) {
       try { st.ws.send(pkt); } catch (_) {}
@@ -2223,7 +2229,9 @@ function publishServerMarketPulse(data) {
     const prices = {};
     for (const inst of (data.instruments || [])) {
       if (inst.id && inst.currentPrice > 0) {
-        prices[inst.id] = { p: inst.currentPrice, c: inst.change1D || 0 };
+        const entry = { p: inst.currentPrice, c: inst.change1D || 0 };
+        if (inst.tlChange1D != null) entry.tlc = inst.tlChange1D;
+        prices[inst.id] = entry;
       }
     }
     serverBroadcastMqtt(`${SERVER_MESH_NS}/market_pulse`, {
@@ -2289,8 +2297,13 @@ function startServerCloudBridge() {
                   const roomCode = segs[0];
                   const sub = segs[1];
                   const { code, room } = getOrInitRoom(roomCode);
-                  if (sub === 'member' && payload) {
-                    if (mergeMemberIntoRoom(room, JSON.parse(payload))) scheduleHubDiskSave();
+                  if (sub === 'member') {
+                    if (payload) {
+                      if (mergeMemberIntoRoom(room, JSON.parse(payload))) scheduleHubDiskSave();
+                    } else if (segs[2] && room.members[segs[2]]) {
+                      delete room.members[segs[2]];
+                      scheduleHubDiskSave();
+                    }
                   } else if (sub === 'event' && payload) {
                     const evObj = JSON.parse(payload);
                     let chg = false;
@@ -2492,6 +2505,7 @@ const server = http.createServer(async (req, res) => {
           if (!m || !m.id) continue;
           if (m._deleted) {
             delete room.members[m.id];
+            serverBroadcastMqtt(`${SERVER_MESH_NS}/${code}/member/${m.id}`, '', true);
             changed = true;
             continue;
           }

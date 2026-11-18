@@ -82,8 +82,8 @@
   let lastSyncPingMs = 0;
   const nativeFetchCallbacks = new Map();
 
-  // iOS Native NSURLSession Köprüsü Yanıt Yakalayıcı
-  global.__onAetherNativeFetch = function (reqId, statusCode, b64Body, errStr) {
+  // iOS Native NSURLSession Köprüsü Yanıt Yakalayıcı (Doğrudan UTF-8 Metin + Base64 Yedekli)
+  global.__onAetherNativeFetch = function (reqId, statusCode, bodyPayload, errStr, isRawText) {
     const cb = nativeFetchCallbacks.get(reqId);
     if (!cb) return;
     nativeFetchCallbacks.delete(reqId);
@@ -92,10 +92,15 @@
       return;
     }
     try {
-      const bin = atob(b64Body || '');
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      const text = new TextDecoder('utf-8').decode(bytes);
+      let text = '';
+      if (isRawText) {
+        text = String(bodyPayload || '');
+      } else {
+        const bin = atob(bodyPayload || '');
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        text = new TextDecoder('utf-8').decode(bytes);
+      }
       cb.resolve({
         ok: statusCode >= 200 && statusCode < 300,
         status: statusCode,
@@ -433,13 +438,22 @@
     const cashChampSet = new Set(
       (kis?.tms29AuditReport?.cashFlowChampions || []).map((x) => String(x.ticker || '').toUpperCase())
     );
+    const mkkAlerts = kis?.mkkFloatDeltaLedger?.lotExpansionAlerts || [];
     const patronSellSet = new Set(
-      (kis?.mkkFloatDeltaLedger?.lotExpansionAlerts || []).map((x) => String(x.ticker || '').toUpperCase())
+      mkkAlerts
+        .filter((x) => Number(x.deltaFloatShares) > 0)
+        .map((x) => String(x.ticker || '').toUpperCase())
+    );
+    const shareBuybackSet = new Set(
+      mkkAlerts
+        .filter((x) => Number(x.deltaFloatShares) < 0)
+        .map((x) => String(x.ticker || '').toUpperCase())
     );
 
     const usdTry = Number(marketData?.macro?.usdTry)
       || Number((marketData?.instruments || []).find((i) => i.id === 'doviz-usd')?.currentPrice)
       || 50.44;
+    const fxChg1D = Number((marketData?.instruments || []).find((i) => i.id === 'doviz-usd')?.change1D) || 0;
 
     for (const inst of (marketData?.instruments || [])) {
       const sym = String(inst.symbol || '');
@@ -498,6 +512,13 @@
       if (EQUITY_EXEMPT_BIST_ETFS.has(sym)) stopajPct = 0;
       if (inst.id === 'dibs-tahvil' || inst.id === 'kira-sertifikasi-sukuk') stopajPct = 0;
 
+      const tlPerf = inst.tlPerf || null;
+      const netPerf = inst.netPerf || null;
+      const rawChg1D = Number(inst.change1D) || 0;
+      const effChg1D = isForeignUsd
+        ? (typeof inst.tlChange1D === 'number' ? inst.tlChange1D : +((((1 + rawChg1D / 100) * (1 + fxChg1D / 100)) - 1) * 100).toFixed(2))
+        : rawChg1D;
+
       const descriptor = {
         key: inst.id,
         id: inst.id,
@@ -513,11 +534,14 @@
         isForeignUsd,
         priceUsd: isForeignUsd ? rawPrice : null,
         priceTL,
-        change1D: Number(inst.change1D) || 0,
-        perf1W: Number(inst.perf1W) || 0,
-        perf1M: Number(inst.perf1M) || 0,
-        perf3M: Number(inst.perf3M ?? bistRow?.perf3M) || 0,
-        perf1Y: Number(inst.perf1Y ?? bistRow?.perf1Y) || 0,
+        change1D: effChg1D,
+        perf1W: Number(tlPerf?.perf1W ?? netPerf?.perf1W ?? inst.perf1W) || 0,
+        perf1M: Number(tlPerf?.perf1M ?? netPerf?.perf1M ?? inst.perf1M) || 0,
+        perf3M: Number(tlPerf?.perf3M ?? netPerf?.perf3M ?? inst.perf3M ?? bistRow?.perf3M) || 0,
+        perf6M: Number(tlPerf?.perf6M ?? netPerf?.perf6M ?? inst.perf6M ?? bistRow?.perf6M) || 0,
+        perf1Y: Number(tlPerf?.perf1Y ?? netPerf?.perf1Y ?? inst.perf1Y ?? bistRow?.perf1Y) || 0,
+        perf3Y: tlPerf?.perf3Y ?? netPerf?.perf3Y ?? (inst.perf3Y != null ? Number(inst.perf3Y) : null),
+        perf5Y: tlPerf?.perf5Y ?? netPerf?.perf5Y ?? (inst.perf5Y != null ? Number(inst.perf5Y) : null),
         stopajPct,
         bsmvBuyPct: venue === 'TWO_DOOR' ? 0.20 : 0,
         isGvk80: isForeignUsd,
@@ -530,6 +554,7 @@
         isTms29Illusion: tmsIllusionSet.has(tUp),
         isCashChampion: cashChampSet.has(tUp),
         isPatronSelling: patronSellSet.has(tUp),
+        isShareBuyback: shareBuybackSet.has(tUp),
         verifyUrl: inst.verifyUrl || null
       };
 
@@ -543,6 +568,7 @@
       if (tUp && sym.startsWith('BIST:')) {
         assetCatalog.set('BIST:' + tUp, descriptor);
         assetCatalog.set(tUp, descriptor);
+        assetCatalog.set('bist-' + tUp.toLowerCase(), descriptor);
       }
     }
 
@@ -561,7 +587,10 @@
         existing.isTms29Illusion = tmsIllusionSet.has(tUp);
         existing.isCashChampion = cashChampSet.has(tUp);
         existing.isPatronSelling = patronSellSet.has(tUp);
+        existing.isShareBuyback = shareBuybackSet.has(tUp);
+        if (!existing.perf6M && row.perf6M) existing.perf6M = Number(row.perf6M) || 0;
         assetCatalog.set(tUp, existing);
+        assetCatalog.set('bist-' + tUp.toLowerCase(), existing);
         continue;
       }
       const desc = {
@@ -583,7 +612,10 @@
         perf1W: Number(row.perf1W) || 0,
         perf1M: Number(row.perf1M) || 0,
         perf3M: Number(row.perf3M) || 0,
+        perf6M: Number(row.perf6M) || 0,
         perf1Y: Number(row.perf1Y) || 0,
+        perf3Y: null,
+        perf5Y: null,
         stopajPct: 0,
         bsmvBuyPct: 0,
         isGvk80: false,
@@ -596,6 +628,7 @@
         isTms29Illusion: tmsIllusionSet.has(tUp),
         isCashChampion: cashChampSet.has(tUp),
         isPatronSelling: patronSellSet.has(tUp),
+        isShareBuyback: shareBuybackSet.has(tUp),
         verifyUrl: `https://tr.tradingview.com/symbols/BIST-${tUp}/`
       };
       const oldP = prevPrices.get(desc.key);
@@ -605,6 +638,46 @@
       assetCatalog.set(desc.key, desc);
       assetCatalog.set(bistKey, desc);
       assetCatalog.set(tUp, desc);
+    }
+
+    // Halka arz dağıtımından gelebilecek payları tüm cihazlarda (Canlı Lig dahil) önden kaydet
+    for (const ipo of IPO_STATIC_DEFS) {
+      const synthKey = 'bist-' + ipo.ticker.toLowerCase();
+      if (!assetCatalog.has(synthKey)) {
+        const ipoDesc = {
+          key: synthKey,
+          id: synthKey,
+          ticker: ipo.ticker,
+          symbol: 'BIST:' + ipo.ticker,
+          name: ipo.name,
+          categoryId: '3',
+          categoryName: ipo.sector,
+          venue: 'BIST',
+          subVenue: 'BIST_STOCK',
+          isSyntheticIpo: true,
+          ipoId: ipo.id,
+          isRateInstrument: false,
+          annualGrossRatePct: 0,
+          isForeignUsd: false,
+          priceUsd: null,
+          priceTL: ipo.offerPriceTL,
+          change1D: 0,
+          perf1W: 0,
+          perf1M: 0,
+          perf3M: 0,
+          perf6M: 0,
+          perf1Y: 0,
+          perf3Y: null,
+          perf5Y: null,
+          stopajPct: 0,
+          bsmvBuyPct: 0,
+          isGvk80: false,
+          bistRow: null
+        };
+        assetCatalog.set(synthKey, ipoDesc);
+        assetCatalog.set('BIST:' + ipo.ticker, ipoDesc);
+        assetCatalog.set(ipo.ticker, ipoDesc);
+      }
     }
   }
 
@@ -619,80 +692,135 @@
   }
 
   // --------------------------------------------------------------------------
-  // 4. SPK HALKA ARZ (IPO) VE GERÇEK TEMETTÜ TAKVİMİ MOTORU
+  // 4. SPK HALKA ARZ (IPO) VE GERÇEK TEMETTÜ TAKVİMİ MOTORU (SABİT TAKVİM ÇAPALI)
   // --------------------------------------------------------------------------
-  function getActiveIpoCatalog() {
-    const clock = getTurkishClock();
-    // Haftalık gerçek takvim döngüsüne bağlanmış SPK Halka Arz Masası
-    const anchorDayMs = Date.UTC(clock.year, clock.month - 1, clock.day, 7, 0, 0);
-    return [
-      {
-        id: 'ipo_endustri_teknik_2026',
-        ticker: 'ENTEK',
-        name: 'Anadolu Güç Sistemleri & Trafo Sanayi A.Ş.',
-        sector: 'Enerji Ekipmanları & İhracat',
-        offerPriceTL: 42.50,
-        totalOfferedLots: 18500000,
-        estimatedParticipants: 485000, // Gerçek kişi başına ~38 lot (~1.615 ₺) düşer!
-        distributionMethod: 'Tamamı Eşit Dağıtım (Bireysel)',
-        lockUpDays: 180,
-        netCashUseNote: 'Gelirin %65’i yeni yüksek gerilim trafo fabrikası (CAPEX), %35’i işletme sermayesi.',
-        closesAtMs: addTurkishBusinessDays(anchorDayMs, 1, 17, 0),
-        statusLabel: 'Talep Toplama Açık (10:30–17:00)'
-      },
-      {
-        id: 'ipo_liman_lojistik_2026',
-        ticker: 'MRLOG',
-        name: 'Marmara Konteyner ve Soğuk Zincir Lojistik A.Ş.',
-        sector: 'Ulaştırma & Lojistik',
-        offerPriceTL: 28.80,
-        totalOfferedLots: 24000000,
-        estimatedParticipants: 540000, // Kişi başı ~44 lot (~1.267 ₺) düşer
-        distributionMethod: 'Bireysele Eşit Dağıtım',
-        lockUpDays: 365,
-        netCashUseNote: 'Gelirin %80’i döviz cinsi liman vinci ve soğuk hava deposu yatırımı, %20’si kredi kapama.',
-        closesAtMs: addTurkishBusinessDays(anchorDayMs, 2, 17, 0),
-        statusLabel: 'SPK Bülteni Onaylı · Talep Toplamada'
+  const IPO_EPOCH_MONDAY_MS = Date.UTC(2026, 0, 5, 7, 0, 0); // Pazartesi 05.01.2026 10:00 TR
+  const IPO_STATIC_DEFS = [
+    {
+      id: 'ipo_endustri_teknik_2026',
+      ticker: 'ENTEK',
+      name: 'Anadolu Güç Sistemleri & Trafo Sanayi A.Ş.',
+      sector: 'Enerji Ekipmanları & İhracat',
+      offerPriceTL: 42.50,
+      totalOfferedLots: 18500000,
+      estimatedParticipants: 485000, // Kişi başı ~38 lot (~1.615 ₺)
+      distributionMethod: 'Tamamı Eşit Dağıtım (Bireysel)',
+      lockUpDays: 180,
+      bizDayOffsetInWeek: 3, // Haftanın 4. iş günü (Perşembe 17:00) sabit kapanış
+      netCashUseNote: 'Gelirin %65’i yeni yüksek gerilim trafo fabrikası (CAPEX), %35’i işletme sermayesi.',
+      statusLabel: 'Talep Toplama Açık (10:30–17:00)'
+    },
+    {
+      id: 'ipo_liman_lojistik_2026',
+      ticker: 'MRLOG',
+      name: 'Marmara Konteyner ve Soğuk Zincir Lojistik A.Ş.',
+      sector: 'Ulaştırma & Lojistik',
+      offerPriceTL: 28.80,
+      totalOfferedLots: 24000000,
+      estimatedParticipants: 540000, // Kişi başı ~44 lot (~1.267 ₺)
+      distributionMethod: 'Bireysele Eşit Dağıtım',
+      lockUpDays: 365,
+      bizDayOffsetInWeek: 4, // Haftanın 5. iş günü (Cuma 17:00) sabit kapanış
+      netCashUseNote: 'Gelirin %80’i döviz cinsi liman vinci ve soğuk hava deposu yatırımı, %20’si kredi kapama.',
+      statusLabel: 'SPK Bülteni Onaylı · Talep Toplamada'
+    }
+  ];
+
+  function getActiveIpoCatalog(customNowMs) {
+    const clock = getTurkishClock(customNowMs);
+    const nowMs = clock.ms;
+    const weekSpanMs = 7 * 24 * 3600 * 1000;
+    const weekIdx = Math.floor((nowMs - IPO_EPOCH_MONDAY_MS) / weekSpanMs);
+    const weekStartMs = IPO_EPOCH_MONDAY_MS + weekIdx * weekSpanMs;
+
+    return IPO_STATIC_DEFS.map((def) => {
+      let closesAtMs = addTurkishBusinessDays(weekStartMs, def.bizDayOffsetInWeek, 17, 0);
+      let cycleTag = 'w' + weekIdx;
+      if (closesAtMs <= nowMs) {
+        closesAtMs = addTurkishBusinessDays(weekStartMs + weekSpanMs, def.bizDayOffsetInWeek, 17, 0);
+        cycleTag = 'w' + (weekIdx + 1);
       }
+      const closeParts = getIstanbulParts(closesAtMs);
+      return {
+        ...def,
+        cycleId: `${def.id}_${cycleTag}`,
+        closesAtMs,
+        closesDateYmd: closeParts.ymd
+      };
+    });
+  }
+
+  const DIVIDEND_STATIC_CANDIDATES = [
+    { ticker: 'TUPRS', bizOffset: 10, grossYieldOverride: null, frequency: 'Yılda 2 Taksit Nakit Temettü' },
+    { ticker: 'FROTO', bizOffset: 15, grossYieldOverride: null, frequency: 'Yılda 2 Taksit Euro İhracat Temettüsü' },
+    { ticker: 'BIMAS', bizOffset: 21, grossYieldOverride: null, frequency: 'Düzenli Perakende Kasa Temettüsü' },
+    { ticker: 'ISMEN', bizOffset: 28, grossYieldOverride: null, frequency: 'Yüksek Nakit Dağıtım Geleneği' },
+    { ticker: 'DOAS', bizOffset: 34, grossYieldOverride: null, frequency: 'Otomotiv Nakit Temettü Ödeyicisi' },
+    { ticker: 'ENJSA', bizOffset: 41, grossYieldOverride: null, frequency: 'Dağıtım Şebekesi Nakit Temettüsü' },
+    { ticker: 'TTRAK', bizOffset: 48, grossYieldOverride: null, frequency: 'Sanayi Temettü Klasiği' },
+    { ticker: 'SISE', bizOffset: 55, grossYieldOverride: null, frequency: 'Küresel Cam & Soda Temettüsü' }
+  ];
+
+  function buildDividendEntryForAnchor(c, anchorMs) {
+    const asset = getAsset(c.ticker);
+    const price = asset?.priceTL || 100;
+    const rawYield = Number(c.grossYieldOverride || asset?.bistRow?.dividendYield || 4.8);
+    const effectiveGrossYieldPct = Math.max(2.2, rawYield);
+    const grossPerShareTL = +(price * (effectiveGrossYieldPct / 100)).toFixed(2);
+    const netPerShareTL = +(grossPerShareTL * 0.85).toFixed(2); // %15 gerçek kişi temettü stopajı
+    const payMs = addTurkishBusinessDays(anchorMs, c.bizOffset, 10, 0);
+    const payParts = getIstanbulParts(payMs);
+    return {
+      ticker: c.ticker,
+      assetKey: asset ? asset.key : ('bist-' + c.ticker.toLowerCase()),
+      name: asset ? asset.name : c.ticker,
+      priceTL: price,
+      grossYieldPct: +effectiveGrossYieldPct.toFixed(2),
+      netYieldPct: +(effectiveGrossYieldPct * 0.85).toFixed(2),
+      grossPerShareTL,
+      netPerShareTL,
+      payDateYmd: payParts.ymd,
+      payAtMs: payMs,
+      frequency: c.frequency
+    };
+  }
+
+  function getSemiAnnualAnchorsAround(nowMs) {
+    const p = getIstanbulParts(nowMs);
+    return [
+      Date.UTC(p.year - 1, 10, 16, 7, 0, 0),
+      Date.UTC(p.year, 3, 15, 7, 0, 0),
+      Date.UTC(p.year, 10, 16, 7, 0, 0),
+      Date.UTC(p.year + 1, 3, 15, 7, 0, 0)
     ];
   }
 
-  function getDividendSchedule() {
-    const clock = getTurkishClock();
-    const candidates = [
-      { ticker: 'TUPRS', payInDays: 12, grossYieldOverride: null, frequency: 'Yılda 2 Taksit Nakit Temettü' },
-      { ticker: 'FROTO', payInDays: 18, grossYieldOverride: null, frequency: 'Yılda 2 Taksit Euro İhracat Temettüsü' },
-      { ticker: 'BIMAS', payInDays: 24, grossYieldOverride: null, frequency: 'Düzenli Perakende Kasa Temettüsü' },
-      { ticker: 'ISMEN', payInDays: 31, grossYieldOverride: null, frequency: 'Yüksek Nakit Dağıtım Geleneği' },
-      { ticker: 'DOAS', payInDays: 38, grossYieldOverride: null, frequency: 'Otomotiv Nakit Temettü Ödeyicisi' },
-      { ticker: 'ENJSA', payInDays: 45, grossYieldOverride: null, frequency: 'Dağıtım Şebekesi Nakit Temettüsü' },
-      { ticker: 'TTRAK', payInDays: 52, grossYieldOverride: null, frequency: 'Sanayi Temettü Klasiği' },
-      { ticker: 'SISE', payInDays: 60, grossYieldOverride: null, frequency: 'Küresel Cam & Soda Temettüsü' }
-    ];
-    const anchorMs = Date.UTC(clock.year, clock.month - 1, clock.day, 7, 0, 0);
-    return candidates.map((c) => {
-      const asset = getAsset(c.ticker);
-      const price = asset?.priceTL || 100;
-      const rawYield = Number(c.grossYieldOverride || asset?.bistRow?.dividendYield || 4.8);
-      const effectiveGrossYieldPct = Math.max(2.2, rawYield);
-      const grossPerShareTL = +(price * (effectiveGrossYieldPct / 100)).toFixed(2);
-      const netPerShareTL = +(grossPerShareTL * 0.85).toFixed(2); // %15 gerçek kişi temettü stopajı
-      const payMs = addTurkishBusinessDays(anchorMs, c.payInDays, 10, 0);
-      const payParts = getIstanbulParts(payMs);
-      return {
-        ticker: c.ticker,
-        assetKey: asset ? asset.key : ('bist-' + c.ticker.toLowerCase()),
-        name: asset ? asset.name : c.ticker,
-        priceTL: price,
-        grossYieldPct: +effectiveGrossYieldPct.toFixed(2),
-        netYieldPct: +(effectiveGrossYieldPct * 0.85).toFixed(2),
-        grossPerShareTL,
-        netPerShareTL,
-        payDateYmd: payParts.ymd,
-        payAtMs: payMs,
-        frequency: c.frequency
-      };
-    });
+  function getDividendSchedule(customNowMs, includeRecentPayable = false) {
+    const nowMs = getTurkishClock(customNowMs).ms;
+    const anchors = getSemiAnnualAnchorsAround(nowMs);
+
+    if (includeRecentPayable) {
+      const allWindow = [];
+      for (const anc of anchors) {
+        for (const c of DIVIDEND_STATIC_CANDIDATES) {
+          const entry = buildDividendEntryForAnchor(c, anc);
+          if (entry.payAtMs <= nowMs && (nowMs - entry.payAtMs) <= 60 * 24 * 3600 * 1000) {
+            allWindow.push(entry);
+          }
+        }
+      }
+      return allWindow;
+    }
+
+    return DIVIDEND_STATIC_CANDIDATES.map((c) => {
+      for (const anc of anchors) {
+        const entry = buildDividendEntryForAnchor(c, anc);
+        if (entry.payAtMs >= nowMs - 24 * 3600 * 1000) {
+          return entry;
+        }
+      }
+      return buildDividendEntryForAnchor(c, anchors[anchors.length - 1]);
+    }).sort((a, b) => a.payAtMs - b.payAtMs);
   }
 
   // --------------------------------------------------------------------------
@@ -737,6 +865,10 @@
       lastSalaryCreditedYm: getIstanbulParts(now).ym,
       cashTL: DEFAULT_STARTING_CAPITAL_TL,
       marginDebtTL: 0,
+      gvk80TaxPayableTL: 0,
+      autoOvernightRepo: false,
+      overnightRepoEarnedTL: 0,
+      lastOvernightRepoMs: now,
       lastMarginAccrualMs: now,
       totalFrictionBurnedTL: 0,
       benchmarksAtStart: captureCurrentBenchmarkPrices(),
@@ -770,7 +902,7 @@
       : ('inv_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4));
     const me = createDeviceInvestor(deviceId, '', '1 Milyon ₺ Portföy Yöneticisi');
     return {
-      version: '13.0.0',
+      version: '13.1.0',
       roomCode: DEFAULT_ROOM_CODE,
       localDeviceId: deviceId,
       me,
@@ -787,6 +919,10 @@
     me.avatarColor = me.avatarColor || pickAvatarColor(me.id);
     me.rev = Number(me.rev) || 1;
     me.marginDebtTL = Number(me.marginDebtTL) || 0;
+    me.gvk80TaxPayableTL = Number(me.gvk80TaxPayableTL) || 0;
+    me.autoOvernightRepo = Boolean(me.autoOvernightRepo);
+    me.overnightRepoEarnedTL = Number(me.overnightRepoEarnedTL) || 0;
+    me.lastOvernightRepoMs = Number(me.lastOvernightRepoMs) || Date.now();
     me.lastMarginAccrualMs = Number(me.lastMarginAccrualMs) || Date.now();
     me.totalFrictionBurnedTL = Number(me.totalFrictionBurnedTL) || 0;
     me.ipoRequests = Array.isArray(me.ipoRequests) ? me.ipoRequests : [];
@@ -804,29 +940,47 @@
     return parsed;
   }
 
+  function isNewerInvestorState(cand, ref) {
+    if (!cand) return false;
+    if (!ref) return true;
+    const cReg = Boolean(cand.me?.profileRegistered);
+    const rReg = Boolean(ref.me?.profileRegistered);
+    if (cReg !== rReg) return cReg;
+    const cRev = Number(cand.me?.rev) || 0;
+    const rRev = Number(ref.me?.rev) || 0;
+    if (cRev !== rRev) return cRev > rRev;
+    return (Number(cand.me?.updatedAt) || 0) >= (Number(ref.me?.updatedAt) || 0);
+  }
+
   function loadState() {
     const key = getStorageKey();
-    // 1) iOS Native NSUserDefaults Köprüsünden Yükle (Varsa ve slot yoksa)
+    let nativeParsed = null;
+    let localParsed = null;
+
+    // 1) iOS Native NSUserDefaults Köprüsünden Aday Yükle (Varsa ve slot yoksa)
     if (!getInvestorSlotSuffix() && typeof global.__AETHER_NATIVE_SAVED_STATE__ === 'string' && global.__AETHER_NATIVE_SAVED_STATE__.length > 10) {
       try {
-        const nativeParsed = normalizeLoadedState(JSON.parse(global.__AETHER_NATIVE_SAVED_STATE__));
-        if (nativeParsed) {
-          state = nativeParsed;
-          return;
-        }
+        nativeParsed = normalizeLoadedState(JSON.parse(global.__AETHER_NATIVE_SAVED_STATE__));
       } catch (_) {}
     }
-    // 2) Tarayıcı localStorage'dan Yükle
+
+    // 2) Tarayıcı localStorage'dan Aday Yükle
     try {
       const raw = global.localStorage ? global.localStorage.getItem(key) : null;
       if (raw) {
-        const parsed = normalizeLoadedState(JSON.parse(raw));
-        if (parsed) {
-          state = parsed;
-          return;
-        }
+        localParsed = normalizeLoadedState(JSON.parse(raw));
       }
     } catch (_) {}
+
+    // İkisinden en güncel revizyonlu/kayıtlı olanı seç (WKWebView yenilemesinde eski bootScript'in yeni işlemi ezmesini önler!)
+    const best = isNewerInvestorState(localParsed, nativeParsed) ? localParsed : nativeParsed;
+    if (best) {
+      state = best;
+      if (!getInvestorSlotSuffix()) {
+        global.__AETHER_NATIVE_SAVED_STATE__ = JSON.stringify(best);
+      }
+      return;
+    }
 
     state = createInitialState();
     saveState(false, false);
@@ -840,6 +994,9 @@
         global.localStorage.setItem(getStorageKey(), serialized);
       }
     } catch (_) {}
+    if (!getInvestorSlotSuffix()) {
+      global.__AETHER_NATIVE_SAVED_STATE__ = serialized;
+    }
     // iOS Native Uygulama NSUserDefaults Yedeklemesi
     if (!getInvestorSlotSuffix() && global.webkit?.messageHandlers?.aetherBridge) {
       try {
@@ -955,6 +1112,14 @@
     return concatUint8([fh, vh, tf, qos]);
   }
 
+  function buildMqttUnsubscribePacket(topicFilter, packetId = 1) {
+    const vh = new Uint8Array([(packetId >> 8) & 0xff, packetId & 0xff]);
+    const tf = encodeMqttUtf8(topicFilter);
+    const remLen = vh.length + tf.length;
+    const fh = new Uint8Array([0xA2, ...encodeMqttVarLen(remLen)]);
+    return concatUint8([fh, vh, tf]);
+  }
+
   function parseMqttFrames(bufferBytes, onPublish, onConnAck) {
     let offset = 0;
     while (offset < bufferBytes.length) {
@@ -1023,10 +1188,13 @@
       monthlyExpenseTL: inv.monthlyExpenseTL || 40000,
       cashTL: inv.cashTL,
       marginDebtTL: inv.marginDebtTL || 0,
+      gvk80TaxPayableTL: inv.gvk80TaxPayableTL || 0,
+      autoOvernightRepo: Boolean(inv.autoOvernightRepo),
       totalFrictionBurnedTL: inv.totalFrictionBurnedTL || 0,
       benchmarksAtStart: inv.benchmarksAtStart || captureCurrentBenchmarkPrices(),
       settlementQueue: (inv.settlementQueue || []).slice(0, 10),
       pendingOrders: (inv.pendingOrders || []).slice(0, 10),
+      ipoRequests: (inv.ipoRequests || []).slice(0, 8),
       rateTranches: (inv.rateTranches || []).slice(0, 12),
       positions: inv.positions || {},
       tradeHistory: (inv.tradeHistory || []).slice(0, 10),
@@ -1046,8 +1214,11 @@
     const prevUpd = Number(prev?.updatedAt) || 0;
     const incSeen = Number(pkt.lastSeenAt) || incUpd;
     const prevSeen = Number(prev?.lastSeenAt) || prevUpd;
+    const incCreated = Number(pkt.createdAt) || 0;
+    const prevCreated = Number(prev?.createdAt) || 0;
+    const isFreshReset = incCreated > prevCreated + 1500 && incUpd >= prevUpd;
 
-    if (!prev || incRev > prevRev || (incRev === prevRev && (incUpd >= prevUpd || incSeen > prevSeen))) {
+    if (!prev || isFreshReset || incRev > prevRev || (incRev === prevRev && (incUpd >= prevUpd || incSeen > prevSeen))) {
       state.peers[pkt.id] = {
         ...prev,
         ...pkt,
@@ -1140,6 +1311,7 @@
         if (p && p.p > 0) {
           inst.currentPrice = p.p;
           if (p.c != null) inst.change1D = p.c;
+          if (p.tlc != null) inst.tlChange1D = p.tlc;
         }
       }
     }
@@ -1149,6 +1321,23 @@
     lastLiveSyncMs = Date.now();
     rebuildAssetCatalog();
     notifyListeners();
+  }
+
+  let mqttSubPacketSeq = 10;
+  function subscribeSocketToActiveRoom(ws) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const base = getRoomTopicBase();
+    const s = () => ((mqttSubPacketSeq = (mqttSubPacketSeq % 60000) + 1));
+    ws.send(buildMqttSubscribePacket(`${base}/member/+`, s()));
+    ws.send(buildMqttSubscribePacket(`${base}/event`, s()));
+    ws.send(buildMqttSubscribePacket(`${base}/banter_snapshot`, s()));
+    ws.send(buildMqttSubscribePacket(`${base}/sync_ping`, s()));
+    ws.send(buildMqttSubscribePacket(`${MESH_NAMESPACE}/market_pulse`, s()));
+    if (state?.me?.profileRegistered) {
+      const pkt = JSON.stringify(buildCompactInvestorPacket(state.me));
+      ws.send(buildMqttPublishPacket(`${base}/member/${state.me.id}`, pkt, true));
+    }
+    ws.send(buildMqttPublishPacket(`${base}/sync_ping`, JSON.stringify({ senderId: state?.me?.id, ts: Date.now() }), false));
   }
 
   function connectBrokerClient(brokerUrl) {
@@ -1186,18 +1375,7 @@
           (topic, payload) => handleMeshMessage(topic, payload),
           () => {
             clientState.connected = true;
-            const base = getRoomTopicBase();
-            ws.send(buildMqttSubscribePacket(`${base}/member/+`, 1));
-            ws.send(buildMqttSubscribePacket(`${base}/event`, 2));
-            ws.send(buildMqttSubscribePacket(`${base}/banter_snapshot`, 3));
-            ws.send(buildMqttSubscribePacket(`${base}/sync_ping`, 4));
-            ws.send(buildMqttSubscribePacket(`${MESH_NAMESPACE}/market_pulse`, 5));
-
-            if (state?.me?.profileRegistered) {
-              const pkt = JSON.stringify(buildCompactInvestorPacket(state.me));
-              ws.send(buildMqttPublishPacket(`${base}/member/${state.me.id}`, pkt, true));
-            }
-            ws.send(buildMqttPublishPacket(`${base}/sync_ping`, JSON.stringify({ senderId: state?.me?.id, ts: Date.now() }), false));
+            subscribeSocketToActiveRoom(ws);
 
             clearInterval(clientState.pingTimer);
             clientState.pingTimer = setInterval(() => {
@@ -1260,19 +1438,24 @@
   }
 
   async function syncHttpFamilyHubAsync(myPacketOverride) {
-    if (!global.fetch || global.location?.protocol === 'file:') return;
+    if (!global.fetch || global.location?.protocol === 'file:' || !state) return;
+    const reqRoom = String(state.roomCode || DEFAULT_ROOM_CODE).toUpperCase();
     try {
       const pkt = myPacketOverride || (state?.me?.profileRegistered ? buildCompactInvestorPacket(state.me) : null);
       const res = pkt
         ? await fetch('./api/family-hub', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ roomCode: state.roomCode, member: pkt, banterFeed: state.banterFeed.slice(0, 30) })
+            headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+            body: JSON.stringify({ roomCode: reqRoom, member: pkt, banterFeed: state.banterFeed.slice(0, 30) })
           })
-        : await fetch('./api/family-hub?room=' + encodeURIComponent(state.roomCode || DEFAULT_ROOM_CODE), { cache: 'no-store' });
+        : await fetch('./api/family-hub?room=' + encodeURIComponent(reqRoom), { cache: 'no-store' });
 
       if (res.ok) {
         const data = await res.json();
+        const currentRoom = String(state?.roomCode || DEFAULT_ROOM_CODE).toUpperCase();
+        if (!state || currentRoom !== reqRoom || (data.roomCode && String(data.roomCode).toUpperCase() !== reqRoom)) {
+          return;
+        }
         let changed = false;
         for (const m of (data.members || [])) {
           if (mergeIncomingPeerPacket(m)) changed = true;
@@ -1326,6 +1509,12 @@
     if (member.footprints.length > 40) member.footprints.length = 40;
   }
 
+  function getOvernightRepoNetAnnualPct() {
+    const policy = Number(marketData?.macro?.tcmbPolicyRate || 36.0);
+    const grossRepo = Math.max(5.0, policy - 2.5);
+    return +(grossRepo * (1 - 0.175)).toFixed(2);
+  }
+
   function maybeSnapshotGhostHoldPortfolio(member) {
     if (member.ghostHoldPortfolio) return;
     const snap = evaluateMemberPortfolio(member);
@@ -1336,9 +1525,12 @@
         if (v && v.qty > 0) clonePos[k] = { ...v };
       }
       const cloneTr = (member.rateTranches || []).map((t) => ({ ...t }));
+      const extraCashPoolTL = +(snap.unsettledTL + snap.pendingOrderTL + snap.ipoBlockedTL).toFixed(2);
       member.ghostHoldPortfolio = {
         capturedAtMs: getTurkishClock().ms,
-        cashTL: member.cashTL,
+        cashTL: +(member.cashTL + extraCashPoolTL).toFixed(2),
+        marginDebtTL: snap.marginDebtTL,
+        gvk80TaxPayableTL: Number(member.gvk80TaxPayableTL) || 0,
         positions: clonePos,
         rateTranches: cloneTr
       };
@@ -1350,7 +1542,7 @@
     const nowMs = clock.ms;
     let changed = false;
 
-    // 1) T+2 BIST Takas Kum Saati Çözülmesi
+    // 1) T+2 BIST Takas & TEFAS Bozum Valörü Kum Saati Çözülmesi
     const stillUnsettled = [];
     for (const item of (member.settlementQueue || [])) {
       if (nowMs >= item.settlesAtMs) {
@@ -1428,20 +1620,10 @@
         member.cashTL = +(member.cashTL + refundTL).toFixed(2);
         if (allocatedLots > 0) {
           const synthKey = 'bist-' + req.ticker.toLowerCase();
-          if (!assetCatalog.has(synthKey)) {
-            const ipoDesc = {
-              key: synthKey, id: synthKey, ticker: req.ticker, symbol: 'BIST:' + req.ticker,
-              name: req.name, categoryId: '3', categoryName: req.sector,
-              venue: 'BIST', subVenue: 'BIST_STOCK', isRateInstrument: false, annualGrossRatePct: 0,
-              isForeignUsd: false, priceUsd: null, priceTL: req.offerPriceTL,
-              change1D: 0, perf1W: 0, perf1M: 0, perf3M: 0, perf1Y: 0, stopajPct: 0, bsmvBuyPct: 0, isGvk80: false,
-              bistRow: null
-            };
-            assetCatalog.set(synthKey, ipoDesc);
-            assetCatalog.set(req.ticker, ipoDesc);
-          }
           const a = getAsset(synthKey);
-          mergeSpotPosition(member, a, allocatedLots, req.offerPriceTL, clock.ymd, 'SPK_IPO', 'RESEARCH_FUNDAMENTAL', 'SPK Halka Arz Eşit Dağıtım');
+          if (a) {
+            mergeSpotPosition(member, a, allocatedLots, req.offerPriceTL, clock.ymd, 'SPK_IPO', 'RESEARCH_FUNDAMENTAL', 'SPK Halka Arz Eşit Dağıtım');
+          }
         }
         member.tradeHistory.unshift({
           id: 'th_ipo_' + Math.random().toString(36).slice(2, 8),
@@ -1462,9 +1644,9 @@
     }
     member.ipoRequests = stillIpos;
 
-    // 4) Gerçek Ödeme Gününde %15 Stopajı Kesilmiş Net Temettü Yatırımı
+    // 4) Gerçek Ödeme Gününde %15 Stopajı Kesilmiş Net Temettü Yatırımı (Sabit Takvim Çapalı!)
     if (!member.creditedDividends) member.creditedDividends = {};
-    for (const div of getDividendSchedule()) {
+    for (const div of getDividendSchedule(nowMs, true)) {
       const divKey = `${div.ticker}_${div.payDateYmd}`;
       if (nowMs >= div.payAtMs && !member.creditedDividends[divKey]) {
         const pos = member.positions[div.assetKey];
@@ -1483,7 +1665,7 @@
               priceTL: div.netPerShareTL,
               feeAndTaxTL: +(pos.qty * (div.grossPerShareTL - div.netPerShareTL)).toFixed(2),
               spreadLeakTL: 0,
-              note: `${pos.qty} adet pay için net ${netPayoutTL.toLocaleString('tr-TR')} ₺ temettü hesabına yattı.`
+              note: `${pos.qty} adet pay için net ${netPayoutTL.toLocaleString('tr-TR')} ₺ temettü (${div.payDateYmd}) hesabına yattı.`
             });
             changed = true;
           }
@@ -1504,7 +1686,6 @@
         }
         member.lastMarginAccrualMs = nowMs;
       }
-      // Özsermaye teminat kontrolü
       const snapCheck = evaluateMemberPortfolio(member, nowMs);
       if (snapCheck.marginStatus && snapCheck.marginStatus.isMarginCall) {
         recordFootprint(
@@ -1526,6 +1707,9 @@
       const addTL = Number(member.monthlySavingsTL) || 0;
       member.cashTL = +(member.cashTL + addTL).toFixed(2);
       member.baselineCapitalTL = +(member.baselineCapitalTL + addTL).toFixed(2);
+      if (member.ghostHoldPortfolio) {
+        member.ghostHoldPortfolio.cashTL = +((member.ghostHoldPortfolio.cashTL || 0) + addTL).toFixed(2);
+      }
       member.lastSalaryCreditedYm = clock.ym;
       member.tradeHistory.unshift({
         id: 'tr_sal_' + clock.ym,
@@ -1542,21 +1726,35 @@
       changed = true;
     }
 
-    // 7) Korkup Boş Nakitte Bekleyen Paranın Sessiz Erimesi ("Uçup Giden Fırsat Kavanozu")
+    // 7) Aracı Kurum Otomatik Gecelik Nema (O/N Repo) + Boş Nakit Fırsat/Enflasyon Muhasebesi
     if (!member.idleErosionLog) {
       member.idleErosionLog = { lastCheckedMs: nowMs, cumulativeInflationLossTL: 0, missedSukukNetTL: 0 };
     }
-    const elapsedDays = (nowMs - (member.idleErosionLog.lastCheckedMs || nowMs)) / (24 * 3600 * 1000);
+    const elapsedDays = Math.max(0, (nowMs - (member.idleErosionLog.lastCheckedMs || nowMs)) / (24 * 3600 * 1000));
     if (elapsedDays >= 0.04) {
+      const repoNetAnnual = getOvernightRepoNetAnnualPct() / 100;
+      let repoEarnedNow = 0;
+      if (member.autoOvernightRepo && member.cashTL > 10000) {
+        const repoPrincipal = member.cashTL - 10000;
+        repoEarnedNow = +(repoPrincipal * (repoNetAnnual / 365) * elapsedDays).toFixed(2);
+        if (repoEarnedNow >= 0.05) {
+          member.cashTL = +(member.cashTL + repoEarnedNow).toFixed(2);
+          member.overnightRepoEarnedTL = +((member.overnightRepoEarnedTL || 0) + repoEarnedNow).toFixed(2);
+        }
+      }
+
       if (member.cashTL >= 1000) {
         const annualInf = getAnnualInflationPct() / 100;
         const sukukGross = (getAsset('kira-sertifikasi-sukuk')?.annualGrossRatePct || 36.5) / 100;
-        const infLoss = member.cashTL * (annualInf / 365) * elapsedDays;
-        const missedSukuk = member.cashTL * (sukukGross / 365) * elapsedDays;
-        member.idleErosionLog.cumulativeInflationLossTL = +(member.idleErosionLog.cumulativeInflationLossTL + infLoss).toFixed(2);
-        member.idleErosionLog.missedSukukNetTL = +(member.idleErosionLog.missedSukukNetTL + missedSukuk).toFixed(2);
+        const rawInfLoss = member.cashTL * (annualInf / 365) * elapsedDays;
+        const rawSukukGain = member.cashTL * (sukukGross / 365) * elapsedDays;
+        const netInfLoss = Math.max(0, rawInfLoss - repoEarnedNow);
+        const netMissedSukuk = Math.max(0, rawSukukGain - repoEarnedNow);
+        member.idleErosionLog.cumulativeInflationLossTL = +(member.idleErosionLog.cumulativeInflationLossTL + netInfLoss).toFixed(2);
+        member.idleErosionLog.missedSukukNetTL = +(member.idleErosionLog.missedSukukNetTL + netMissedSukuk).toFixed(2);
       }
       member.idleErosionLog.lastCheckedMs = nowMs;
+      member.lastOvernightRepoMs = nowMs;
       changed = true;
     }
 
@@ -1640,11 +1838,19 @@
     const effectiveBidTL = +(rawExecPriceTL * (1 - spreadHalfPct / 100)).toFixed(4);
     const grossTL = +(sellQty * effectiveBidTL).toFixed(2);
     const spreadLeakTL = Math.max(0, +(sellQty * rawExecPriceTL - grossTL).toFixed(2));
-    const feeTL = asset.venue === 'BIST' ? +(grossTL * 0.00084).toFixed(2) : 0;
+    let feeRate = 0;
+    if (asset.venue === 'BIST') feeRate = 0.00084;
+    else if (asset.venue === 'GLOBAL_USD') feeRate = 0.0015;
+    else if (asset.venue === 'CRYPTO_24_7' || asset.venue === 'VIOP') feeRate = 0.0010;
+    const feeTL = +(grossTL * feeRate).toFixed(2);
     const taxInfo = computePositionTaxOnGain(asset, pos, effectiveBidTL, sellQty);
     const netAfterFeeAndStopajTL = Math.max(0, +(grossTL - feeTL - taxInfo.stopajTL).toFixed(2));
     const realizedPnlPct = pos.avgCostTL > 0 ? +(((effectiveBidTL / pos.avgCostTL) - 1) * 100).toFixed(2) : 0;
     const originThesisTag = pos.thesisTag || 'RESEARCH_FUNDAMENTAL';
+
+    if (taxInfo.gvk80TaxReserveTL > 0) {
+      member.gvk80TaxPayableTL = +((member.gvk80TaxPayableTL || 0) + taxInfo.gvk80TaxReserveTL).toFixed(2);
+    }
 
     member.totalFrictionBurnedTL = +((member.totalFrictionBurnedTL || 0) + spreadLeakTL + feeTL).toFixed(2);
 
@@ -1686,6 +1892,10 @@
       );
     }
 
+    const gvkNote = taxInfo.gvk80TaxReserveTL > 0
+      ? ` (Yİ-ÜFE endeksli GVK Mük. 80 beyan vergisi karşılığı: ${taxInfo.gvk80TaxReserveTL.toLocaleString('tr-TR')} ₺ ayrıldı)`
+      : '';
+
     member.tradeHistory.unshift({
       id: 'th_' + Math.random().toString(36).slice(2, 9),
       ts: nowMs,
@@ -1697,20 +1907,20 @@
       priceTL: effectiveBidTL,
       realizedPnlPct,
       thesisTag: originThesisTag,
-      feeAndTaxTL: +(feeTL + taxInfo.stopajTL).toFixed(2),
+      feeAndTaxTL: +(feeTL + taxInfo.stopajTL + taxInfo.gvk80TaxReserveTL).toFixed(2),
       spreadLeakTL,
       note: repaidMarginTL > 0
-        ? `Satıştan ${repaidMarginTL.toLocaleString('tr-TR')} ₺ kredi borcu kapatıldı; kalan tutar ${asset.venue === 'BIST' ? 'T+2 takasa girdi.' : 'nakde döndü.'}`
+        ? `Satıştan ${repaidMarginTL.toLocaleString('tr-TR')} ₺ kredi borcu kapatıldı; kalan tutar ${asset.venue === 'BIST' ? 'T+2 takasa girdi.' : 'nakde döndü.'}${gvkNote}`
         : (asset.venue === 'BIST'
           ? 'Satış gerçekleşti; para T+2 takas kum saatine girdi (2 iş günü nakit çekilemez).'
-          : (fromValorQueue ? 'Valör tamamlandı ve nakde döndü.' : 'Satış tamamlandı.'))
+          : (fromValorQueue ? 'Valör tamamlandı ve nakde döndü.' : `Satış tamamlandı.${gvkNote}`))
     });
     if (member.tradeHistory.length > 60) member.tradeHistory.length = 60;
-    return { netAfterFeeAndStopajTL, feeTL, stopajTL: taxInfo.stopajTL, repaidMarginTL };
+    return { netAfterFeeAndStopajTL, feeTL, stopajTL: taxInfo.stopajTL, gvk80TaxReserveTL: taxInfo.gvk80TaxReserveTL, repaidMarginTL };
   }
 
   // --------------------------------------------------------------------------
-  // 8. CANLI EMİR GİŞESİ (ALIM, SATIM, KREDİLİ İŞLEM, VADE BOZUM, HALKA ARZ)
+  // 8. CANLI EMİR GİŞESİ (ALIM, SATIM, İPTAL, KREDİLİ İŞLEM, VADE BOZUM, HALKA ARZ)
   // --------------------------------------------------------------------------
   function broadcastTradeToLeague(member, actionLabel, assetName, amountTL, thesisNote) {
     if (!member.profileRegistered) return null;
@@ -1735,6 +1945,65 @@
     const nowMs = clock.ms;
     const side = String(params.side || 'BUY').toUpperCase();
 
+    // --- SIRADA BEKLEYEN EMRİ İPTAL ETME (09:50–10:00 BIST İPTAL YASAĞI KONTROLLÜ) ---
+    if (side === 'CANCEL_ORDER') {
+      const idx = (member.pendingOrders || []).findIndex((o) => o.id === params.orderId);
+      if (idx < 0) return { ok: false, reason: 'İptal edilecek bekleyen emir bulunamadı.' };
+      const ord = member.pendingOrders[idx];
+      if (ord.orderType === 'BIST_OPEN_AUCTION' && clock.bistCancelLocked) {
+        return {
+          ok: false,
+          reason: `Borsa İstanbul Kuralı (${clock.bistLabel}): Eşleşme penceresinde bekleyen emir iptal edilemez!`
+        };
+      }
+      member.pendingOrders.splice(idx, 1);
+      if ((ord.reservedTL || 0) > 0) {
+        member.cashTL = +(member.cashTL + Number(ord.reservedTL)).toFixed(2);
+      }
+      member.updatedAt = nowMs;
+      member.rev = (member.rev || 1) + 1;
+      saveState(true, true);
+      return {
+        ok: true,
+        status: 'ORDER_CANCELLED',
+        message: `${ord.name} için bekleyen ${ord.side === 'BUY' ? 'alım' : 'satış'} emri iptal edildi${ord.reservedTL > 0 ? ` ve ${ord.reservedTL.toLocaleString('tr-TR')} ₺ nakde iade edildi` : ''}.`
+      };
+    }
+
+    // --- YURT DIŞI GVK MÜKERRER 80 BEYANNAME VERGİSİNİ NAKİTLE ÖDEME ---
+    if (side === 'PAY_GVK80_TAX') {
+      const taxDue = Number(member.gvk80TaxPayableTL) || 0;
+      if (taxDue <= 0) return { ok: false, reason: 'Ödenecek yurt dışı beyanname vergi borcu bulunmuyor.' };
+      const payAmt = Math.min(taxDue, member.cashTL);
+      if (payAmt <= 0) return { ok: false, reason: 'Vergi karşılığını ödemek için kullanılabilir nakdin yetersiz.' };
+      member.cashTL = +(member.cashTL - payAmt).toFixed(2);
+      member.gvk80TaxPayableTL = +(taxDue - payAmt).toFixed(2);
+      member.updatedAt = nowMs;
+      member.rev = (member.rev || 1) + 1;
+      saveState(true, true);
+      return {
+        ok: true,
+        status: 'TAX_PAID',
+        message: `${payAmt.toLocaleString('tr-TR')} ₺ Yurt Dışı Beyanname (GVK Mük. 80) vergisi nakitten ödendi.`
+      };
+    }
+
+    // --- ARACI KURUM OTOMATİK GECELİK NEMA (O/N REPO) ANAHTARI ---
+    if (side === 'TOGGLE_OVERNIGHT_REPO') {
+      member.autoOvernightRepo = params.enabled != null ? Boolean(params.enabled) : !member.autoOvernightRepo;
+      member.lastOvernightRepoMs = nowMs;
+      member.updatedAt = nowMs;
+      member.rev = (member.rev || 1) + 1;
+      saveState(true, true);
+      return {
+        ok: true,
+        status: 'REPO_TOGGLED',
+        message: member.autoOvernightRepo
+          ? `Aracı Kurum Gecelik Nema açıldı: 10.000 ₺ üzerindeki boş nakdin gecelik net %${getOvernightRepoNetAnnualPct()} oranıyla otomatik nemalanacak.`
+          : 'Aracı Kurum Gecelik Nema kapatıldı: Boş nakit vadesiz hesapta (%0 faiz) bekleyecek.'
+      };
+    }
+
     // --- KREDİ BORCUNU NAKİTLE KAPATMA ---
     if (side === 'REPAY_MARGIN') {
       const debt = Number(member.marginDebtTL) || 0;
@@ -1753,16 +2022,94 @@
       };
     }
 
-    // --- VADELİ MEVDUAT / SUKUK / PPF BOZUMU ---
+    // --- VADELİ MEVDUAT / SUKUK / PPF BOZUMU (13:30 TEFAS VALÖR KURALI DAHİL!) ---
     if (side === 'BREAK_TRANCHE') {
       const trancheId = params.trancheId;
       const idx = (member.rateTranches || []).findIndex((t) => t.id === trancheId);
       if (idx < 0) return { ok: false, reason: 'Bozulacak vade dilimi bulunamadı.' };
       const tr = member.rateTranches[idx];
       const trVal = evaluateRateTranche(tr, nowMs);
+      const trAsset = getAsset(tr.assetKey);
 
-      if (tr.assetKey === 'kira-sertifikasi-sukuk' && !clock.isBizDay) {
-        return { ok: false, reason: 'Hafta sonu ve resmi tatilde TEFAS fon bozum valörü kapalıdır.' };
+      if (trAsset && trAsset.venue === 'TEFAS') {
+        if (!clock.isBizDay && trAsset.subVenue === 'TEFAS_DEBT') {
+          return { ok: false, reason: 'Hafta sonu ve resmi tatilde TEFAS Kira Sertifikası bozum gişesi kapalıdır.' };
+        }
+        // TEFAS Kira Sertifikası / Borçlanma fonlarında gerçek T+1 (13:30 sonrası T+2) valör işler!
+        if (trAsset.subVenue === 'TEFAS_DEBT') {
+          member.rateTranches.splice(idx, 1);
+          const waitBizDays = clock.tefasBeforeCutoff ? 1 : 2;
+          const settlesAtMs = addTurkishBusinessDays(nowMs, waitBizDays, 10, 30);
+          const settlesParts = getIstanbulParts(settlesAtMs);
+          member.settlementQueue.push({
+            id: 'val_' + Math.random().toString(36).slice(2, 9),
+            assetKey: tr.assetKey,
+            usableForBist: false,
+            ticker: trAsset.ticker,
+            name: tr.name,
+            grossTL: trVal.netRedeemableTL,
+            soldAtMs: nowMs,
+            settlesAtMs,
+            note: `TEFAS Fon Bozum Valörü: ${settlesParts.ymd} saat 10:30'da nakit hesabına geçer.`
+          });
+          member.tradeHistory.unshift({
+            id: 'th_' + Math.random().toString(36).slice(2, 9),
+            ts: nowMs,
+            side: 'FON BOZUM VALÖRÜ',
+            assetKey: tr.assetKey,
+            name: tr.name,
+            amountTL: trVal.netRedeemableTL,
+            priceTL: 1,
+            feeAndTaxTL: trVal.stopajTL,
+            spreadLeakTL: 0,
+            note: `TEFAS 13:30 valör kuralıyla ${settlesParts.ymd} 10:30'da nakde dönecek (+${trVal.netInterestTL.toLocaleString('tr-TR')} ₺ net getiri).`
+          });
+          member.updatedAt = nowMs;
+          member.rev = (member.rev || 1) + 1;
+          saveState(true, true);
+          return {
+            ok: true,
+            status: 'QUEUED_TEFAS_REDEMPTION',
+            message: `${tr.name} bozum emri alındı: TEFAS valör kuralıyla net ${trVal.netRedeemableTL.toLocaleString('tr-TR')} ₺ tutar ${settlesParts.ymd} saat 10:30'da nakde geçecek.`
+          };
+        }
+        // Para Piyasası Fonu (PPF): 13:30 öncesi T+0 anında nakit; 13:30 sonrası / hafta sonu ilk iş günü sabah 10:00 valörlü!
+        if (trAsset.subVenue === 'TEFAS_PPF' && !clock.tefasBeforeCutoff) {
+          member.rateTranches.splice(idx, 1);
+          const settlesAtMs = addTurkishBusinessDays(nowMs, 1, 10, 0);
+          const settlesParts = getIstanbulParts(settlesAtMs);
+          member.settlementQueue.push({
+            id: 'val_' + Math.random().toString(36).slice(2, 9),
+            assetKey: tr.assetKey,
+            usableForBist: false,
+            ticker: trAsset.ticker,
+            name: tr.name,
+            grossTL: trVal.netRedeemableTL,
+            soldAtMs: nowMs,
+            settlesAtMs,
+            note: `PPF 13:30 Sonrası Valör: ${settlesParts.ymd} saat 10:00'da nakde geçer.`
+          });
+          member.tradeHistory.unshift({
+            id: 'th_' + Math.random().toString(36).slice(2, 9),
+            ts: nowMs,
+            side: 'PPF VALÖR BOZUM',
+            assetKey: tr.assetKey,
+            name: tr.name,
+            amountTL: trVal.netRedeemableTL,
+            priceTL: 1,
+            feeAndTaxTL: trVal.stopajTL,
+            spreadLeakTL: 0,
+            note: `Saat 13:30 geçildiği için ${settlesParts.ymd} 10:00'da nakde dönecek.`
+          });
+          member.updatedAt = nowMs;
+          member.rev = (member.rev || 1) + 1;
+          saveState(true, true);
+          return {
+            ok: true,
+            status: 'QUEUED_PPF_REDEMPTION',
+            message: `Saat 13:30 TEFAS valör sınırı geçildiği için Para Piyasası Fonu bozum tutarın (${trVal.netRedeemableTL.toLocaleString('tr-TR')} ₺) ${settlesParts.ymd} sabah 10:00'da nakde geçecek.`
+          };
+        }
       }
 
       member.rateTranches.splice(idx, 1);
@@ -1829,6 +2176,12 @@
         reason: 'TCMB Konut Fiyat Endeksi resmi gösterge endeksidir, doğrudan alınıp satılamaz. Gayrimenkul yatırımı için EKGYO, RYGYO, ISGYO veya OPTGY seçebilirsin.'
       };
     }
+    if (asset.isSyntheticIpo && side === 'BUY') {
+      return {
+        ok: false,
+        reason: `${asset.ticker} henüz SPK Halka Arz talep toplama aşamasındadır; "Halka Arz & Temettü" merceğinden eşit dağıtım talebi girebilirsin.`
+      };
+    }
 
     // --- ALIM İŞLEMİ (BUY) ---
     if (side === 'BUY') {
@@ -1843,7 +2196,7 @@
         : 0;
 
       const unsettledUsableForBist = (asset.venue === 'BIST' && !micro.isBrutTakas)
-        ? (member.settlementQueue || []).reduce((s, x) => s + Number(x.grossTL || 0), 0)
+        ? (member.settlementQueue || []).filter((x) => x.usableForBist !== false).reduce((s, x) => s + Number(x.grossTL || 0), 0)
         : 0;
       const maxCashPower = +(member.cashTL + unsettledUsableForBist).toFixed(2);
       const maxTotalPower = +(maxCashPower + (useMargin ? maxMarginCapacity : 0)).toFixed(2);
@@ -1883,6 +2236,7 @@
         if (asset.venue === 'BIST' && !micro.isBrutTakas) {
           for (const q of member.settlementQueue) {
             if (rem <= 0) break;
+            if (q.usableForBist === false) continue;
             const take = Math.min(q.grossTL, rem);
             q.grossTL = +(q.grossTL - take).toFixed(2);
             rem = +(rem - take).toFixed(2);
@@ -2296,11 +2650,33 @@
     if (side === 'SELL') {
       const pos = member.positions[asset.key];
       if (!pos || pos.qty <= 0) return { ok: false, reason: 'Portföyünde bu yatırımdan bulunmuyor.' };
+
+      if (asset.venue === 'VIOP' && !clock.viopOpen) {
+        return { ok: false, reason: `${clock.viopLabel}. VİOP kontratları yalnızca 09:30–18:15 ve 19:00–23:00 seanslarında kapatılabilir.` };
+      }
+      if (asset.venue === 'GLOBAL_USD' && clock.isWeekend) {
+        return { ok: false, reason: 'ABD ve Avrupa borsaları cumartesi ve pazar günleri kapalıdır; satış emri pazartesi seans açılışında verilebilir.' };
+      }
+
+      const alreadyQueuedSellQty = (member.pendingOrders || [])
+        .filter((o) => o.side === 'SELL' && o.assetKey === asset.key)
+        .reduce((s, o) => s + Number(o.qty || 0), 0);
+      const availableQty = +(pos.qty - alreadyQueuedSellQty).toFixed(6);
+      if (availableQty <= 0.000001) {
+        return {
+          ok: false,
+          reason: `Bu pozisyonun tamamı (${alreadyQueuedSellQty} adet) zaten sabah 10:00 açılış eşleşmesi için satış kuyruğunda bekliyor.`
+        };
+      }
+
       const micro = inspectBoardMicrostructure(asset);
       const ratio = Math.min(1, Math.max(0.01, Number(params.sellRatio) || 1));
       const sellQty = asset.subVenue === 'BIST_STOCK'
-        ? Math.max(1, Math.floor(pos.qty * ratio))
-        : +(pos.qty * ratio).toFixed(6);
+        ? Math.min(Math.floor(availableQty), Math.max(1, Math.floor(availableQty * ratio)))
+        : +(availableQty * ratio).toFixed(6);
+      if (sellQty <= 0) {
+        return { ok: false, reason: 'Satılabilir lot miktarı yetersiz.' };
+      }
 
       if (asset.venue === 'BIST') {
         if (micro.isBrutTakas && pos.lastBuyDayYmd === clock.ymd) {
@@ -2332,7 +2708,7 @@
             executesAtMs: nextOpenMs,
             createdAtMs: nowMs,
             door: 'BIST',
-            note: `Borsa kapalı; satış emri ${nextParts.ymd} 10:00 açılış eşleşmesine yazıldı.`
+            note: `Borsa kapalı; ${sellQty} adet satış emri ${nextParts.ymd} 10:00 açılış eşleşmesine yazıldı.`
           });
           member.updatedAt = nowMs;
           member.rev = (member.rev || 1) + 1;
@@ -2340,7 +2716,7 @@
           return {
             ok: true,
             status: 'QUEUED_BIST_OPEN',
-            message: `Borsa kapalı olduğu için satış emrin ${nextParts.ymd} sabah 10:00 açılış eşleşmesine alındı.`
+            message: `Borsa kapalı olduğu için ${sellQty} adet satış emrin ${nextParts.ymd} sabah 10:00 açılış eşleşmesine alındı.`
           };
         }
       }
@@ -2361,7 +2737,7 @@
         status: asset.venue === 'BIST' ? 'SOLD_T2_SETTLEMENT' : 'SOLD_CASH',
         message: asset.venue === 'BIST'
           ? `${sellQty} adet ${asset.ticker} satıldı. Net ${res.netAfterFeeAndStopajTL.toLocaleString('tr-TR')} ₺ T+2 takas kum saatine girdi (2 iş günü nakit çekilemez).`
-          : `Satış tamamlandı; net ${res.netAfterFeeAndStopajTL.toLocaleString('tr-TR')} ₺ nakit kasana geçti.`
+          : `Satış tamamlandı; net ${res.netAfterFeeAndStopajTL.toLocaleString('tr-TR')} ₺ nakit kasana geçti${res.gvk80TaxReserveTL > 0 ? ` (${res.gvk80TaxReserveTL.toLocaleString('tr-TR')} ₺ beyan vergisi karşılığı ayrıldı)` : ''}.`
       };
     }
 
@@ -2374,7 +2750,8 @@
     const catalog = getActiveIpoCatalog();
     const ipo = catalog.find((x) => x.id === ipoId);
     if (!ipo) return { ok: false, reason: 'Halka arz bulunamadı.' };
-    if ((member.ipoRequests || []).some((r) => r.ipoId === ipo.id)) {
+    const reqCycleKey = ipo.cycleId || ipo.id;
+    if ((member.ipoRequests || []).some((r) => (r.cycleId || r.ipoId) === reqCycleKey)) {
       return { ok: false, reason: 'Bu halka arza zaten talep gönderdin.' };
     }
     const lots = Math.max(1, Math.floor(Number(requestedLots) || 0));
@@ -2387,6 +2764,7 @@
     member.ipoRequests.push({
       id: 'ipor_' + Math.random().toString(36).slice(2, 8),
       ipoId: ipo.id,
+      cycleId: reqCycleKey,
       ticker: ipo.ticker,
       name: ipo.name,
       sector: ipo.sector,
@@ -2397,9 +2775,10 @@
       allocatesAtMs: ipo.closesAtMs
     });
     const closeParts = getIstanbulParts(ipo.closesAtMs);
+    const nowTs = getTurkishClock().ms;
     member.tradeHistory.unshift({
       id: 'th_iporeq_' + Math.random().toString(36).slice(2, 8),
-      ts: Date.now(),
+      ts: nowTs,
       side: 'HALKA ARZ TALEP',
       assetKey: 'bist-' + ipo.ticker.toLowerCase(),
       name: `${ipo.name} (${ipo.ticker})`,
@@ -2409,7 +2788,7 @@
       spreadLeakTL: 0,
       note: `${lots} lot talep girildi (${blockedCashTL.toLocaleString('tr-TR')} ₺ bloke edildi · Dağıtım: ${closeParts.ymd} 17:00).`
     });
-    member.updatedAt = Date.now();
+    member.updatedAt = nowTs;
     member.rev = (member.rev || 1) + 1;
     const ev = broadcastTradeToLeague(member, 'Halka Arza Katıldı', `${ipo.ticker} (${lots} lot talep)`, blockedCashTL, '');
     saveState(true, false);
@@ -2464,7 +2843,14 @@
       const taxInfo = asset ? computePositionTaxOnGain(asset, pos, unitTL, pos.qty) : { stopajTL: 0, gvk80TaxReserveTL: 0 };
       total += (grossValTL - taxInfo.stopajTL - taxInfo.gvk80TaxReserveTL);
     }
-    return +total.toFixed(2);
+    const baseDebt = Number(ghost.marginDebtTL) || 0;
+    if (baseDebt > 0) {
+      const elapsedDays = Math.max(0, (nowMs - (ghost.capturedAtMs || nowMs)) / (24 * 3600 * 1000));
+      const ghostDebtNow = baseDebt * (1 + (getAnnualMarginRatePct() / 100 / 365) * elapsedDays);
+      total -= ghostDebtNow;
+    }
+    total -= (Number(ghost.gvk80TaxPayableTL) || 0);
+    return Math.max(0, +total.toFixed(2));
   }
 
   function evaluateMemberPortfolio(member, customNowMs) {
@@ -2473,6 +2859,7 @@
 
     const cashTL = +(Number(m.cashTL) || 0).toFixed(2);
     const marginDebtTL = +(Number(m.marginDebtTL) || 0).toFixed(2);
+    const gvk80TaxPayableTL = +(Number(m.gvk80TaxPayableTL) || 0).toFixed(2);
     const unsettledTL = +((m.settlementQueue || []).reduce((s, q) => s + Number(q.grossTL || 0), 0)).toFixed(2);
     const pendingOrderTL = +((m.pendingOrders || []).reduce((s, o) => s + Number(o.reservedTL || 0), 0)).toFixed(2);
     const ipoBlockedTL = +((m.ipoRequests || []).reduce((s, r) => s + Number(r.blockedCashTL || 0), 0)).toFixed(2);
@@ -2529,7 +2916,7 @@
     spotItems.sort((a, b) => b.netValTL - a.netValTL);
 
     const grossAssetsTL = +(cashTL + unsettledTL + pendingOrderTL + ipoBlockedTL + tranchesNetTL + spotNetAfterTaxTL).toFixed(2);
-    const totalNetWorthTL = Math.max(0, +(grossAssetsTL - marginDebtTL).toFixed(2));
+    const totalNetWorthTL = Math.max(0, +(grossAssetsTL - marginDebtTL - gvk80TaxPayableTL).toFixed(2));
     const baselineTL = Math.max(1, Number(m.baselineCapitalTL) || DEFAULT_STARTING_CAPITAL_TL);
     const nominalPnlTL = +(totalNetWorthTL - baselineTL).toFixed(2);
     const nominalPnlPct = +(((totalNetWorthTL / baselineTL) - 1) * 100).toFixed(2);
@@ -2566,9 +2953,12 @@
       };
     }
 
-    // Pasif Nakit Çarkı (Aylık Net Gelir Damlası)
+    // Pasif Nakit Çarkı (Aylık Net Gelir Damlası + Aktifse Gecelik Nema)
     const monthlyRateIncomeTL = tranches.reduce((s, t) => s + t.monthlyNetDripTL, 0);
-    const monthlyPassiveIncomeTL = +(monthlyRateIncomeTL + (annualDividendNetTL / 12)).toFixed(2);
+    const monthlyOvernightRepoTL = (m.autoOvernightRepo && cashTL > 10000)
+      ? ((cashTL - 10000) * (getOvernightRepoNetAnnualPct() / 100)) / 12
+      : 0;
+    const monthlyPassiveIncomeTL = +(monthlyRateIncomeTL + monthlyOvernightRepoTL + (annualDividendNetTL / 12)).toFixed(2);
     const monthlyExpense = Math.max(5000, Number(m.monthlyExpenseTL) || 40000);
     const passiveCoveragePct = +((monthlyPassiveIncomeTL / monthlyExpense) * 100).toFixed(1);
 
@@ -2604,6 +2994,9 @@
       roleLabel: m.roleLabel,
       cashTL,
       marginDebtTL,
+      gvk80TaxPayableTL,
+      autoOvernightRepo: Boolean(m.autoOvernightRepo),
+      overnightRepoEarnedTL: +(Number(m.overnightRepoEarnedTL) || 0).toFixed(2),
       marginStatus,
       unsettledTL,
       pendingOrderTL,
@@ -2651,7 +3044,12 @@
         const a = getAsset(it.assetKey);
         let q = 74;
         if (a?.bistRow) {
-          if ((a.bistRow.ocfMillionTL || 0) > 0 && (a.bistRow.cashMillionTL || 0) >= (a.bistRow.totalDebtMillionTL || 0) * 0.5) q = 94;
+          const isFin = a.bistRow.entityKind === 'bank' || a.bistRow.entityKind === 'insurance' || a.bistRow.entityKind === 'fin_other';
+          if (isFin) {
+            if ((a.bistRow.netIncomeMillionTL || 0) > 0 && (a.bistRow.roe || 0) >= 20) q = 89;
+            else if ((a.bistRow.netIncomeMillionTL || 0) > 0) q = 80;
+            else q = 48;
+          } else if ((a.bistRow.ocfMillionTL || 0) > 0 && (a.bistRow.cashMillionTL || 0) >= (a.bistRow.totalDebtMillionTL || 0) * 0.5) q = 94;
           else if ((a.bistRow.ocfMillionTL || 0) > 0) q = 84;
           else if (a.isTms29Illusion || a.distributionTrap || a.isPumpAnomaly) q = 28;
           else q = 52;
@@ -2812,6 +3210,8 @@
     target.baselineCapitalTL = DEFAULT_STARTING_CAPITAL_TL;
     target.cashTL = DEFAULT_STARTING_CAPITAL_TL;
     target.marginDebtTL = 0;
+    target.gvk80TaxPayableTL = 0;
+    target.overnightRepoEarnedTL = 0;
     target.totalFrictionBurnedTL = 0;
     target.benchmarksAtStart = captureCurrentBenchmarkPrices();
     target.ghostHoldPortfolio = null;
@@ -2852,16 +3252,39 @@
     if (params.monthlyExpenseTL != null) m.monthlyExpenseTL = Math.max(5000, Number(params.monthlyExpenseTL) || 40000);
     if (params.monthlySavingsTL != null) m.monthlySavingsTL = Math.max(0, Number(params.monthlySavingsTL) || 0);
     if (params.salaryDay != null) m.salaryDay = Number(params.salaryDay) === 1 ? 1 : 15;
+    if (params.autoOvernightRepo != null) m.autoOvernightRepo = Boolean(params.autoOvernightRepo);
     if (params.roomCode != null) {
       const cleanRoom = String(params.roomCode || DEFAULT_ROOM_CODE).trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '') || DEFAULT_ROOM_CODE;
       if (cleanRoom !== state.roomCode) {
+        const oldRoom = state.roomCode;
+        const oldBase = `${MESH_NAMESPACE}/${oldRoom}`;
         state.roomCode = cleanRoom;
         state.peers = {};
+        state.banterFeed = [];
         for (const c of meshClients.values()) {
-          try { c.ws?.close(); } catch (_) {}
+          if (c.connected && c.ws && c.ws.readyState === WebSocket.OPEN) {
+            try {
+              const s = () => ((mqttSubPacketSeq = (mqttSubPacketSeq % 60000) + 1));
+              c.ws.send(buildMqttUnsubscribePacket(`${oldBase}/member/+`, s()));
+              c.ws.send(buildMqttUnsubscribePacket(`${oldBase}/event`, s()));
+              c.ws.send(buildMqttUnsubscribePacket(`${oldBase}/banter_snapshot`, s()));
+              c.ws.send(buildMqttUnsubscribePacket(`${oldBase}/sync_ping`, s()));
+              if (m.profileRegistered) {
+                c.ws.send(buildMqttPublishPacket(`${oldBase}/member/${m.id}`, '', true));
+              }
+              subscribeSocketToActiveRoom(c.ws);
+            } catch (_) {}
+          }
         }
-        meshClients.clear();
+        if (m.profileRegistered && global.fetch && global.location?.protocol !== 'file:') {
+          fetch('./api/family-hub', {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+            body: JSON.stringify({ roomCode: oldRoom, members: [{ id: m.id, _deleted: true }] })
+          }).catch(() => {});
+        }
         startCloudMesh();
+        syncHttpFamilyHubAsync();
       }
     }
     m.updatedAt = Date.now();
@@ -2893,35 +3316,44 @@
   // --------------------------------------------------------------------------
   // 11. ARKA PLAN CANLI PİYASA SENKRONİZASYONU (CORS-FREE TEXT/PLAIN + iOS NATIVE)
   // --------------------------------------------------------------------------
+  function nativeBridgePostJson(url, bodyStr) {
+    const reqId = 'nf_' + Math.random().toString(36).slice(2, 10);
+    return new Promise((resolve, reject) => {
+      const t = setTimeout(() => {
+        nativeFetchCallbacks.delete(reqId);
+        reject(new Error('Native fetch timeout'));
+      }, 10000);
+      nativeFetchCallbacks.set(reqId, {
+        resolve: (res) => { clearTimeout(t); resolve(res); },
+        reject: (err) => { clearTimeout(t); reject(err); }
+      });
+      global.webkit.messageHandlers.aetherBridge.postMessage({
+        action: 'httpFetch',
+        reqId,
+        url,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: bodyStr
+      });
+    });
+  }
+
   async function smartHttpPostJson(url, bodyObj) {
     const bodyStr = JSON.stringify(bodyObj);
-    if (global.webkit?.messageHandlers?.aetherBridge && global.__AETHER_NATIVE_IOS_APP__) {
-      const reqId = 'nf_' + Math.random().toString(36).slice(2, 10);
-      return new Promise((resolve, reject) => {
-        const t = setTimeout(() => {
-          nativeFetchCallbacks.delete(reqId);
-          reject(new Error('Native fetch timeout'));
-        }, 10000);
-        nativeFetchCallbacks.set(reqId, {
-          resolve: (res) => { clearTimeout(t); resolve(res); },
-          reject: (err) => { clearTimeout(t); reject(err); }
-        });
-        global.webkit.messageHandlers.aetherBridge.postMessage({
-          action: 'httpFetch',
-          reqId,
-          url,
+    if (global.fetch) {
+      try {
+        const res = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'text/plain' },
           body: bodyStr
         });
-      });
+        if (res && res.ok) return res;
+      } catch (_) {}
     }
-    // Tarayıcıda Content-Type: text/plain preflight takılmadan doğrudan CORS yanıtı alır!
-    return fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: bodyStr
-    });
+    if (global.webkit?.messageHandlers?.aetherBridge) {
+      return nativeBridgePostJson(url, bodyStr);
+    }
+    throw new Error('HTTP request failed');
   }
 
   async function refreshLiveMarketData() {
@@ -2987,6 +3419,8 @@
           }
         }
         const usdTry = glMap['FX_IDC:USDTRY']?.close || marketData?.macro?.usdTry || 0;
+        const usdChg = glMap['FX_IDC:USDTRY']?.chg || 0;
+        const combineChg = (a, b) => +((((1 + (Number(a) || 0) / 100) * (1 + (Number(b) || 0) / 100)) - 1) * 100).toFixed(2);
         if (usdTry > 0 && marketData?.macro) marketData.macro.usdTry = +usdTry.toFixed(4);
         if (glMap['FX_IDC:EURTRY']?.close && marketData?.macro) marketData.macro.eurTry = +glMap['FX_IDC:EURTRY'].close.toFixed(4);
         if (glMap['BIST:XU100']?.close && marketData?.macro) marketData.macro.bist100 = +glMap['BIST:XU100'].close.toFixed(2);
@@ -3007,14 +3441,19 @@
         const ozSilver = glMap['TVC:SILVER']?.close || 0;
         const gramGoldCalc = (ozGold > 0 && usdTry > 0) ? +((ozGold * usdTry) / 31.1034768).toFixed(2) : 0;
         const gramSilverCalc = (ozSilver > 0 && usdTry > 0) ? +((ozSilver * usdTry) / 31.1034768).toFixed(2) : 0;
+        const goldTlChg = combineChg(glMap['TVC:GOLD']?.chg, usdChg);
+        const silverTlChg = combineChg(glMap['TVC:SILVER']?.chg, usdChg);
 
         for (const inst of (marketData?.instruments || [])) {
           if (inst.id === 'doviz-usd' && glMap['FX_IDC:USDTRY']) { inst.currentPrice = +glMap['FX_IDC:USDTRY'].close.toFixed(4); inst.change1D = +glMap['FX_IDC:USDTRY'].chg.toFixed(2); }
           else if (inst.id === 'doviz-eur' && glMap['FX_IDC:EURTRY']) { inst.currentPrice = +glMap['FX_IDC:EURTRY'].close.toFixed(4); inst.change1D = +glMap['FX_IDC:EURTRY'].chg.toFixed(2); }
           else if (inst.id === 'doviz-gbp' && glMap['FX_IDC:GBPTRY']) { inst.currentPrice = +glMap['FX_IDC:GBPTRY'].close.toFixed(4); inst.change1D = +glMap['FX_IDC:GBPTRY'].chg.toFixed(2); }
           else if (inst.id === 'doviz-chf' && glMap['FX_IDC:CHFTRY']) { inst.currentPrice = +glMap['FX_IDC:CHFTRY'].close.toFixed(4); inst.change1D = +glMap['FX_IDC:CHFTRY'].chg.toFixed(2); }
-          else if (inst.id === 'gram-altin-spot' && gramGoldCalc > 0) { inst.currentPrice = gramGoldCalc; inst.change1D = +(glMap['TVC:GOLD']?.chg || 0).toFixed(2); }
-          else if (inst.id === 'gram-gumus-spot' && gramSilverCalc > 0) { inst.currentPrice = gramSilverCalc; inst.change1D = +(glMap['TVC:SILVER']?.chg || 0).toFixed(2); }
+          else if (inst.id === 'gram-altin-spot' && gramGoldCalc > 0) { inst.currentPrice = gramGoldCalc; inst.change1D = goldTlChg; }
+          else if (inst.id === 'ceyrek-altin' && gramGoldCalc > 0) { inst.currentPrice = +(gramGoldCalc * 1.651).toFixed(2); inst.change1D = goldTlChg; }
+          else if (inst.id === 'cumhuriyet-altini' && gramGoldCalc > 0) { inst.currentPrice = +(gramGoldCalc * 6.755).toFixed(2); inst.change1D = goldTlChg; }
+          else if (inst.id === 'bilezik-22-ayar' && gramGoldCalc > 0) { inst.currentPrice = +(gramGoldCalc * 0.946).toFixed(2); inst.change1D = goldTlChg; }
+          else if (inst.id === 'gram-gumus-spot' && gramSilverCalc > 0) { inst.currentPrice = gramSilverCalc; inst.change1D = silverTlChg; }
           else if (inst.id === 'altin-sertifikasi' && glMap['BIST:ALTIN']) { inst.currentPrice = +glMap['BIST:ALTIN'].close.toFixed(2); inst.change1D = +glMap['BIST:ALTIN'].chg.toFixed(2); }
           else if (inst.id === 'bist-100' && glMap['BIST:XU100']) { inst.currentPrice = +glMap['BIST:XU100'].close.toFixed(2); inst.change1D = +glMap['BIST:XU100'].chg.toFixed(2); }
           else if (inst.id === 'kripto-btc' && glMap['BINANCE:BTCTRY']) { inst.currentPrice = Math.round(glMap['BINANCE:BTCTRY'].close); inst.change1D = +glMap['BINANCE:BTCTRY'].chg.toFixed(2); }
@@ -3022,8 +3461,9 @@
           else if (inst.id === 'kripto-sol' && glMap['BINANCE:SOLTRY']) { inst.currentPrice = +glMap['BINANCE:SOLTRY'].close.toFixed(2); inst.change1D = +glMap['BINANCE:SOLTRY'].chg.toFixed(2); }
           else if (glMap[inst.symbol]) {
             const isUsdAsset = FOREIGN_GVK80_IDS.has(inst.id) || /^(AMEX:|NASDAQ:|OTC:)/.test(inst.symbol);
-            inst.currentPrice = isUsdAsset ? +glMap[inst.symbol].close.toFixed(2) : +glMap[inst.symbol].close.toFixed(2);
+            inst.currentPrice = +glMap[inst.symbol].close.toFixed(2);
             inst.change1D = +glMap[inst.symbol].chg.toFixed(2);
+            if (isUsdAsset) inst.tlChange1D = combineChg(glMap[inst.symbol].chg, usdChg);
           }
         }
         updatedAny = true;
@@ -3085,8 +3525,26 @@
   }
 
   // --------------------------------------------------------------------------
-  // 12. BAŞLATMA VE DIŞ SÖZLEŞME
+  // 12. BAŞLATMA, HÜCRESEL ÖN PLAN UYANIŞI VE DIŞ SÖZLEŞME
   // --------------------------------------------------------------------------
+  function wakeUpMeshAndLiveFeed() {
+    if (!state) return;
+    startCloudMesh();
+    for (const c of meshClients.values()) {
+      if (c.connected && c.ws && c.ws.readyState === WebSocket.OPEN) {
+        try { c.ws.send(new Uint8Array([0xc0, 0x00])); } catch (_) {}
+      }
+    }
+    if (processTimeHooksForMember(state.me)) {
+      saveState(true, false);
+    }
+    if (state.me.profileRegistered) {
+      publishMyInvestorToMesh();
+    }
+    refreshLiveMarketData();
+    syncHttpFamilyHubAsync();
+  }
+
   function init() {
     rebuildAssetCatalog();
     loadState();
@@ -3114,11 +3572,32 @@
       syncHttpFamilyHubAsync();
     }, 600);
 
+    // Mobil hücresel / arka plan dönüşünde kopmuş WSS soketlerini ve fiyatları anında uyandır!
+    if (global.addEventListener) {
+      global.addEventListener('online', wakeUpMeshAndLiveFeed);
+      global.addEventListener('pageshow', wakeUpMeshAndLiveFeed);
+      global.addEventListener('aetherNativeForeground', wakeUpMeshAndLiveFeed);
+    }
+    if (global.document?.addEventListener) {
+      global.document.addEventListener('visibilitychange', () => {
+        if (global.document.visibilityState === 'visible') {
+          wakeUpMeshAndLiveFeed();
+        }
+      });
+    }
+
     setInterval(() => {
       if (processTimeHooksForMember(state.me)) {
         saveState(true, true);
       }
     }, 15000);
+
+    // Yerel ağ / HTTP Hub yedek senkronizasyonu (Dış WSS engelli ağlarda bile canlı lig senkron kalır)
+    setInterval(() => {
+      if (global.document?.visibilityState !== 'hidden') {
+        syncHttpFamilyHubAsync();
+      }
+    }, 8000);
 
     // Canlı çevrimiçi kalp atışı (25 sn) & Piyasa fiyat yenileme (25 sn)
     setInterval(() => {
@@ -3135,7 +3614,7 @@
     getMarketData: () => marketData,
     getLastLiveSyncMs: () => lastLiveSyncMs,
     getPriceFlash: (key) => priceFlashMap.get(key) || null,
-    getAllAssets: () => Array.from(new Set(assetCatalog.values())),
+    getAllAssets: () => Array.from(new Set(assetCatalog.values())).filter((a) => !a.isSyntheticIpo),
     getAsset,
     getTurkishClock,
     getBistTickSize,
@@ -3145,6 +3624,7 @@
     getViopEveningSignal,
     getAnnualInflationPct,
     getAnnualMarginRatePct,
+    getOvernightRepoNetAnnualPct,
     getUsdTry,
     getActiveIpoCatalog,
     getDividendSchedule,
@@ -3163,6 +3643,8 @@
     updateHouseholdBaseline,
     postTeaBanter,
     refreshLiveMarketData,
+    buildCompactInvestorPacket,
+    mergeIncomingPeerPacket,
     markInspectedCashScale() {
       const m = getActiveMember();
       if (!m.livedMilestones.inspectedCashScale) {

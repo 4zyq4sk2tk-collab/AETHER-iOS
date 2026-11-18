@@ -76,8 +76,8 @@ jobs:
       - name: Publish IPA to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v13.0.0-ios
-          name: "AETHER v13.0 — 1.000.000 ₺ Gerçek Yatırım Meydanı ve Küresel Canlı Yatırımcı Ligi (ARM64 iOS IPA)"
+          tag_name: v13.1.0-ios
+          name: "AETHER v13.1 — 1.000.000 ₺ Gerçek Yatırım Meydanı ve Küresel Canlı Yatırımcı Ligi (ARM64 iOS IPA)"
           files: AETHER-iOS.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
