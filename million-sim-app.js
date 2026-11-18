@@ -1,5 +1,5 @@
 // ============================================================================
-// AETHER v14.0 — TAM EKRAN NATIVE MOBİL YATIRIM MEYDANI UYGULAMASI
+// AETHER v15.1.0 — TAM EKRAN NATIVE MOBİL YATIRIM MEYDANI UYGULAMASI
 // 5 Bölmeli Native Dock · Dokunmatik Emir Gişesi · Sürüklenebilir Sheet ·
 // Haptic & Dynamic Island Bildirim Köprüsü · Sıfır Web Karmaşası
 // ============================================================================
@@ -31,13 +31,22 @@
 
   // Uygulama Durumu
   let activeTab = 'market'; // market | compass | wallet | mastery | family
-  let compassSubTab = 'BRIEF'; // BRIEF | CHAINS | CRISIS | CALENDAR
+  let compassSubTab = 'BRIEF'; // BRIEF | KITCHEN | CHAINS | CRISIS | CALENDAR
   let walletSubTab = 'HOLDINGS'; // HOLDINGS | QUEUES | LEDGER
+  let masterySubTab = 'MIRROR'; // MIRROR | CASES | MANUAL
   let marketViewMode = 'LIST'; // LIST | BENTO
-  let marketSortBy = 'DEFAULT'; // DEFAULT | CHANGE_DESC | CHANGE_ASC | DISCOUNT_52W
-  let activeLens = 'VITRIN'; // VITRIN | FIRE_SALE | BAKERY_CASH | PASSIVE_RIVER | ROTTEN_TRAPS | IPO_DIVIDEND
+  let marketSortBy = 'DEFAULT'; // DEFAULT | FORENSIC_SCORE | CHANGE_DESC | CHANGE_ASC | DISCOUNT_52W
+  let activeLens = 'VITRIN'; // VITRIN | EARLY_SIGNALS | HARVEST_VALUE | FIRE_SALE | BAKERY_CASH | PASSIVE_RIVER | ROTTEN_TRAPS | IPO_DIVIDEND
   let activeCategory = 'ALL'; // ALL | GOLD_COMMODITY | RATE_SUKUK | FX | BIST_ALL | FUNDS | GLOBAL_CRYPTO
+  let bistSectorFilter = 'ALL';
+  let bistVisibleLimit = 100;
+  let lastMarketMatchTotal = 0;
   let searchQuery = '';
+  let kitchenDeskId = 'BREAKEVEN'; // BREAKEVEN | AUDIT_BARBELL | TMS29 | MKK_WHALE | PATTERNS | CAPEX_VALUE | FIELD_BDDK
+  let calcAmountTL = 250000;
+  let calcDays = 32;
+  let caseFilterCat = 'ALL';
+  let manualSearchQuery = '';
   let selectedChainId = 'chain-oil';
   let selectedNewsId = null;
   let selectedCrisisId = 'STRAIT_BLOCKADE';
@@ -200,24 +209,28 @@
       .replace(/"/g, '&quot;');
   }
 
+  const TR_INT = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
+  const TR_DEC2 = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const TR_DEC4 = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 3, maximumFractionDigits: 4 });
+
   function fmtTL(n) {
-    return Math.round(Number(n) || 0).toLocaleString('tr-TR') + ' ₺';
+    return TR_INT.format(Math.round(Number(n) || 0)) + ' ₺';
   }
 
   function fmtCompactTL(n) {
     const v = Number(n) || 0;
     const abs = Math.abs(v);
     const sign = v < 0 ? '-' : '';
-    if (abs >= 1000000) return sign + (abs / 1000000).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + 'M ₺';
-    if (abs >= 10000) return sign + Math.round(abs / 1000).toLocaleString('tr-TR') + 'B ₺';
-    return Math.round(v).toLocaleString('tr-TR') + ' ₺';
+    if (abs >= 1000000) return sign + TR_DEC2.format(abs / 1000000) + 'M ₺';
+    if (abs >= 10000) return sign + TR_INT.format(Math.round(abs / 1000)) + 'B ₺';
+    return TR_INT.format(Math.round(v)) + ' ₺';
   }
 
   function fmtUnitTL(n) {
     const v = Number(n) || 0;
-    if (v >= 1000) return Math.round(v).toLocaleString('tr-TR') + ' ₺';
-    if (v >= 1) return v.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
-    return v.toLocaleString('tr-TR', { minimumFractionDigits: 3, maximumFractionDigits: 4 }) + ' ₺';
+    if (v >= 1000) return TR_INT.format(Math.round(v)) + ' ₺';
+    if (v >= 1) return TR_DEC2.format(v) + ' ₺';
+    return TR_DEC4.format(v) + ' ₺';
   }
 
   function fmtAgo(ts) {
@@ -537,19 +550,18 @@
   // --------------------------------------------------------------------------
   function getFilteredMarketAssets() {
     const K = global.AetherKernelV10;
+    const G = global.RealInvestmentGuide;
     const all = K.getAllAssets().filter((a) => a.venue !== 'BENCHMARK_ONLY' && (a.priceTL > 0 || a.isRateInstrument));
     const q = searchQuery.trim().toLocaleUpperCase('tr-TR');
 
     let list = [];
 
     if (q.length > 0) {
-      list = all
-        .filter((a) =>
-          a.name.toLocaleUpperCase('tr-TR').includes(q) ||
-          a.ticker.toLocaleUpperCase('tr-TR').includes(q) ||
-          (a.categoryName || '').toLocaleUpperCase('tr-TR').includes(q)
-        )
-        .slice(0, 80);
+      list = all.filter((a) =>
+        a.name.toLocaleUpperCase('tr-TR').includes(q) ||
+        a.ticker.toLocaleUpperCase('tr-TR').includes(q) ||
+        (a.categoryName || '').toLocaleUpperCase('tr-TR').includes(q)
+      );
     } else if (activeCategory !== 'ALL') {
       if (activeCategory === 'GOLD_COMMODITY') list = all.filter((a) => a.categoryId === '2' || a.subVenue === 'DARPHANE_S1');
       else if (activeCategory === 'RATE_SUKUK') list = all.filter((a) => a.isRateInstrument || a.id === 'eurobond-usdtr' || a.id === 'eurobond-emb');
@@ -557,11 +569,32 @@
       else if (activeCategory === 'FUNDS') list = all.filter((a) => a.categoryId === '4' || a.subVenue === 'BIST_TAXABLE_ETF' || a.subVenue === 'BIST_EXEMPT_ETF');
       else if (activeCategory === 'GLOBAL_CRYPTO') list = all.filter((a) => a.isForeignUsd || a.venue === 'CRYPTO_24_7');
       else if (activeCategory === 'BIST_ALL') {
-        list = all
-          .filter((a) => a.subVenue === 'BIST_STOCK')
-          .sort((a, b) => (b.bistRow?.turnoverMillionTL || 0) - (a.bistRow?.turnoverMillionTL || 0))
-          .slice(0, 90);
+        list = all.filter((a) => a.subVenue === 'BIST_STOCK' && (bistSectorFilter === 'ALL' || a.bistRow?.sector === bistSectorFilter));
+        if (marketSortBy === 'DEFAULT') {
+          list = [...list].sort((a, b) => (b.bistRow?.turnoverMillionTL || 0) - (a.bistRow?.turnoverMillionTL || 0));
+        }
       }
+    } else if (activeLens === 'EARLY_SIGNALS') {
+      list = all
+        .filter((a) =>
+          a.trueSignalRecord ||
+          a.vukRecord?.kind === 'VUK_CASH_LEADER' ||
+          a.forensicPattern?.patternCode === 'QUIET_BOTTOM' ||
+          a.forensicPattern?.patternCode === 'INST_BREAKOUT' ||
+          a.whaleRecord
+        )
+        .sort((a, b) => ((b.bistRow?.cmf20 || 0) - (a.bistRow?.cmf20 || 0)))
+        .slice(0, 48);
+    } else if (activeLens === 'HARVEST_VALUE') {
+      list = all
+        .filter((a) =>
+          a.capexRecord ||
+          a.legalArbRecord ||
+          a.tms29Record?.kind === 'CASH_CHAMPION' ||
+          (a.bistRow && (a.bistRow.fcfMillionTL || 0) > 500 && (a.bistRow.pb || 9) <= 1.25 && !a.isPatronSelling)
+        )
+        .sort((a, b) => ((b.bistRow?.fcfMillionTL || 0) - (a.bistRow?.fcfMillionTL || 0)))
+        .slice(0, 48);
     } else if (activeLens === 'FIRE_SALE') {
       list = all
         .filter((a) =>
@@ -569,7 +602,7 @@
           (a.bistRow && (a.bistRow.drawdown52WPct || 0) <= -25 && (a.bistRow.ocfMillionTL || 0) > 0 && !a.isPumpAnomaly)
         )
         .sort((a, b) => ((b.bistRow?.cmf20 || 0) - (a.bistRow?.cmf20 || 0)))
-        .slice(0, 40);
+        .slice(0, 48);
     } else if (activeLens === 'BAKERY_CASH') {
       list = all
         .filter((a) => a.bistRow && a.bistRow.entityKind !== 'bank' && (a.bistRow.ocfMillionTL || 0) > 250 && !a.isPumpAnomaly && !a.isTms29Illusion)
@@ -578,7 +611,7 @@
           const rB = (b.bistRow.ocfMillionTL || 0) / Math.max(0.5, b.bistRow.marketCapBillionTL || 10);
           return rB - rA;
         })
-        .slice(0, 40);
+        .slice(0, 48);
     } else if (activeLens === 'PASSIVE_RIVER') {
       const fixed = ['kira-sertifikasi-sukuk', 'para-piyasasi-fonu', 'mevduat-ust', 'dibs-tahvil', 'eurobond-usdtr']
         .map((k) => K.getAsset(k))
@@ -586,24 +619,45 @@
       const divStocks = all
         .filter((a) => a.bistRow && (a.bistRow.dividendYield || 0) >= 2.0 && (a.bistRow.ocfMillionTL || 0) > 0)
         .sort((a, b) => (b.bistRow.dividendYield || 0) - (a.bistRow.dividendYield || 0))
-        .slice(0, 28);
+        .slice(0, 32);
       list = [...fixed, ...divStocks];
     } else if (activeLens === 'ROTTEN_TRAPS') {
       const s1 = K.getAsset('altin-sertifikasi');
       const traps = all.filter((a) => a.isPumpAnomaly || a.isTms29Illusion || a.distributionTrap || a.isPatronSelling);
       const out = s1 && K.getDarphanePremiumInfo().premiumPct >= 5 ? [s1, ...traps] : traps;
-      list = Array.from(new Set(out)).slice(0, 40);
+      list = Array.from(new Set(out)).slice(0, 48);
     } else {
       list = CURATED_VITRIN_KEYS.map((k) => K.getAsset(k)).filter(Boolean);
     }
 
-    if (marketSortBy === 'CHANGE_DESC') {
+    // Tam Evren Sıralaması: Kesmeden ÖNCE tüm eşleşen varlıklar sıralanır (Schwartzian O(N) Önbellek!)
+    if (marketSortBy === 'FORENSIC_SCORE') {
+      list = list
+        .map((a) => ({ a, v: G.getQuickForensicScore ? G.getQuickForensicScore(a) : (G.computeDeepForensicXray(a)?.overallScore ?? 0) }))
+        .sort((x, y) => y.v - x.v)
+        .map((x) => x.a);
+    } else if (marketSortBy === 'CHANGE_DESC') {
       list = [...list].sort((a, b) => (Number(b.change1D) || 0) - (Number(a.change1D) || 0));
     } else if (marketSortBy === 'CHANGE_ASC') {
       list = [...list].sort((a, b) => (Number(a.change1D) || 0) - (Number(b.change1D) || 0));
     } else if (marketSortBy === 'DISCOUNT_52W') {
-      const G = global.RealInvestmentGuide;
-      list = [...list].sort((a, b) => (G.computeRange52W(a)?.drawdownPct ?? 0) - (G.computeRange52W(b)?.drawdownPct ?? 0));
+      list = list
+        .map((a) => ({
+          a,
+          v: a.bistRow?.drawdown52WPct != null && Number.isFinite(Number(a.bistRow.drawdown52WPct))
+            ? Number(a.bistRow.drawdown52WPct)
+            : (G.computeRange52W(a)?.drawdownPct ?? 0)
+        }))
+        .sort((x, y) => x.v - y.v)
+        .map((x) => x.a);
+    }
+
+    lastMarketMatchTotal = list.length;
+    if (q.length > 0) {
+      return list.slice(0, 100);
+    }
+    if (activeCategory === 'BIST_ALL') {
+      return list.slice(0, bistVisibleLimit);
     }
     return list;
   }
@@ -627,7 +681,7 @@
         <div class="ae-two-col">
           <div class="ms-list" style="margin-bottom:10px">
             ${ipos.map((ipo) => {
-              const already = (me.ipoRequests || []).find((r) => r.ipoId === ipo.id);
+              const already = (me.ipoRequests || []).find((r) => (r.cycleId && ipo.cycleId ? r.cycleId === ipo.cycleId : r.ipoId === ipo.id) || r.ipoId === ipo.id);
               const estLots = Math.round(ipo.totalOfferedLots / ipo.estimatedParticipants);
               return `
                 <div class="ms-list-row" style="flex-direction:column;align-items:stretch">
@@ -689,6 +743,18 @@
       `;
     }
 
+    const showMoreBist = activeCategory === 'BIST_ALL' && !searchQuery.trim() && assets.length < lastMarketMatchTotal;
+    const moreFooterHtml = showMoreBist ? `
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;padding:10px 2px 4px">
+        <button type="button" class="ms-btn primary sm" id="aeLoadMoreBistBtn" style="flex:1;min-width:170px;padding:10px 12px">
+          Daha Fazla Şirket Göster (${assets.length} / ${lastMarketMatchTotal})
+        </button>
+        <button type="button" class="ms-btn sm" id="aeLoadAllBistBtn" style="padding:10px 12px">
+          Tümünü Aç (${lastMarketMatchTotal})
+        </button>
+      </div>
+    ` : '';
+
     if (marketViewMode === 'BENTO') {
       return `
         <div class="ae-bento-grid">
@@ -723,6 +789,7 @@
             `;
           }).join('')}
         </div>
+        ${moreFooterHtml}
       `;
     }
 
@@ -775,6 +842,7 @@
           `;
         }).join('')}
       </div>
+      ${moreFooterHtml}
     `;
   }
 
@@ -784,6 +852,28 @@
         AetherNative.haptic('light');
         openAssetDrawer(el.getAttribute('data-open-asset'), 'ORDER');
       });
+    });
+
+    root.querySelector('#aeLoadMoreBistBtn')?.addEventListener('click', () => {
+      AetherNative.haptic('selection');
+      bistVisibleLimit = Math.min(lastMarketMatchTotal || 700, bistVisibleLimit + 160);
+      const listReg = document.getElementById('aeMarketListRegion');
+      if (listReg) {
+        const K = global.AetherKernelV10;
+        listReg.innerHTML = buildMarketAssetListHtml(getFilteredMarketAssets(), K.evaluateMemberPortfolio());
+        bindAssetListClicks(listReg);
+      }
+    });
+
+    root.querySelector('#aeLoadAllBistBtn')?.addEventListener('click', () => {
+      AetherNative.haptic('selection');
+      bistVisibleLimit = Math.max(700, lastMarketMatchTotal || 700);
+      const listReg = document.getElementById('aeMarketListRegion');
+      if (listReg) {
+        const K = global.AetherKernelV10;
+        listReg.innerHTML = buildMarketAssetListHtml(getFilteredMarketAssets(), K.evaluateMemberPortfolio());
+        bindAssetListClicks(listReg);
+      }
     });
   }
 
@@ -795,6 +885,7 @@
     const dInfo = K.getDarphanePremiumInfo();
     const inf = K.getAnnualInflationPct();
     const dailyInfBurn = Math.round(1000000 * (Math.pow(1 + inf / 100, 1 / 365) - 1));
+    const allBistCount = K.getAllAssets().filter((a) => a.subVenue === 'BIST_STOCK' && a.priceTL > 0).length || 619;
 
     const usdAsset = K.getAsset('doviz-usd');
     const eurAsset = K.getAsset('doviz-eur');
@@ -898,12 +989,14 @@
       <!-- 3. TEK SATIR BİRLEŞİK KEŞİF RADARI & VARLIK SINIFI ŞERİDİ -->
       <div class="ae-hscroll" id="aeLensScroll" style="margin-bottom:6px">
         <button type="button" class="ae-chip ${activeLens === 'VITRIN' && activeCategory === 'ALL' ? 'active' : ''}" data-lens="VITRIN">Vitrin 20</button>
+        <button type="button" class="ae-chip ${activeLens === 'EARLY_SIGNALS' && activeCategory === 'ALL' ? 'active' : ''}" data-lens="EARLY_SIGNALS">🎯 Öncü İzler</button>
+        <button type="button" class="ae-chip ${activeLens === 'HARVEST_VALUE' && activeCategory === 'ALL' ? 'active' : ''}" data-lens="HARVEST_VALUE">🏭 Hasat & Değer</button>
         <button type="button" class="ae-chip ${activeLens === 'FIRE_SALE' && activeCategory === 'ALL' ? 'active' : ''}" data-lens="FIRE_SALE">🔥 Yangın Yeri</button>
         <button type="button" class="ae-chip ${activeLens === 'BAKERY_CASH' && activeCategory === 'ALL' ? 'active' : ''}" data-lens="BAKERY_CASH">🥖 Fırın Kasalar</button>
         <button type="button" class="ae-chip ${activeLens === 'PASSIVE_RIVER' && activeCategory === 'ALL' ? 'active' : ''}" data-lens="PASSIVE_RIVER">💧 Nakit Çarkı</button>
         <button type="button" class="ae-chip ${activeLens === 'ROTTEN_TRAPS' && activeCategory === 'ALL' ? 'active' : ''}" data-lens="ROTTEN_TRAPS">⛔ Tuzaklar</button>
         <button type="button" class="ae-chip ${activeLens === 'IPO_DIVIDEND' && activeCategory === 'ALL' ? 'active' : ''}" data-lens="IPO_DIVIDEND">🏛️ Arz & Temettü</button>
-        <button type="button" class="ae-chip sub ${activeCategory === 'BIST_ALL' ? 'active' : ''}" data-cat="BIST_ALL">BIST 619</button>
+        <button type="button" class="ae-chip sub ${activeCategory === 'BIST_ALL' ? 'active' : ''}" data-cat="BIST_ALL">BIST ${allBistCount}</button>
         <button type="button" class="ae-chip sub ${activeCategory === 'GOLD_COMMODITY' ? 'active' : ''}" data-cat="GOLD_COMMODITY">Altın & Emtia</button>
         <button type="button" class="ae-chip sub ${activeCategory === 'RATE_SUKUK' ? 'active' : ''}" data-cat="RATE_SUKUK">Mevduat & Sukuk</button>
         <button type="button" class="ae-chip sub ${activeCategory === 'FX' ? 'active' : ''}" data-cat="FX">Döviz</button>
@@ -912,9 +1005,43 @@
         ${showInstallChip ? `<button type="button" class="ae-chip" id="aeOpenInstallChipBtn" style="border-color:rgba(245,158,11,0.45);color:var(--gold-bright)">📲 Uygulamayı Kur</button>` : ''}
       </div>
 
+      ${activeCategory === 'BIST_ALL' ? `
+        <div class="ae-hscroll" id="aeSectorScroll" style="margin-bottom:6px">
+          ${[
+            ['ALL', `Tüm Sektörler (${allBistCount})`],
+            ['Bankacılık', '🏦 Banka'],
+            ['Havacılık & Lojistik', '✈️ Havacılık/Lojistik'],
+            ['Elektrik & Yenilenebilir Enerji', '⚡ Enerji'],
+            ['Market & Perakende', '🛒 Perakende'],
+            ['Otomotiv & Yan Sanayi', '🚗 Otomotiv'],
+            ['Savunma & Havacılık Sanayi', '🛡️ Savunma'],
+            ['Yazılım, Teknoloji & Telekom', '💻 Yazılım/Telekom'],
+            ['Gıda, İçecek & Tarım', '🌾 Gıda/İçecek'],
+            ['Demir-Çelik & Metal', '🏗️ Demir-Çelik'],
+            ['Gayrimenkul & GYO', '🏢 GYO'],
+            ['Holding & Çoklu Yatırım', '🏛️ Holding'],
+            ['Sigorta & Emeklilik', '☂️ Sigorta'],
+            ['Aracı Kurum & Finansman', '📈 Aracı Kurum'],
+            ['Petrol, Rafineri & Doğalgaz', '🛢️ Rafineri/Gaz'],
+            ['Kimya, Gübre & Kağıt', '🧪 Kimya/Gübre/Kağıt'],
+            ['Çimento, Cam & Seramik', '🧱 Çimento/Cam'],
+            ['Beyaz Eşya & Mobilya', '🏠 Beyaz Eşya/Mobilya'],
+            ['Makine & Sanayi Üretimi', '⚙️ Makine/Sanayi'],
+            ['Tekstil & Hazır Giyim', '🧵 Tekstil/Giyim'],
+            ['Turizm, Medya & Hizmet', '🏨 Turizm/Hizmet'],
+            ['İlaç & Sağlık', '💊 İlaç/Sağlık'],
+            ['İnşaat & Taahhüt', '🚧 İnşaat/Taahhüt'],
+            ['Madencilik & Altın', '⛏️ Maden/Altın'],
+            ['Girişim & Yatırım Ortaklığı', '🚀 Girişim/YO']
+          ].map(([sKey, sLabel]) => `
+            <button type="button" class="ae-chip ${bistSectorFilter === sKey ? 'active' : ''}" data-bsec="${esc(sKey)}" style="padding:5px 10px;font-size:11.4px">${esc(sLabel)}</button>
+          `).join('')}
+        </div>
+      ` : ''}
+
       ${marketSortBy !== 'DEFAULT' ? `
         <div style="display:flex;justify-content:space-between;align-items:center;padding:2px 4px 8px;font-size:11.5px;color:var(--gold-bright);font-weight:700">
-          <span>Sıralama: ${marketSortBy === 'CHANGE_DESC' ? 'En Çok Yükselenler' : (marketSortBy === 'CHANGE_ASC' ? 'En Çok Düşenler' : '52 Hafta Zirvesinden En Ucuzlar')}</span>
+          <span>Sıralama: ${marketSortBy === 'FORENSIC_SCORE' ? 'En Sağlam Kasa Röntgen Puanı' : (marketSortBy === 'CHANGE_DESC' ? 'En Çok Yükselenler' : (marketSortBy === 'CHANGE_ASC' ? 'En Çok Düşenler' : '52 Hafta Zirvesinden En Ucuzlar'))}</span>
           <button type="button" class="ms-btn sm" id="aeResetSortBtn" style="padding:3px 8px;font-size:10.8px">Varsayılan</button>
         </div>
       ` : ''}
@@ -958,7 +1085,7 @@
 
     document.getElementById('aeSortCycleBtn')?.addEventListener('click', () => {
       AetherNative.haptic('selection');
-      const order = ['DEFAULT', 'CHANGE_DESC', 'CHANGE_ASC', 'DISCOUNT_52W'];
+      const order = ['DEFAULT', 'FORENSIC_SCORE', 'CHANGE_DESC', 'CHANGE_ASC', 'DISCOUNT_52W'];
       marketSortBy = order[(order.indexOf(marketSortBy) + 1) % order.length];
       renderMarketTab(host);
     });
@@ -973,6 +1100,8 @@
         AetherNative.haptic('selection');
         activeLens = btn.getAttribute('data-lens');
         activeCategory = 'ALL';
+        bistSectorFilter = 'ALL';
+        bistVisibleLimit = 100;
         searchQuery = '';
         lastIpoFeedback = null;
         renderMarketTab(host);
@@ -983,7 +1112,17 @@
       btn.addEventListener('click', () => {
         AetherNative.haptic('selection');
         activeCategory = btn.getAttribute('data-cat');
+        bistVisibleLimit = 100;
         searchQuery = '';
+        renderMarketTab(host);
+      });
+    });
+
+    host.querySelectorAll('[data-bsec]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        AetherNative.haptic('selection');
+        bistSectorFilter = btn.getAttribute('data-bsec') || 'ALL';
+        bistVisibleLimit = 100;
         renderMarketTab(host);
       });
     });
@@ -1037,8 +1176,430 @@
   }
 
   // --------------------------------------------------------------------------
-  // 5. SEKME 2: PUSULA (DOST & KAP, DOMİNO & MEVSİM, FIRTINA TESTİ, TAKVİM & ARZ)
+  // 5. SEKME 2: PUSULA (DOST & KAP, MUTFAK RADARI, DOMİNO, FIRTINA, TAKVİM)
   // --------------------------------------------------------------------------
+  function renderKitchenSubDeskHtml() {
+    const K = global.AetherKernelV10;
+    const G = global.RealInvestmentGuide;
+    const desks = G.getKitchenIntelDesks ? G.getKitchenIntelDesks() : null;
+    const be = G.computeBreakevenComparison ? G.computeBreakevenComparison(calcAmountTL, calcDays) : null;
+
+    const deskChipsHtml = `
+      <div class="ae-hscroll" id="aeKitchenDeskScroll" style="margin-bottom:10px">
+        <button type="button" class="ae-chip ${kitchenDeskId === 'BREAKEVEN' ? 'active' : ''}" data-kdesk="BREAKEVEN">⚖️ Başabaş Terazisi</button>
+        <button type="button" class="ae-chip ${kitchenDeskId === 'AUDIT_BARBELL' ? 'active' : ''}" data-kdesk="AUDIT_BARBELL">🛡️ Öz-Denetim & Zırh</button>
+        <button type="button" class="ae-chip ${kitchenDeskId === 'TMS29' ? 'active' : ''}" data-kdesk="TMS29">🥖 TMS-29 & VUK Kasa</button>
+        <button type="button" class="ae-chip ${kitchenDeskId === 'MKK_WHALE' ? 'active' : ''}" data-kdesk="MKK_WHALE">🕵️ MKK & Balina</button>
+        <button type="button" class="ae-chip ${kitchenDeskId === 'PATTERNS' ? 'active' : ''}" data-kdesk="PATTERNS">📐 4 Tahta İzi</button>
+        <button type="button" class="ae-chip ${kitchenDeskId === 'CAPEX_VALUE' ? 'active' : ''}" data-kdesk="CAPEX_VALUE">🏭 Hasat & Değer</button>
+        <button type="button" class="ae-chip ${kitchenDeskId === 'FIELD_BDDK' ? 'active' : ''}" data-kdesk="FIELD_BDDK">🚢 Gümrük & BDDK</button>
+      </div>
+    `;
+
+    const quickTickerBtn = (tk, extraLabel = '') => {
+      const cleanTk = String(tk || '').replace(/^BIST:/i, '').trim();
+      const a = K.getAsset(cleanTk) || K.getAsset(tk);
+      if (!a) return `<span class="ms-asset-code">${esc(cleanTk || tk)}</span>`;
+      return `<button type="button" class="ms-btn sm" data-open-asset="${esc(a.key)}" style="padding:5px 9px;font-size:11.2px">${esc(a.ticker)}${extraLabel ? ' · ' + esc(extraLabel) : ' · ' + (a.isRateInstrument ? '%' + a.annualGrossRatePct.toFixed(1) : fmtUnitTL(a.priceTL))}</button>`;
+    };
+
+    if (kitchenDeskId === 'AUDIT_BARBELL' && desks?.auditAndBarbell) {
+      const sc = desks.auditAndBarbell.scorecard;
+      const bp = desks.auditAndBarbell.barbellPlan;
+      const zr = bp?.zeroRuinProof || null;
+      const arbs = desks.auditAndBarbell.arbitrageChains || [];
+      return `
+        ${deskChipsHtml}
+        ${sc ? `
+          <section class="ae-hero-card">
+            <span class="ms-sig-pill good">Feynman Öz-Denetim Karnesi · ${esc(sc.windowLabel || 'T-22 -> T-0')}</span>
+            <h3 style="margin:6px 0 4px;font-size:15.8px;font-weight:900">Motor Kendi Sinyallerini Canlı Piyasada Denetledi</h3>
+            <div class="ae-kpi-2x2" style="margin:8px 0">
+              <div class="ms-kpi-box" style="border-color:rgba(16,185,129,0.4)">
+                <span>Tuzaklardan Koruma İsabeti</span>
+                <strong class="pos">%${sc.trapAvoidanceAccuracyPct ?? 96}</strong>
+                <small>${sc.trapCount || 27} tuzak ort: %${sc.avgWorst6Traps1M ?? sc.avgTrap1M}</small>
+              </div>
+              <div class="ms-kpi-box" style="border-color:rgba(56,189,248,0.4)">
+                <span>Top-6 Doğrulanmış Alfa Farkı</span>
+                <strong class="pos">+${sc.netAlphaTop6SpreadPct ?? 38.7} puan</strong>
+                <small>Top-6 ort: +%${sc.avgTop6Verified1M ?? 15.9}</small>
+              </div>
+            </div>
+            ${sc.feynmanSelfCritique ? `<p style="margin:0 0 8px;font-size:11.8px;color:var(--ink-200);line-height:1.45">${esc(sc.feynmanSelfCritique)}</p>` : ''}
+            ${(sc.topVerifiedWinners || []).length > 0 ? `
+              <div class="ae-hscroll" style="padding-bottom:0">
+                ${sc.topVerifiedWinners.slice(0, 6).map((w) => quickTickerBtn(w.id || w.symbol, (w.perf1M >= 0 ? '+' : '') + '%' + w.perf1M)).join('')}
+              </div>
+            ` : ''}
+          </section>
+        ` : ''}
+
+        ${bp ? `
+          <section class="ae-card">
+            <span class="ms-sig-pill info">%${bp.armorWeightPct || 65} Kasa Zırhı + %${bp.equityBasketWeightPct || 35} Asimetrik Sepet</span>
+            <h3 style="margin:6px 0 4px;font-size:15.4px;font-weight:800">1.000.000 ₺ Sıfır Yıkım (Zero-Ruin) Halter Mimarisi</h3>
+            ${zr?.mathematicalTheorem ? `
+              <div class="ms-alert ok" style="margin-bottom:10px;font-size:11.8px">
+                <strong>Matematiksel Kanıt:</strong> ${esc(zr.mathematicalTheorem)}
+              </div>
+            ` : ''}
+            <div class="ms-list" style="margin-bottom:10px">
+              ${(bp.layer1Armor || []).map((arm) => `
+                <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:5px">
+                  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                    <div><span class="ms-sig-pill good">${esc(arm.slot)} · %${arm.weightPct}</span> <strong style="font-size:12.8px">${esc(arm.name)}</strong></div>
+                    ${arm.assetId ? quickTickerBtn(arm.assetId) : ''}
+                  </div>
+                  <div style="font-size:11.6px;color:var(--ink-200)">${esc(arm.role)}</div>
+                </div>
+              `).join('')}
+            </div>
+            <div style="font-size:12px;font-weight:800;color:var(--gold-bright);margin-bottom:6px">🎯 Katman-2: %${bp.equityBasketWeightPct || 35} Asimetrik Öncü Sepet (Stop: %${bp.hardStopLossPct || -7}):</div>
+            <div class="ms-list">
+              ${(bp.layer2AsymmetricBasket || []).slice(0, 6).map((eq) => `
+                <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:5px">
+                  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                    <div><span class="ms-asset-code">${esc(String(eq.ticker || '').replace(/^BIST:/, ''))}</span> <strong style="font-size:12.6px">${esc(eq.name)}</strong></div>
+                    ${quickTickerBtn(eq.ticker, 'R/R ' + (eq.riskRewardRatio || '2x'))}
+                  </div>
+                  <div style="font-size:11.5px;color:var(--ink-400)">Pay: %${eq.weightPct} · Destek: ${eq.supportBand} · Stop: ${eq.stopLossPrice} · 1A Hedef: +${eq.targetGainPct}%</div>
+                </div>
+              `).join('')}
+            </div>
+          </section>
+        ` : ''}
+
+        ${arbs.length > 0 ? `
+          <section class="ae-card">
+            <span class="ms-sig-pill warn">Canlı Tedarik Zinciri & Ambalaj Arbitrajları</span>
+            <h3 style="margin:6px 0 8px;font-size:15px;font-weight:800">Aynı Varlık / Zincirde Fiyat Sapması Yakalayanlar</h3>
+            <div class="ms-list">
+              ${arbs.map((ch) => `
+                <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:5px">
+                  <span class="ms-sig-pill info" style="align-self:flex-start">${esc(ch.badge || 'Arbitraj')}</span>
+                  <strong style="font-size:13px">${esc(ch.title)}</strong>
+                  <div style="font-size:11.6px;color:var(--ink-200)">${esc(ch.actionableRule || ch.transmissionMechanism)}</div>
+                </div>
+              `).join('')}
+            </div>
+          </section>
+        ` : ''}
+      `;
+    }
+
+    if (kitchenDeskId === 'BREAKEVEN' && be) {
+      return `
+        ${deskChipsHtml}
+        <section class="ae-hero-card">
+          <span class="ms-sig-pill info">Canlı Faiz – Kur – Altın – Enflasyon Terazisi</span>
+          <h3 style="margin:6px 0 4px;font-size:16px;font-weight:900">Dolar veya Altın Kaç ₺ Olmazsa TL Getirisine Yenilir?</h3>
+          <p style="margin:0 0 10px;font-size:12px;color:var(--ink-200)">Tutar ve vadeyi seç; stopaj ve makas düşülmüş gerçek net sonuçları kuruşu kuruşuna tart:</p>
+
+          <div style="font-size:11px;font-weight:800;color:var(--ink-400);margin-bottom:4px">Sermaye Tutarı:</div>
+          <div class="ae-hscroll" style="margin-bottom:8px">
+            ${[100000, 250000, 500000, 1000000].map((v) => `
+              <button type="button" class="ae-chip sub ${calcAmountTL === v ? 'active' : ''}" data-bamt="${v}">${fmtCompactTL(v)}</button>
+            `).join('')}
+          </div>
+
+          <div style="font-size:11px;font-weight:800;color:var(--ink-400);margin-bottom:4px">Vade Süresi:</div>
+          <div class="ae-hscroll" style="margin-bottom:10px">
+            ${[[32, '32 Gün (1 Ay)'], [90, '90 Gün (3 Ay)'], [180, '180 Gün (6 Ay)'], [365, '365 Gün (1 Yıl)']].map(([d, lbl]) => `
+              <button type="button" class="ae-chip sub ${calcDays === d ? 'active' : ''}" data-bdays="${d}">${lbl}</button>
+            `).join('')}
+          </div>
+
+          <div class="ae-kpi-2x2" style="margin-bottom:10px">
+            <div class="ms-kpi-box" style="border-color:rgba(16,185,129,0.45)">
+              <span>💧 %0 Vergili Kamu Sukuk</span>
+              <strong class="pos">${fmtTL(be.sukuk.endTL)}</strong>
+              <small>Net +${fmtTL(be.sukuk.netGainTL)} (+%${be.sukuk.netPeriodPct})</small>
+            </div>
+            <div class="ms-kpi-box">
+              <span>🏦 Vadeli Mevduat (%${be.deposit.stopaj} Stopaj)</span>
+              <strong>${fmtTL(be.deposit.endTL)}</strong>
+              <small>Net +${fmtTL(be.deposit.netGainTL)} (+%${be.deposit.netPeriodPct})</small>
+            </div>
+            <div class="ms-kpi-box">
+              <span>⚡ Günlük Bileşik PPF (%17,5 Vergi)</span>
+              <strong>${fmtTL(be.ppf.endTL)}</strong>
+              <small>Net +${fmtTL(be.ppf.netGainTL)} (+%${be.ppf.netPeriodPct})</small>
+            </div>
+            <div class="ms-kpi-box" style="border-color:rgba(245,158,11,0.42)">
+              <span>🥖 Mutfak Enflasyon Barajı</span>
+              <strong class="warn-txt">${fmtTL(be.infBarTL)}</strong>
+              <small>Alım gücünü koruma sınırı (+%${be.infPeriodPct})</small>
+            </div>
+          </div>
+
+          <div class="ae-card" style="background:var(--surface-2);margin-bottom:8px">
+            <div style="font-size:12.6px;font-weight:800;margin-bottom:6px;color:var(--gold-bright)">🎯 ${be.horizonDays} Gün Sonraki Başabaş Kurları (Sukuk'u Geçmek İçin):</div>
+            <div style="display:grid;gap:6px;font-size:12.2px">
+              <div>• <strong>Dolar (Kapalıçarşıdan alırsan):</strong> Şu an ${be.usdNow} ₺ -> ${be.horizonDays} gün sonra en az <strong>${be.breakevenUsdBazaar} ₺</strong> olmalı! <span style="color:var(--ink-400)">(Gece bankadan alırsan ${be.breakevenUsdBankNight} ₺ olmalı!)</span></div>
+              <div>• <strong>Fiziki Gram Altın:</strong> Şu an ${fmtTL(be.goldNow)} -> ${be.horizonDays} gün sonra en az <strong>${fmtTL(be.breakevenGoldBazaar)}</strong> olmalı!</div>
+              <div>• <strong>ALTIN.S1 Hava Parası Farkı:</strong> ${fmtTL(be.amountTL)} ile Çarşıdan <strong>${be.goldArbitrage.bazaarGrams} gr</strong> altın alırken, borsada ALTIN.S1 alırsan sadece <strong>${be.goldArbitrage.s1Grams} gr</strong> alabiliyorsun (<strong class="neg">-${be.goldArbitrage.extraGramsInBazaar} gr / ~${fmtTL(be.goldArbitrage.s1AirMoneyTL)} hava parası kaybı!</strong>).</div>
+            </div>
+            <div class="ae-hscroll" style="margin-top:9px;padding-bottom:0">
+              ${quickTickerBtn('kira-sertifikasi-sukuk', '%' + be.sukuk.annualGross + ' %0 Vergi')}
+              ${quickTickerBtn('gram-altin-spot')}
+              ${quickTickerBtn('altin-sertifikasi')}
+              ${quickTickerBtn('doviz-usd')}
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    if (kitchenDeskId === 'TMS29' && desks) {
+      return `
+        ${deskChipsHtml}
+        <section class="ae-card">
+          <span class="ms-sig-pill good">${desks.tms29.auditedCount} BIST Şirketi Bilanço Denetimi</span>
+          <h3 style="margin:6px 0 4px;font-size:15.5px;font-weight:800">Saf Kasa Nakdi Şampiyonları (VUK & OCF >> Kağıt Kâr)</h3>
+          <p style="margin:0 0 9px;font-size:11.9px;color:var(--ink-400)">TMS-29 amortismanı yüzünden kağıt kârı düşük görünse de vergi dairesi (VUK) ve esas faaliyet kasasında oluk oluk nakit basanlar:</p>
+          <div class="ms-list" style="margin-bottom:12px">
+            ${[...desks.tms29.vukCashLeaders, ...desks.tms29.cashChampions].slice(0, 8).map((x) => `
+              <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:6px">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                  <div><span class="ms-asset-code">${esc(x.ticker)}</span> <strong style="font-size:13px">${esc(x.name)}</strong></div>
+                  ${quickTickerBtn(x.ticker, 'Röntgen')}
+                </div>
+                <div style="font-size:11.8px;color:var(--ink-200)">${esc(x.vukVerdict || x.auditNote)}</div>
+              </div>
+            `).join('')}
+          </div>
+
+          <span class="ms-sig-pill danger">Kırmızı Bayrak · Makyajlı Kâr, İlişkili Taraf & ÖST Borç Duvarı</span>
+          <h3 style="margin:6px 0 4px;font-size:15px;font-weight:800">Kağıt Üstünde Kâr Yazıp Kasadan Nakit Yakanlar</h3>
+          <div class="ms-list">
+            ${[
+              ...desks.tms29.illusionTraps.slice(0, 4),
+              ...(desks.tms29.relatedPartyRisks || []).slice(0, 3),
+              ...(desks.tms29.bondRolloverRisks || []).slice(0, 3),
+              ...desks.tms29.debtWalls.slice(0, 2)
+            ].map((x) => `
+              <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:6px;border-color:rgba(244,63,94,0.28)">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                  <div><span class="ms-sig-pill danger">${esc(x.ticker)}</span> <strong style="font-size:13px">${esc(x.name)}</strong></div>
+                  ${quickTickerBtn(x.ticker, 'İncele')}
+                </div>
+                <div style="font-size:11.8px;color:var(--ink-400)">${esc(x.auditNote || x.auditWarning || x.bondDeskNote)}</div>
+              </div>
+            `).join('')}
+          </div>
+        </section>
+      `;
+    }
+
+    if (kitchenDeskId === 'MKK_WHALE' && desks) {
+      return `
+        ${deskChipsHtml}
+        <section class="ae-card">
+          <span class="ms-sig-pill danger">MKK Fiili Dolaşım Lot Artışı (${desks.mkkWhale.meta?.totalSnapshotsRecorded || 2700}+ Anlık Kesit)</span>
+          <h3 style="margin:6px 0 4px;font-size:15.5px;font-weight:800">Patron / Ortak "Tipe Dönüşüm" Arz Alarmları</h3>
+          <p style="margin:0 0 9px;font-size:11.9px;color:var(--ink-400)">Kapalı payların MKK'da borsada satılabilir açık lota dönüştüğü tahtalar — parlak haber gelse bile dikkatle yaklaşılır:</p>
+          <div class="ms-list" style="margin-bottom:12px">
+            ${desks.mkkWhale.lotExpansions.map((x) => `
+              <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:6px;border-color:rgba(244,63,94,0.3)">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                  <div><span class="ms-sig-pill danger">${esc(x.ticker)}</span> <strong style="font-size:13px">${esc(x.name)}</strong></div>
+                  ${quickTickerBtn(x.ticker, 'Röntgen')}
+                </div>
+                <div style="font-size:11.8px;color:var(--ink-200)">${esc(x.note)}</div>
+              </div>
+            `).join('')}
+          </div>
+
+          <span class="ms-sig-pill good">Kurumsal Emilim, Döviz Kaleleri & Küresel Zincir Üstü Akış</span>
+          <h3 style="margin:6px 0 4px;font-size:15px;font-weight:800">Hazirun Balinaları & Çeyrek Sonu Net Nakit Kaleleri</h3>
+          <div class="ms-list">
+            ${[
+              ...desks.mkkWhale.stealthWhales,
+              ...(desks.mkkWhale.quarterEndFxFortresses || []).slice(0, 4),
+              ...desks.mkkWhale.tightFortresses.slice(0, 3)
+            ].map((x) => `
+              <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:6px">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                  <div><span class="ms-asset-code">${esc(x.ticker)}</span> <strong style="font-size:13px">${esc(x.name)}</strong></div>
+                  ${quickTickerBtn(x.ticker, 'İncele')}
+                </div>
+                <div style="font-size:11.8px;color:var(--ink-200)">${esc(x.whaleSignal || x.fxNote || x.note)}</div>
+              </div>
+            `).join('')}
+            ${(desks.mkkWhale.globalWhaleMatrix || []).map((gw) => `
+              <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:5px">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap">
+                  <strong style="font-size:12.8px">🌍 ${esc(gw.asset)}</strong>
+                  <span class="ms-sig-pill warn">${esc(gw.statusBadge || gw.category)}</span>
+                </div>
+                <div style="font-size:11.5px;color:var(--cyan)">${esc(gw.metrics)}</div>
+                <div style="font-size:11.6px;color:var(--ink-400)">${esc(gw.interpretation)}</div>
+              </div>
+            `).join('')}
+          </div>
+        </section>
+      `;
+    }
+
+    if (kitchenDeskId === 'PATTERNS' && desks) {
+      const renderPatBlock = (badge, tone, title, arr) => `
+        <div style="margin-bottom:12px">
+          <span class="ms-sig-pill ${tone}">${badge}</span>
+          <h4 style="margin:5px 0 6px;font-size:14.2px;font-weight:800">${title}</h4>
+          <div class="ms-list">
+            ${arr.map((x) => `
+              <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:5px">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                  <div><span class="ms-asset-code">${esc(x.ticker)}</span> <strong style="font-size:12.8px">${esc(x.name)}</strong></div>
+                  ${quickTickerBtn(x.ticker)}
+                </div>
+                <div style="font-size:11.6px;color:var(--ink-400)">${esc(x.forensicNote)}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      return `
+        ${deskChipsHtml}
+        <section class="ae-card">
+          <h3 style="margin:0 0 8px;font-size:15.5px;font-weight:800">Tüm BIST Hisselerinde 4 Adli Tahta İzi Taraması</h3>
+          ${renderPatBlock('1. İz · Sessiz Toplama', 'good', 'Fiyat Yatayken Dipte Kurumsal Emilim (CMF+)', desks.boardPatterns.quietBottom)}
+          ${renderPatBlock('2. İz · Demir Taban', 'info', '52 Haftalık Dipte Özsermaye Altı Sıkışma', desks.boardPatterns.ironFloor)}
+          ${renderPatBlock('3. İz · Hacimli Kırılım', 'good', '2x+ Hacim ve Nakit Akışı Onaylı Kırılım', desks.boardPatterns.instBreakout)}
+          ${renderPatBlock('4. İz · Tuzak Dağıtım', 'danger', 'CMF Negatifken Tahtadan Kurumsal Mal Çıkışı', desks.boardPatterns.hiddenDist)}
+        </section>
+      `;
+    }
+
+    if (kitchenDeskId === 'CAPEX_VALUE' && desks) {
+      return `
+        ${deskChipsHtml}
+        <section class="ae-card">
+          <span class="ms-sig-pill good">Fabrika Yatırımı Bitti -> Para Basma Dönemi</span>
+          <h3 style="margin:6px 0 4px;font-size:15.5px;font-weight:800">CAPEX Nakit Hasadı & Yüksek ROIC Hendek Şampiyonları</h3>
+          <div class="ms-list" style="margin-bottom:12px">
+            ${[...desks.capexAndValue.capexHarvest, ...desks.capexAndValue.evaMoat.slice(0, 4)].map((x) => `
+              <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:6px">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                  <div><span class="ms-asset-code">${esc(x.ticker)}</span> <strong style="font-size:13px">${esc(x.name)}</strong></div>
+                  ${quickTickerBtn(x.ticker, 'Röntgen')}
+                </div>
+                <div style="font-size:11.8px;color:var(--ink-200)">${esc(x.harvestNote || x.evaNote)}</div>
+              </div>
+            `).join('')}
+          </div>
+
+          <span class="ms-sig-pill info">Defter Arbitrajı, Üst Pazar Terfisi & Zorunlu Fon Takvimi</span>
+          <h3 style="margin:6px 0 6px;font-size:15px;font-weight:800">Özsermaye Altı Emilim & Endeks Akışı Adayları</h3>
+          <div class="ms-list">
+            ${[...desks.capexAndValue.bookArbitrage, ...(desks.capexAndValue.tierPromotions || []).slice(0, 4)].map((x) => `
+              <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:6px">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                  <div><span class="ms-asset-code">${esc(x.ticker)}</span> <strong style="font-size:13px">${esc(x.name)}</strong></div>
+                  ${quickTickerBtn(x.ticker)}
+                </div>
+                <div style="font-size:11.8px;color:var(--ink-400)">${esc(x.legalNote || x.catalyst)}</div>
+              </div>
+            `).join('')}
+            ${(desks.capexAndValue.mandatoryCalendar || []).map((mc) => `
+              <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:5px">
+                <span class="ms-sig-pill good" style="align-self:flex-start">${esc(mc.badge)}</span>
+                <div style="font-size:11.6px;color:var(--cyan);font-weight:700">${esc(mc.window || '')}</div>
+                <div style="font-size:11.6px;color:var(--ink-200)">${esc(mc.mechanism)}</div>
+                <div class="ae-hscroll" style="padding-bottom:0">
+                  ${(mc.affectedTickers || []).slice(0, 6).map((tk) => quickTickerBtn(tk)).join('')}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </section>
+      `;
+    }
+
+    // FIELD_BDDK
+    return `
+      ${deskChipsHtml}
+      ${desks ? `
+        <section class="ae-card">
+          <span class="ms-sig-pill info">Bilançodan 45–60 Gün Önce Konuşan Saha Verileri</span>
+          <h3 style="margin:6px 0 8px;font-size:15.5px;font-weight:800">12 Haneli GTİP Gümrük, Ana-Yan Sanayi & TİM Havzaları</h3>
+          <div class="ms-list" style="margin-bottom:12px">
+            ${desks.fieldAndBddk.gtipMatrix.map((g) => `
+              <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:6px">
+                <div><span class="ms-sig-pill warn">${esc(g.hsCode)}</span> <strong style="font-size:13px;margin-left:4px">${esc(g.productName)}</strong></div>
+                <div style="font-size:11.5px;color:var(--cyan);font-weight:700">Öncü Kaynak: ${esc(g.leadingSource)}</div>
+                <div style="font-size:11.8px;color:var(--ink-200)">${esc(g.liveSpreadSignal)}</div>
+                <div class="ae-hscroll" style="padding-bottom:0">
+                  ${(g.matchedStocks || []).slice(0, 5).map((ms) => quickTickerBtn(ms.ticker)).join('')}
+                </div>
+              </div>
+            `).join('')}
+
+            ${(desks.fieldAndBddk.oemCross || []).map((oc) => `
+              <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:6px">
+                <strong style="font-size:12.8px">🔗 ${esc(oc.chainTitle)}</strong>
+                <div style="font-size:11.6px;color:var(--ink-200)">${esc(oc.disclosureMechanism)}</div>
+                <div class="ae-hscroll" style="padding-bottom:0">
+                  ${[...(oc.anchors || []).slice(0, 2), ...(oc.suppliers || []).slice(0, 4)].map((s) => quickTickerBtn(s.ticker)).join('')}
+                </div>
+              </div>
+            `).join('')}
+
+            ${desks.fieldAndBddk.timBasins.slice(0, 4).map((tb) => `
+              <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:6px">
+                <strong>🏭 ${esc(tb.province)} — <small style="color:var(--ink-400)">${esc(tb.sectorFocus)}</small></strong>
+                <div style="font-size:11.7px;color:var(--ink-200)">${esc(tb.exportDriver)}</div>
+                <div class="ae-hscroll" style="padding-bottom:0">
+                  ${(tb.companies || []).slice(0, 5).map((c) => quickTickerBtn(c.ticker)).join('')}
+                </div>
+              </div>
+            `).join('')}
+
+            ${[...(desks.fieldAndBddk.epiasEnergy || []).slice(0, 3), ...(desks.fieldAndBddk.insuranceFloat || []).slice(0, 3)].map((ef) => `
+              <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:5px">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                  <div><span class="ms-asset-code">${esc(ef.ticker)}</span> <strong style="font-size:12.8px">${esc(ef.name)}</strong></div>
+                  ${quickTickerBtn(ef.ticker)}
+                </div>
+                <div style="font-size:11.6px;color:var(--ink-200)">${esc(ef.fieldNote)}</div>
+              </div>
+            `).join('')}
+
+            ${(desks.fieldAndBddk.tenderTracker || []).map((td) => `
+              <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:5px">
+                <span class="ms-sig-pill info" style="align-self:flex-start">${esc(td.category)}</span>
+                <div style="font-size:11.6px;color:var(--ink-200)">${esc(td.insight)}</div>
+                <div class="ae-hscroll" style="padding-bottom:0">
+                  ${(td.tickers || []).slice(0, 6).map((tk) => quickTickerBtn(tk)).join('')}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+
+          <span class="ms-sig-pill good">BDDK Haftalık Banka Karnesi & VİOP Taşıma</span>
+          <h3 style="margin:6px 0 6px;font-size:15px;font-weight:800">Bankacılık ROE / PD-DD Matrisi</h3>
+          ${desks.fieldAndBddk.viopCarry ? `
+            <div class="ms-alert info" style="margin-bottom:8px">
+              <strong>${esc(desks.fieldAndBddk.viopCarry.viopArbitrageVerdict)}:</strong> ${esc(desks.fieldAndBddk.viopCarry.viopArbitrageAction)}
+            </div>
+          ` : ''}
+          <div class="ms-list">
+            ${desks.fieldAndBddk.bddkBanks.map((b) => `
+              <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:5px">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                  <div><span class="ms-asset-code">${esc(b.ticker)}</span> <strong style="font-size:13px">${esc(b.name)}</strong></div>
+                  ${quickTickerBtn(b.ticker)}
+                </div>
+                <div style="font-size:11.6px;color:var(--ink-400)">${esc(b.bddkSignal)}</div>
+              </div>
+            `).join('')}
+          </div>
+        </section>
+      ` : ''}
+    `;
+  }
+
   function renderCompassTab(host) {
     const K = global.AetherKernelV10;
     const G = global.RealInvestmentGuide;
@@ -1077,7 +1638,7 @@
             <div>
               <h3 style="margin:0;font-size:15.5px;font-weight:800">Canlı KAP, Resmi Gazete & Gece Bilanço Masası</h3>
               <p style="margin:2px 0 0;font-size:11.8px;color:var(--ink-400)">
-                ${clock.bistCanMatchNow ? 'Haberi yorumla ve etkilenen tahtaları anında incele.' : 'Borsa kapalıyken bilançoları ve Resmi Gazete kararlarını okuyup yorumlayan, sabah 09:55 açılışına önde girer!'}
+                ${clock.bistCanMatchNow ? 'Haberi sokak ve uzman gözüyle yorumla; etkilenen tahtaları anında incele.' : 'Borsa kapalıyken bilançoları ve Resmi Gazete kararlarını okuyup yorumlayan, sabah 09:55 açılışına önde girer!'}
               </p>
             </div>
           </div>
@@ -1092,9 +1653,10 @@
                     ${studied ? `<span class="ms-sig-pill good">✓ Ders Çalışıldı (${esc(studied.stance)})</span>` : ''}
                   </div>
                   <strong style="font-size:13.6px;line-height:1.35">${esc(nw.title)}</strong>
-                  <div style="font-size:12px;color:var(--ink-400)">${esc(nw.streetImpact)}</div>
+                  <div style="font-size:12px;color:var(--ink-200)">${esc(nw.streetImpact)}</div>
+                  ${nw.analystRule ? `<div style="font-size:11.3px;color:var(--cyan);background:var(--surface-1);padding:6px 9px;border-radius:9px">🎯 ${esc(nw.analystRule)}</div>` : ''}
 
-                  <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding-top:4px">
+                  <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding-top:2px">
                     ${(nw.linkedKeys || []).map((lk) => {
                       const a = K.getAsset(lk);
                       if (!a) return '';
@@ -1114,6 +1676,8 @@
           </div>
         </section>
       `;
+    } else if (compassSubTab === 'KITCHEN') {
+      bodyHtml = renderKitchenSubDeskHtml();
     } else if (compassSubTab === 'CHAINS') {
       const activeChain = chains.find((c) => c.id === selectedChainId) || chains[0];
       const chainAssets = (activeChain?.assetKeys || []).map((k) => K.getAsset(k)).filter(Boolean);
@@ -1136,12 +1700,12 @@
           </section>
         ` : ''}
 
-        <!-- HAMMADDE -> FABRİKA DOMİNO ZİNCİRİ -->
+        <!-- 10 HAMMADDE -> FABRİKA DOMİNO ZİNCİRİ -->
         <section class="ae-card">
-          <h3 style="margin:0 0 4px;font-size:15.5px;font-weight:800">Hammadde -> Fabrika -> Kasa Zincirleri</h3>
-          <p style="margin:0 0 10px;font-size:12px;color:var(--ink-400)">Mazottan domatese, kuraklıktan baraja gerçek sebep-sonuç hatları:</p>
+          <h3 style="margin:0 0 4px;font-size:15.5px;font-weight:800">10 Gerçek Hammadde -> Fabrika -> Kasa Zinciri</h3>
+          <p style="margin:0 0 10px;font-size:12px;color:var(--ink-400)">Mazottan domatese, kuraklıktan baraja, TSB priminden sigorta kasasına sebep-sonuç hatları:</p>
 
-          <div class="ae-hscroll" style="margin-bottom:8px">
+          <div class="ae-hscroll" id="aeChainScroll" style="margin-bottom:8px">
             ${chains.map((c) => `
               <button type="button" class="ae-chip ${activeChain?.id === c.id ? 'active' : ''}" data-chain="${esc(c.id)}">
                 ${esc(c.shortTitle || c.title)}
@@ -1151,10 +1715,12 @@
 
           ${activeChain ? `
             <div style="background:var(--surface-2);border:1px solid var(--line-subtle);border-radius:14px;padding:12px;margin-bottom:10px">
-              <div style="font-size:12.4px;font-weight:800;color:var(--gold-bright);margin-bottom:8px">${esc(activeChain.triggerHeadline)}</div>
+              <div style="font-size:12.4px;font-weight:800;color:var(--gold-bright);margin-bottom:6px">${esc(activeChain.triggerHeadline)}</div>
+              ${activeChain.leadingSource ? `<div style="font-size:11.3px;color:var(--cyan);font-weight:700;margin-bottom:4px">🔍 Öncü Resmi Veri: ${esc(activeChain.leadingSource)}</div>` : ''}
+              ${activeChain.delayNote ? `<div style="font-size:11.2px;color:var(--ink-400);margin-bottom:8px">⏳ Aktarım Süresi: ${esc(activeChain.delayNote)}</div>` : ''}
               <div style="display:grid;gap:6px;margin-bottom:8px">
-                <div style="background:var(--surface-1);padding:8px 10px;border-radius:10px;font-size:12.2px"><span style="color:var(--cyan);font-weight:800">1. ÖNCÜ HAMMADDE:</span> <strong>${esc(activeChain.step1)}</strong></div>
-                <div style="background:var(--surface-1);padding:8px 10px;border-radius:10px;font-size:12.2px"><span style="color:var(--gold-bright);font-weight:800">2. ÜRETİM KANALI:</span> <strong>${esc(activeChain.step2)}</strong></div>
+                <div style="background:var(--surface-1);padding:8px 10px;border-radius:10px;font-size:12.2px"><span style="color:var(--cyan);font-weight:800">1. ÖNCÜ TETİK:</span> <strong>${esc(activeChain.step1)}</strong></div>
+                <div style="background:var(--surface-1);padding:8px 10px;border-radius:10px;font-size:12.2px"><span style="color:var(--gold-bright);font-weight:800">2. AKTARIM KANALI:</span> <strong>${esc(activeChain.step2)}</strong></div>
                 <div style="background:var(--surface-1);padding:8px 10px;border-radius:10px;font-size:12.2px"><span style="color:var(--green-ink);font-weight:800">3. KASASI ETKİLENEN:</span> <strong>${esc(activeChain.step3)}</strong></div>
               </div>
               <div style="font-size:12.3px;color:var(--ink-200);line-height:1.45">${esc(activeChain.insight)}</div>
@@ -1173,7 +1739,7 @@
             <div class="ae-kpi-2x2" style="margin-bottom:10px">
               ${season.wheel.map((w) => `
                 <div class="ms-kpi-box" style="padding:9px 10px;border-color:${w.code === season.activePhase ? 'var(--gold)' : 'var(--line-subtle)'};background:${w.code === season.activePhase ? 'var(--gold-soft)' : 'var(--surface-2)'}">
-                  <strong style="font-size:12.2px">${w.code === season.activePhase ? '● ' : ''}${esc(w.name)}</strong>
+                  <strong style="font-size:12.2px;white-space:normal;line-height:1.25">${w.code === season.activePhase ? '● ' : ''}${esc(w.name)}</strong>
                   <small>${esc(w.sub)}</small>
                 </div>
               `).join('')}
@@ -1196,11 +1762,11 @@
 
       bodyHtml = `
         <section class="ae-hero-card">
-          <span class="ms-sig-pill danger">Ani Fırtına & Stres Laboratuvarı</span>
+          <span class="ms-sig-pill danger">9 Gerçek Fırtına & Stres Laboratuvarı</span>
           <h2 style="margin:6px 0 4px;font-size:16.5px;font-weight:800">Ortalık Aniden Karıştığında Kim Soğukkanlı?</h2>
           <p style="margin:0 0 10px;font-size:12.2px;color:var(--ink-200)">Bir şok seç; mevcut <strong>${fmtTL(snap.totalNetWorthTL)}</strong> portföyünün hem TL karşılığını hem de gerçek alım gücünü anında sına.</p>
 
-          <div class="ae-hscroll">
+          <div class="ae-hscroll" id="aeCrisisScroll">
             ${scenarios.map((sc) => `
               <button type="button" class="ae-chip ${(selectedCrisisId || 'STRAIT_BLOCKADE') === sc.id ? 'active' : ''}" data-crisis="${esc(sc.id)}">
                 ⚡ ${esc(sc.shortTitle || sc.title)}
@@ -1236,6 +1802,24 @@
             ${snap.largestSingleSharePct >= 65 ? `
               <div class="ms-alert warn">
                 🥚 <strong>Tek Sepet Uyarısı:</strong> Portföyünün %${snap.largestSingleSharePct} kadarı tek varlıkta toplandığı için bu fırtınada dalgalanma doğrudan kalbine vuruyor.
+              </div>
+            ` : ''}
+
+            ${crisisSim.masterPlaybook ? `
+              <div class="ms-alert ok">
+                🧭 ${esc(crisisSim.masterPlaybook)}
+              </div>
+            ` : ''}
+
+            ${(crisisSim.fireSaleKeys || []).length > 0 ? `
+              <div style="margin:8px 0 10px">
+                <span style="display:block;font-size:11.4px;font-weight:800;color:var(--gold-bright);margin-bottom:5px">🔥 Bu Fırtınada Kalabalık Kaçarken İzlenecek Kaleler:</span>
+                <div class="ae-hscroll" style="padding-bottom:0">
+                  ${crisisSim.fireSaleKeys.map((fk) => {
+                    const fa = K.getAsset(fk);
+                    return fa ? `<button type="button" class="ae-chip sub" data-open-asset="${esc(fa.key)}">${esc(fa.ticker)} · ${fa.isRateInstrument ? '%' + fa.annualGrossRatePct : fmtUnitTL(fa.priceTL)}</button>` : '';
+                  }).join('')}
+                </div>
               </div>
             ` : ''}
 
@@ -1281,7 +1865,7 @@
               <span class="ms-sig-pill ${clock.grandBazaarOpen ? 'good' : 'info'}">${clock.grandBazaarOpen ? 'Çarşı Açık' : (clock.nobetciOpen ? 'Nöbetçi Açık' : 'Gece Makası')}</span>
             </div>
             <div class="ms-list-row">
-              <div><strong>Resmi Veri & Maaş Takvimi</strong><div style="font-size:11.6px;color:var(--ink-400)">Ayın 3'ü 10:00 TÜİK TÜFE · Perşembe 14:00 TCMB · Ayın 1'i / 15'i Maaş Günü</div></div>
+              <div><strong>Resmi Veri & Maaş Takvimi</strong><div style="font-size:11.6px;color:var(--ink-400)">Ayın 3'ü 10:00 TÜİK TÜFE · Perşembe 14:00 TCMB & BDDK/POS · Ayın 1'i / 15'i Maaş</div></div>
               <span class="ms-sig-pill info">Canlı Takvim</span>
             </div>
           </div>
@@ -1292,8 +1876,9 @@
     }
 
     host.innerHTML = `
-      <div class="ae-seg" role="tablist">
-        <button type="button" class="ae-seg-btn ${compassSubTab === 'BRIEF' ? 'active' : ''}" data-csub="BRIEF">Dost & KAP</button>
+      <div class="ae-seg ae-seg-5" role="tablist">
+        <button type="button" class="ae-seg-btn ${compassSubTab === 'BRIEF' ? 'active' : ''}" data-csub="BRIEF">Gündem</button>
+        <button type="button" class="ae-seg-btn ${compassSubTab === 'KITCHEN' ? 'active' : ''}" data-csub="KITCHEN">Mutfak</button>
         <button type="button" class="ae-seg-btn ${compassSubTab === 'CHAINS' ? 'active' : ''}" data-csub="CHAINS">Domino</button>
         <button type="button" class="ae-seg-btn ${compassSubTab === 'CRISIS' ? 'active' : ''}" data-csub="CRISIS">Fırtına</button>
         <button type="button" class="ae-seg-btn ${compassSubTab === 'CALENDAR' ? 'active' : ''}" data-csub="CALENDAR">Takvim</button>
@@ -1306,6 +1891,30 @@
         AetherNative.haptic('selection');
         compassSubTab = b.getAttribute('data-csub');
         renderHeader();
+        renderCompassTab(host);
+      });
+    });
+
+    host.querySelectorAll('[data-kdesk]').forEach((b) => {
+      b.addEventListener('click', () => {
+        AetherNative.haptic('selection');
+        kitchenDeskId = b.getAttribute('data-kdesk') || 'BREAKEVEN';
+        renderCompassTab(host);
+      });
+    });
+
+    host.querySelectorAll('[data-bamt]').forEach((b) => {
+      b.addEventListener('click', () => {
+        AetherNative.haptic('selection');
+        calcAmountTL = Number(b.getAttribute('data-bamt')) || 250000;
+        renderCompassTab(host);
+      });
+    });
+
+    host.querySelectorAll('[data-bdays]').forEach((b) => {
+      b.addEventListener('click', () => {
+        AetherNative.haptic('selection');
+        calcDays = Number(b.getAttribute('data-bdays')) || 32;
         renderCompassTab(host);
       });
     });
@@ -1396,12 +2005,16 @@
               `;
             }).join('')}
 
-            ${snap.spotItems.map((it) => `
+            ${snap.spotItems.map((it) => {
+              const aObj = K.getAsset(it.assetKey);
+              const qSig = aObj ? global.RealInvestmentGuide?.getCardQuickSignal(aObj) : null;
+              return `
               <div class="ms-list-row">
                 <div style="min-width:0;flex:1;cursor:pointer" data-open-pos="${esc(it.assetKey)}">
-                  <div style="display:flex;align-items:center;gap:6px">
+                  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
                     <span class="ms-asset-code">${esc(it.ticker)}</span>
                     <strong style="font-size:13.8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(it.name)}</strong>
+                    ${qSig?.badge ? `<span class="ms-sig-pill ${esc(qSig.tone || 'neutral')}">${esc(qSig.badge)}</span>` : ''}
                   </div>
                   <div style="font-size:11.8px;color:var(--ink-400);margin-top:2px">
                     ${it.qty} adet · Maliyet ${fmtUnitTL(it.avgCostTL)} · Değer: <strong style="color:var(--ink-100)">${fmtTL(it.netValTL)}</strong>
@@ -1416,7 +2029,8 @@
                   <button type="button" class="ms-btn danger sm" data-open-pos="${esc(it.assetKey)}" data-pos-side="SELL">Sat</button>
                 </div>
               </div>
-            `).join('')}
+              `;
+            }).join('')}
 
             ${(member.pendingOrders || []).map((o) => `
               <div class="ms-list-row" style="border-color:rgba(56,189,248,0.32)">
@@ -1653,149 +2267,438 @@
   }
 
   // --------------------------------------------------------------------------
-  // 7. SEKME 4: USTALIK (6-EKSEN RADAR, SABIR KANITI, KAÇAN FIRSAT & ARKETİP)
+  // 7. SEKME 4: USTALIK (KARNEM & KASA DOKTORU, 12 SAHA VAKASI, UZMANLIK REHBERİ)
   // --------------------------------------------------------------------------
+  function buildManualAndLexiconRegionHtml() {
+    const K = global.AetherKernelV10;
+    const G = global.RealInvestmentGuide;
+    const modules = G.getExpertCurriculum ? G.getExpertCurriculum() : [];
+    const lexicon = G.getStreetLexicon ? G.getStreetLexicon() : [];
+    const q = manualSearchQuery.trim().toLocaleUpperCase('tr-TR');
+
+    const filteredMods = q
+      ? modules.filter((m) =>
+          (m.title + ' ' + m.streetSummary + ' ' + m.proFormula).toLocaleUpperCase('tr-TR').includes(q)
+        )
+      : modules;
+
+    const filteredLex = q
+      ? lexicon.filter((lx) =>
+          (lx.term + ' ' + lx.cat + ' ' + lx.street + ' ' + lx.pro).toLocaleUpperCase('tr-TR').includes(q)
+        )
+      : lexicon;
+
+    return `
+      ${filteredMods.length > 0 ? `
+        <div style="font-size:12px;font-weight:800;color:var(--gold-bright);margin:4px 2px 8px">
+          📚 10 Adımda Çıraklıktan Ustalığa Yaşayan Saha Rehberi (${filteredMods.length} Bölüm)
+        </div>
+        ${filteredMods.map((m, idx) => `
+          <details class="ae-guide-acc" ${idx === 0 || q ? 'open' : ''}>
+            <summary>
+              <span style="display:flex;align-items:center;gap:9px;min-width:0">
+                <span class="ae-step-tag">${esc(m.step)}</span>
+                <span style="line-height:1.28">${esc(m.title)}</span>
+              </span>
+            </summary>
+            <div class="ae-guide-body">
+              <div style="margin-top:10px;background:var(--surface-2);border-radius:11px;padding:9px 11px;margin-bottom:8px">
+                <strong style="color:var(--gold-bright);display:block;font-size:11.3px;margin-bottom:3px">🥖 Sokak Türkçesiyle Özü:</strong>
+                ${esc(m.streetSummary)}
+              </div>
+              <div style="background:var(--surface-2);border-left:3px solid var(--cyan);border-radius:9px;padding:9px 11px;margin-bottom:8px">
+                <strong style="color:var(--cyan);display:block;font-size:11.3px;margin-bottom:3px">🎯 Profesyonelin Terazisi & Formülü:</strong>
+                ${esc(m.proFormula)}
+              </div>
+              <div style="font-size:11.6px;color:var(--ink-400);margin-bottom:7px">💡 <strong>Uygulama İçi Canlı Kontrol:</strong> ${esc(m.liveCheck)}</div>
+              <div class="ae-hscroll" style="padding-bottom:0">
+                ${(m.sampleKeys || []).map((sk) => {
+                  const a = K.getAsset(sk);
+                  return a ? `<button type="button" class="ae-chip sub" data-open-asset="${esc(a.key)}">${esc(a.ticker)} · ${a.isRateInstrument ? '%' + a.annualGrossRatePct : fmtUnitTL(a.priceTL)}</button>` : '';
+                }).join('')}
+              </div>
+            </div>
+          </details>
+        `).join('')}
+      ` : ''}
+
+      <section class="ae-card" style="margin-top:12px">
+        <span class="ms-sig-pill info">Sokak Türkçesi -> Profesyonel Analist Sözlüğü</span>
+        <h3 style="margin:6px 0 8px;font-size:15.5px;font-weight:800">${lexicon.length} Temel Kavramın Mahalle Fırını Çevirisi (${filteredLex.length})</h3>
+        ${filteredLex.length > 0 ? `
+          <div class="ms-list">
+            ${filteredLex.map((lx) => `
+              <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:5px">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                  <strong style="font-size:13.4px;color:var(--gold-bright)">${esc(lx.term)}</strong>
+                  <span class="ms-sig-pill neutral">${esc(lx.cat)}</span>
+                </div>
+                <div style="font-size:12px;color:var(--ink-100)"><strong>Sokak Dili:</strong> ${esc(lx.street)}</div>
+                <div style="font-size:11.6px;color:var(--cyan)"><strong>Usta Eşiği:</strong> ${esc(lx.pro)}</div>
+              </div>
+            `).join('')}
+          </div>
+        ` : `<div style="font-size:12.4px;color:var(--ink-400);padding:8px">Aramana uygun terim veya bölüm bulunamadı.</div>`}
+      </section>
+    `;
+  }
+
   function renderMasteryTab(host) {
     const K = global.AetherKernelV10;
+    const G = global.RealInvestmentGuide;
     const member = K.getActiveMember();
     const snap = K.evaluateMemberPortfolio(member);
     const mastery = K.evaluateInvestorMastery(member, snap);
     const idle = member.idleErosionLog || { cumulativeInflationLossTL: 0, missedSukukNetTL: 0 };
     const arch = mastery.archetype || { title: 'Piyasa Gözcüsü', motto: '', strength: '', blindSpot: '' };
+    const allCases = G.getFieldCaseCatalog ? G.getFieldCaseCatalog() : [];
+    const solvedCount = Object.values(member.completedFieldCases || {}).filter((c) => c && c.isOptimal).length;
 
-    const maxBench = Math.max(snap.totalNetWorthTL, snap.ifAllGoldTL, snap.ifAllDepositNetTL, snap.ifAllBist100TL, snap.inflationTargetTL, 1000000);
-    const pctBar = (v) => Math.max(10, Math.round((v / maxBench) * 100));
+    let subBodyHtml = '';
 
-    host.innerHTML = `
-      <!-- 1. 6-EKSEN USTALIK RADARI VE DOSTUN KOÇLUĞU -->
-      <section class="ae-hero-card">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">
-          <div>
-            <span class="ms-sig-pill info">Yatırımcı Ustalık Aynası</span>
-            <h2 style="margin:5px 0 0;font-size:19px;font-weight:900">${esc(mastery.rankTitle)}</h2>
-          </div>
-          <div style="text-align:right">
-            <strong style="font-size:28px;font-weight:900;color:var(--gold-bright)">${mastery.overallScore}</strong><span style="font-size:12px;color:var(--ink-400)">/100</span>
-          </div>
-        </div>
+    if (masterySubTab === 'CASES') {
+      const cats = ['ALL', ...Array.from(new Set(allCases.map((c) => c.category)))];
+      const shownCases = caseFilterCat === 'ALL' ? allCases : allCases.filter((c) => c.category === caseFilterCat);
+      const solvePct = allCases.length > 0 ? Math.round((solvedCount / allCases.length) * 100) : 0;
 
-        ${renderMasteryHexagonSvg(mastery.axes)}
-
-        <div class="ms-alert info" style="margin-bottom:0;margin-top:8px">
-          <strong>Görmüş Geçirmiş Dostun Notu:</strong> ${esc(mastery.mentorVoice)}
-        </div>
-      </section>
-
-      <!-- 2. KENDİ YOĞURT YİYİŞİN (KARAKTER ARKETİPİ) -->
-      <section class="ae-card">
-        <span class="ms-sig-pill warn">Kendi Yoğurt Yiyişin · Yatırımcı Karakterin</span>
-        <h3 style="margin:6px 0 2px;font-size:16px;font-weight:800">${esc(arch.title)}</h3>
-        <div style="font-size:12px;color:var(--gold-bright);font-weight:700;margin-bottom:8px">"${esc(arch.motto)}"</div>
-        <div class="ae-kpi-2x2" style="margin-bottom:0">
-          <div class="ms-kpi-box">
-            <span class="pos">Güçlü Kasın</span>
-            <div style="font-size:12px;font-weight:600;color:var(--ink-200)">${esc(arch.strength)}</div>
-          </div>
-          <div class="ms-kpi-box">
-            <span class="warn-txt">Kör Noktan</span>
-            <div style="font-size:12px;font-weight:600;color:var(--ink-200)">${esc(arch.blindSpot)}</div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 3. SABIR KANITI & ALTERNATİF KIYASLAMA -->
-      <section class="ae-card">
-        <h3 style="margin:0 0 4px;font-size:15.5px;font-weight:800">Huzurlu Büyüme vs Ekran Nöbeti Kanıtı</h3>
-        <p style="margin:0 0 10px;font-size:11.8px;color:var(--ink-400)">Sürekli al-sat yapmak gerçekten kazandırdı mı, yoksa ilk sağlam sepeti hiç kurcalamamak daha mı huzurluydu?</p>
-
-        <div class="ms-bar-row">
-          <div class="ms-bar-label"><span>Senin Portföyün</span><span>${fmtTL(snap.totalNetWorthTL)}</span></div>
-          <div class="ms-bar-track"><div class="ms-bar-fill" style="width:${pctBar(snap.totalNetWorthTL)}%"></div></div>
-        </div>
-        ${snap.ghostHoldNetWorthTL != null ? `
-          <div class="ms-bar-row">
-            <div class="ms-bar-label"><span>İlk Kurduğun Sepete Hiç Dokunmasaydın</span><span>${fmtTL(snap.ghostHoldNetWorthTL)}</span></div>
-            <div class="ms-bar-track"><div class="ms-bar-fill purple" style="width:${pctBar(snap.ghostHoldNetWorthTL)}%"></div></div>
-          </div>
-        ` : ''}
-        <div class="ms-bar-row">
-          <div class="ms-bar-label"><span>1M Tamamı Fiziki Gram Altın Olsaydı</span><span>${fmtTL(snap.ifAllGoldTL)}</span></div>
-          <div class="ms-bar-track"><div class="ms-bar-fill amber" style="width:${pctBar(snap.ifAllGoldTL)}%"></div></div>
-        </div>
-        <div class="ms-bar-row">
-          <div class="ms-bar-label"><span>1M Tamamı Net Mevduatta Olsaydı</span><span>${fmtTL(snap.ifAllDepositNetTL)}</span></div>
-          <div class="ms-bar-track"><div class="ms-bar-fill green" style="width:${pctBar(snap.ifAllDepositNetTL)}%"></div></div>
-        </div>
-      </section>
-
-      <!-- 4. SESSİZ FIRSAT MALİYETİ & ARAŞTIRMA vs DEDİKODU KARNESİ -->
-      <div class="ae-two-col">
-        <section class="ae-card">
-          <h3 style="margin:0 0 8px;font-size:15px;font-weight:800">Sessizce Biriken Fırsat & Makas Kaybı</h3>
-          <div class="ae-kpi-2x2" style="margin-bottom:0">
-            <div class="ms-kpi-box">
-              <span>Boş Nakit Enflasyon Erimesi</span>
-              <strong class="neg">-${fmtTL(idle.cumulativeInflationLossTL)}</strong>
-              <small>Kaçan %0 Vergili Sukuk: +${fmtTL(idle.missedSukukNetTL)}</small>
+      subBodyHtml = `
+        <section class="ae-hero-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">
+            <div>
+              <span class="ms-sig-pill info">Gerçek Türkiye Piyasası Karar Meydanı</span>
+              <h2 style="margin:5px 0 2px;font-size:17.5px;font-weight:900">${allCases.length} Gerçek Saha Vakası</h2>
             </div>
-            <div class="ms-kpi-box">
-              <span>Yanan Makas, Komisyon & Ceza</span>
-              <strong class="neg">-${fmtTL(snap.totalFrictionBurnedTL)}</strong>
-              <small>Sabırsızlık ve gişe sürtünmesi</small>
-            </div>
+            <strong style="font-size:20px;font-weight:900;color:var(--gold-bright)">${solvedCount}/${allCases.length}</strong>
           </div>
-        </section>
-
-        <section class="ae-card">
-          <h3 style="margin:0 0 8px;font-size:15px;font-weight:800">Araştırma vs Dedikodu/Heyecan Karnesi</h3>
-          <div class="ae-kpi-2x2" style="margin-bottom:0">
-            <div class="ms-kpi-box">
-              <span>📊 Kasa & Makro İnceleyerek (${mastery.researchVsRumor.researchCount})</span>
-              <strong class="${(mastery.researchVsRumor.researchAvgPct || 0) >= 0 ? 'pos' : 'neg'}">
-                ${mastery.researchVsRumor.researchAvgPct != null ? `${mastery.researchVsRumor.researchAvgPct >= 0 ? '+' : ''}%${mastery.researchVsRumor.researchAvgPct}` : 'Bekleniyor'}
-              </strong>
-              <small>KAP Okuma: ${mastery.studiedDisclosureCount || 0} bildirim</small>
-            </div>
-            <div class="ms-kpi-box">
-              <span>🔥 Duyum & Sürü Coşkusu (${mastery.researchVsRumor.rumorCount})</span>
-              <strong class="${(mastery.researchVsRumor.rumorAvgPct || 0) >= 0 ? 'pos' : 'neg'}">
-                ${mastery.researchVsRumor.rumorAvgPct != null ? `${mastery.researchVsRumor.rumorAvgPct >= 0 ? '+' : ''}%${mastery.researchVsRumor.rumorAvgPct}` : '0 İşlem (Temiz)'}
-              </strong>
-              <small>İncelemeden atlanan işlemler</small>
-            </div>
+          <p style="margin:0 0 8px;font-size:12.2px;color:var(--ink-200)">Ezber kitap sorusu yok: Gece düşen KAP tuzağından Yİ-ÜFE vergi kalkanına, T+2 takastan kuraklık ve sıfır yıkım halterine kadar gerçek hayatta paranın kaderini belirleyen ${allCases.length} kritik eşik.</p>
+          <div class="ms-bar-track" style="height:7px;margin-bottom:9px">
+            <div class="ms-bar-fill green" style="width:${solvePct}%"></div>
           </div>
-        </section>
-      </div>
-
-      <!-- 5. YAŞANMIŞ TECRÜBE İZLERİ & SIFIRLAMA -->
-      <section class="ae-card">
-        <h3 style="margin:0 0 8px;font-size:15px;font-weight:800">Yaşanmış Piyasa Tecrübe İzleri</h3>
-        ${(member.footprints || []).length > 0 ? `
-          <div class="ms-list" style="margin-bottom:12px">
-            ${member.footprints.map((fp) => `
-              <div class="ms-list-row">
-                <div style="min-width:0;flex:1">
-                  <strong style="font-size:13px">${esc(fp.title)}</strong>
-                  <div style="font-size:11.8px;color:var(--ink-400)">${esc(fp.detail)}</div>
-                </div>
-                ${fp.leakTL > 0 ? `<strong class="neg">-${fmtTL(fp.leakTL)}</strong>` : ''}
-              </div>
+          <div class="ae-hscroll" id="aeCaseCatScroll" style="padding-bottom:0">
+            ${cats.map((ct) => `
+              <button type="button" class="ae-chip ${caseFilterCat === ct ? 'active' : ''}" data-ccat="${esc(ct)}" style="padding:5px 11px;font-size:11.5px">${ct === 'ALL' ? `Tüm Vakalar (${allCases.length})` : esc(ct)}</button>
             `).join('')}
           </div>
-        ` : `<div style="font-size:12.4px;color:var(--ink-400);margin-bottom:12px">Henüz ağır bir makas, panik satışı veya erken vade bozumu hatası yapmadın.</div>`}
+        </section>
 
-        <div style="padding-top:12px;border-top:1px solid var(--line-subtle);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-          <button type="button" class="ms-btn sm" id="aeOpenProfFromMastery">Profil & Maaş Ayarları</button>
-          <button type="button" class="ms-btn danger sm" id="msReset1MBtn">1.000.000 ₺ Baştan Başlat</button>
+        ${shownCases.map((cs) => {
+          const attempt = member.completedFieldCases?.[cs.id] || null;
+          return `
+            <article class="ae-case-card ${attempt?.isOptimal ? 'solved-ok' : ''}">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px">
+                <span class="ms-sig-pill info">${esc(cs.category)}</span>
+                ${attempt ? `<span class="ms-sig-pill ${attempt.isOptimal ? 'good' : 'warn'}">${attempt.isOptimal ? '✓ Usta Kararı Verildi' : '↻ Tekrar Dene'}</span>` : '<span class="ms-sig-pill neutral">Çözülmedi</span>'}
+              </div>
+              <h3 style="margin:0 0 6px;font-size:14.8px;font-weight:800;line-height:1.3">${esc(cs.title)}</h3>
+              <p style="margin:0 0 7px;font-size:12.3px;color:var(--ink-200);line-height:1.46">${esc(cs.situation)}</p>
+              <div style="font-size:12.3px;font-weight:800;color:var(--gold-bright)">❓ ${esc(cs.question)}</div>
+
+              <div class="ae-choice-stack">
+                ${cs.choices.map((ch) => {
+                  const isPicked = attempt && attempt.choiceId === ch.id;
+                  const cls = isPicked ? (ch.isOptimal ? 'picked-right' : 'picked-wrong') : '';
+                  return `
+                    <button type="button" class="ae-choice-btn ${cls}" data-case-id="${esc(cs.id)}" data-choice-id="${esc(ch.id)}" data-optimal="${ch.isOptimal ? '1' : '0'}">
+                      <span class="ae-choice-key">${esc(ch.id)}</span>
+                      <span>${esc(ch.label)}</span>
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+
+              ${attempt ? `
+                <div class="ms-alert ${attempt.isOptimal ? 'ok' : 'warn'}" style="margin-top:10px;margin-bottom:6px">
+                  <strong>${attempt.isOptimal ? '🎯 Tam İsabet — Gerçek Piyasa Sonucu:' : '⚠️ Can Yakan Ders — Gerçek Piyasa Sonucu:'}</strong> ${esc(cs.consequence100k)}
+                  <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--line-subtle);color:var(--ink-100)">
+                    ${esc(cs.proRule)}
+                  </div>
+                </div>
+                <div class="ae-hscroll" style="padding-bottom:0">
+                  ${(cs.linkedKeys || []).map((lk) => {
+                    const a = K.getAsset(lk);
+                    return a ? `<button type="button" class="ae-chip sub" data-open-asset="${esc(a.key)}">${esc(a.ticker)} · Canlı İncele</button>` : '';
+                  }).join('')}
+                </div>
+              ` : ''}
+            </article>
+          `;
+        }).join('')}
+      `;
+    } else if (masterySubTab === 'MANUAL') {
+      subBodyHtml = `
+        <div class="ae-search-bar" style="margin:0 0 10px">
+          <div class="ae-search-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="7.5"/><path d="M20 20l-3.8-3.8"/>
+            </svg>
+            <input id="aeManualSearchInp" class="ae-input" type="search" autocomplete="off" value="${esc(manualSearchQuery)}" placeholder="Konu veya terim ara: TMS-29, ROIC, MKK, GVK 80, FAVÖK..." />
+            <button type="button" id="aeClearManualSearchBtn" class="ae-clear-btn" ${manualSearchQuery ? '' : 'hidden'} aria-label="Temizle">×</button>
+          </div>
         </div>
-      </section>
+        <div id="aeManualResultsRegion">
+          ${buildManualAndLexiconRegionHtml()}
+        </div>
+      `;
+    } else {
+      // MIRROR: Karnem & Kasa Doktoru
+      const maxBench = Math.max(snap.totalNetWorthTL, snap.ifAllGoldTL, snap.ifAllDepositNetTL, snap.ifAllBist100TL, snap.inflationTargetTL, 1000000);
+      const pctBar = (v) => Math.max(10, Math.round((v / maxBench) * 100));
+      const doc = G.evaluatePortfolioDoctor ? G.evaluatePortfolioDoctor(member, snap) : null;
+      const imp = K.evaluateImpatienceLedger ? K.evaluateImpatienceLedger(member) : { missedUpsideTotalTL: 0, savedDownsideTotalTL: 0, decisions: [] };
+
+      subBodyHtml = `
+        <!-- 1. 6-EKSEN USTALIK RADARI VE DOSTUN KOÇLUĞU -->
+        <section class="ae-hero-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">
+            <div>
+              <span class="ms-sig-pill info">Yatırımcı Ustalık Aynası</span>
+              <h2 style="margin:5px 0 0;font-size:19px;font-weight:900">${esc(mastery.rankTitle)}</h2>
+            </div>
+            <div style="text-align:right">
+              <strong style="font-size:28px;font-weight:900;color:var(--gold-bright)">${mastery.overallScore}</strong><span style="font-size:12px;color:var(--ink-400)">/100</span>
+            </div>
+          </div>
+
+          ${renderMasteryHexagonSvg(mastery.axes)}
+
+          <div class="ms-alert info" style="margin-bottom:0;margin-top:8px">
+            <strong>Görmüş Geçirmiş Dostun Notu:</strong> ${esc(mastery.mentorVoice)}
+          </div>
+        </section>
+
+        <!-- 2. 1M PORTFÖY KASA DOKTORU & GERÇEK İŞLETME GÜCÜ -->
+        ${doc ? `
+          <section class="ae-card" style="border-color:rgba(56,189,248,0.32)">
+            <span class="ms-sig-pill info">1M Portföy Kasa Doktoru · Neye Ortaksın?</span>
+            <h3 style="margin:6px 0 4px;font-size:15.5px;font-weight:800">Ortak Olduğun Kasaların Senin Payına Ürettiği Güç</h3>
+            <p style="margin:0 0 10px;font-size:11.8px;color:var(--ink-400)">Ekran fiyatı her gün iner çıkar; asıl zenginlik ortak olduğun şirketlerin ve sabit dilimlerin senin payına ürettiği gerçek nakittir:</p>
+            <div class="ae-kpi-2x2" style="margin-bottom:8px">
+              <div class="ms-kpi-box">
+                <span>Yıllık Kasa & Faiz Motorun</span>
+                <strong class="${doc.totalAnnualCashEngineTL >= 0 ? 'pos' : 'neg'}">${doc.totalAnnualCashEngineTL >= 0 ? '+' : ''}${fmtTL(doc.totalAnnualCashEngineTL)}/yıl</strong>
+                <small>Günde ~+${doc.dailyCashEngineTL.toLocaleString('tr-TR')} ₺ üretim</small>
+              </div>
+              <div class="ms-kpi-box">
+                <span>Şirket Serbest Nakit Payın</span>
+                <strong class="${doc.annualPartnerFcfTL >= 0 ? 'pos' : 'warn-txt'}">${doc.annualPartnerFcfTL >= 0 ? '+' : ''}${fmtTL(doc.annualPartnerFcfTL)}/yıl</strong>
+                <small>CAPEX sonrası saf FCF</small>
+              </div>
+              <div class="ms-kpi-box">
+                <span>Doğal Döviz / Altın Zırhı</span>
+                <strong>%${doc.fxNaturalShieldPct}</strong>
+                <small>32G USD Başabaş: ${doc.breakevenUsd32d} ₺</small>
+              </div>
+              <div class="ms-kpi-box">
+                <span>Ağırlıklı Hisse Çarpanı</span>
+                <strong>${doc.weightedPe != null ? `F/K ${doc.weightedPe}x` : 'Hisse Yok'}</strong>
+                <small>${doc.weightedPb != null ? `Ort. PD/DD: ${doc.weightedPb}x` : 'Nakit / Sabit ağırlıklı'}</small>
+              </div>
+            </div>
+            ${doc.warnings.map((w) => `<div class="ms-alert warn" style="margin:6px 0 0">${esc(w)}</div>`).join('')}
+          </section>
+        ` : ''}
+
+        <!-- 3. KENDİ YOĞURT YİYİŞİN (KARAKTER ARKETİPİ) -->
+        <section class="ae-card">
+          <span class="ms-sig-pill warn">Kendi Yoğurt Yiyişin · Yatırımcı Karakterin</span>
+          <h3 style="margin:6px 0 2px;font-size:16px;font-weight:800">${esc(arch.title)}</h3>
+          <div style="font-size:12px;color:var(--gold-bright);font-weight:700;margin-bottom:8px">"${esc(arch.motto)}"</div>
+          <div class="ae-kpi-2x2" style="margin-bottom:0">
+            <div class="ms-kpi-box">
+              <span class="pos">Güçlü Kasın</span>
+              <div style="font-size:12px;font-weight:600;color:var(--ink-200)">${esc(arch.strength)}</div>
+            </div>
+            <div class="ms-kpi-box">
+              <span class="warn-txt">Kör Noktan</span>
+              <div style="font-size:12px;font-weight:600;color:var(--ink-200)">${esc(arch.blindSpot)}</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. SABIR KANITI & SABIRSIZLIK AYNASI -->
+        <section class="ae-card">
+          <h3 style="margin:0 0 4px;font-size:15.5px;font-weight:800">Huzurlu Büyüme vs Ekran Nöbeti Kanıtı</h3>
+          <p style="margin:0 0 10px;font-size:11.8px;color:var(--ink-400)">Sürekli al-sat yapmak gerçekten kazandırdı mı, yoksa ilk sağlam sepeti hiç kurcalamamak daha mı huzurluydu?</p>
+
+          <div class="ms-bar-row">
+            <div class="ms-bar-label"><span>Senin Portföyün</span><span>${fmtTL(snap.totalNetWorthTL)}</span></div>
+            <div class="ms-bar-track"><div class="ms-bar-fill" style="width:${pctBar(snap.totalNetWorthTL)}%"></div></div>
+          </div>
+          ${snap.ghostHoldNetWorthTL != null ? `
+            <div class="ms-bar-row">
+              <div class="ms-bar-label"><span>İlk Kurduğun Sepete Hiç Dokunmasaydın</span><span>${fmtTL(snap.ghostHoldNetWorthTL)}</span></div>
+              <div class="ms-bar-track"><div class="ms-bar-fill purple" style="width:${pctBar(snap.ghostHoldNetWorthTL)}%"></div></div>
+            </div>
+          ` : ''}
+          <div class="ms-bar-row">
+            <div class="ms-bar-label"><span>1M Tamamı Fiziki Gram Altın Olsaydı</span><span>${fmtTL(snap.ifAllGoldTL)}</span></div>
+            <div class="ms-bar-track"><div class="ms-bar-fill amber" style="width:${pctBar(snap.ifAllGoldTL)}%"></div></div>
+          </div>
+          <div class="ms-bar-row">
+            <div class="ms-bar-label"><span>1M Tamamı Net Mevduatta Olsaydı</span><span>${fmtTL(snap.ifAllDepositNetTL)}</span></div>
+            <div class="ms-bar-track"><div class="ms-bar-fill green" style="width:${pctBar(snap.ifAllDepositNetTL)}%"></div></div>
+          </div>
+
+          ${imp.decisions.length > 0 ? `
+            <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line-subtle)">
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:800;margin-bottom:6px">
+                <span>🪞 Sattıktan Sonra Ne Oldu? (Sabırsızlık Aynası)</span>
+                <span>
+                  ${imp.missedUpsideTotalTL > 0 ? `<small class="warn-txt">Erken Satış: -${fmtCompactTL(imp.missedUpsideTotalTL)}</small>` : ''}
+                  ${imp.savedDownsideTotalTL > 0 ? ` <small class="pos">Doğru Çıkış: +${fmtCompactTL(imp.savedDownsideTotalTL)}</small>` : ''}
+                </span>
+              </div>
+              <div class="ms-list">
+                ${imp.decisions.slice(0, 4).map((d) => `
+                  <div class="ms-list-row" style="padding:8px 10px;font-size:11.8px">
+                    <span><strong>${esc(d.ticker)}</strong> (${fmtUnitTL(d.soldPriceTL)} -> ${fmtUnitTL(d.currentPriceTL)})</span>
+                    <strong class="${d.kind === 'SAVED_DOWNSIDE' ? 'pos' : 'warn-txt'}">
+                      ${d.kind === 'SAVED_DOWNSIDE' ? `Doğru Çıkış (+${fmtTL(d.diffTL)} korundu)` : `Sabırsızlık (-${fmtTL(d.diffTL)} kaçtı)`}
+                    </strong>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+        </section>
+
+        <!-- 5. SESSİZ FIRSAT MALİYETİ & ARAŞTIRMA vs DEDİKODU KARNESİ -->
+        <div class="ae-two-col">
+          <section class="ae-card">
+            <h3 style="margin:0 0 8px;font-size:15px;font-weight:800">Sessizce Biriken Fırsat & Makas Kaybı</h3>
+            <div class="ae-kpi-2x2" style="margin-bottom:0">
+              <div class="ms-kpi-box">
+                <span>Boş Nakit Enflasyon Erimesi</span>
+                <strong class="neg">-${fmtTL(idle.cumulativeInflationLossTL)}</strong>
+                <small>Kaçan %0 Vergili Sukuk: +${fmtTL(idle.missedSukukNetTL)}</small>
+              </div>
+              <div class="ms-kpi-box">
+                <span>Yanan Makas, Komisyon & Ceza</span>
+                <strong class="neg">-${fmtTL(snap.totalFrictionBurnedTL)}</strong>
+                <small>Sabırsızlık ve gişe sürtünmesi</small>
+              </div>
+            </div>
+          </section>
+
+          <section class="ae-card">
+            <h3 style="margin:0 0 8px;font-size:15px;font-weight:800">Araştırma vs Dedikodu/Heyecan Karnesi</h3>
+            <div class="ae-kpi-2x2" style="margin-bottom:0">
+              <div class="ms-kpi-box">
+                <span>📊 Kasa & Makro İnceleyerek (${mastery.researchVsRumor.researchCount})</span>
+                <strong style="font-size:14.2px" class="${(mastery.researchVsRumor.researchAvgPct || 0) >= 0 ? 'pos' : 'neg'}">
+                  ${mastery.researchVsRumor.researchAvgPct != null ? `${mastery.researchVsRumor.researchAvgPct >= 0 ? '+' : ''}%${mastery.researchVsRumor.researchAvgPct}` : 'Bekleniyor'}
+                </strong>
+                <small>KAP: ${mastery.studiedDisclosureCount || 0} · Vaka: ${solvedCount}/${allCases.length}</small>
+              </div>
+              <div class="ms-kpi-box">
+                <span>🔥 Duyum & Sürü Coşkusu (${mastery.researchVsRumor.rumorCount})</span>
+                <strong style="font-size:14.2px" class="${(mastery.researchVsRumor.rumorAvgPct || 0) >= 0 ? 'pos' : 'neg'}">
+                  ${mastery.researchVsRumor.rumorAvgPct != null ? `${mastery.researchVsRumor.rumorAvgPct >= 0 ? '+' : ''}%${mastery.researchVsRumor.rumorAvgPct}` : '0 İşlem (Temiz)'}
+                </strong>
+                <small>İncelemeden atlanan işlemler</small>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- 6. YAŞANMIŞ TECRÜBE İZLERİ & SIFIRLAMA -->
+        <section class="ae-card">
+          <h3 style="margin:0 0 8px;font-size:15px;font-weight:800">Yaşanmış Piyasa Tecrübe İzleri</h3>
+          ${(member.footprints || []).length > 0 ? `
+            <div class="ms-list" style="margin-bottom:12px">
+              ${member.footprints.map((fp) => `
+                <div class="ms-list-row">
+                  <div style="min-width:0;flex:1">
+                    <strong style="font-size:13px">${esc(fp.title)}</strong>
+                    <div style="font-size:11.8px;color:var(--ink-400)">${esc(fp.detail)}</div>
+                  </div>
+                  ${fp.leakTL > 0 ? `<strong class="neg">-${fmtTL(fp.leakTL)}</strong>` : ''}
+                </div>
+              `).join('')}
+            </div>
+          ` : `<div style="font-size:12.4px;color:var(--ink-400);margin-bottom:12px">Henüz ağır bir makas, panik satışı veya erken vade bozumu hatası yapmadın.</div>`}
+
+          <div style="padding-top:12px;border-top:1px solid var(--line-subtle);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+            <button type="button" class="ms-btn sm" id="aeOpenProfFromMastery">Profil & Maaş Ayarları</button>
+            <button type="button" class="ms-btn danger sm" id="msReset1MBtn">1.000.000 ₺ Baştan Başlat</button>
+          </div>
+        </section>
+      `;
+    }
+
+    host.innerHTML = `
+      <div class="ae-seg" role="tablist">
+        <button type="button" class="ae-seg-btn ${masterySubTab === 'MIRROR' ? 'active' : ''}" data-msub="MIRROR">Karnem</button>
+        <button type="button" class="ae-seg-btn ${masterySubTab === 'CASES' ? 'active' : ''}" data-msub="CASES">Vakalar (${solvedCount}/${allCases.length})</button>
+        <button type="button" class="ae-seg-btn ${masterySubTab === 'MANUAL' ? 'active' : ''}" data-msub="MANUAL">Rehber</button>
+      </div>
+      ${subBodyHtml}
     `;
+
+    host.querySelectorAll('[data-msub]').forEach((b) => {
+      b.addEventListener('click', () => {
+        AetherNative.haptic('selection');
+        masterySubTab = b.getAttribute('data-msub') || 'MIRROR';
+        renderMasteryTab(host);
+      });
+    });
+
+    host.querySelectorAll('[data-ccat]').forEach((b) => {
+      b.addEventListener('click', () => {
+        AetherNative.haptic('selection');
+        caseFilterCat = b.getAttribute('data-ccat') || 'ALL';
+        renderMasteryTab(host);
+      });
+    });
+
+    host.querySelectorAll('[data-case-id]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const cid = btn.getAttribute('data-case-id');
+        const chId = btn.getAttribute('data-choice-id');
+        const isOpt = btn.getAttribute('data-optimal') === '1';
+        K.recordFieldCaseAttempt(cid, chId, isOpt);
+        AetherNative.haptic(isOpt ? 'success' : 'warning');
+        AetherNative.toast(isOpt ? 'Usta işi karar! Gerçek piyasa kuralı ustalık puanına işlendi.' : 'Gerçek piyasa sonucunu aşağıdan incele ve tekrar dene.', isOpt ? 'ok' : 'info');
+        renderHeader();
+        renderMasteryTab(host);
+      });
+    });
+
+    const mInp = document.getElementById('aeManualSearchInp');
+    const mClr = document.getElementById('aeClearManualSearchBtn');
+    if (mInp) {
+      mInp.addEventListener('input', () => {
+        manualSearchQuery = mInp.value;
+        if (mClr) mClr.hidden = !manualSearchQuery;
+        const reg = document.getElementById('aeManualResultsRegion');
+        if (reg) {
+          reg.innerHTML = buildManualAndLexiconRegionHtml();
+          bindAssetListClicks(reg);
+        }
+      });
+    }
+    if (mClr) {
+      mClr.addEventListener('click', () => {
+        manualSearchQuery = '';
+        if (mInp) {
+          mInp.value = '';
+          mInp.focus();
+        }
+        mClr.hidden = true;
+        const reg = document.getElementById('aeManualResultsRegion');
+        if (reg) {
+          reg.innerHTML = buildManualAndLexiconRegionHtml();
+          bindAssetListClicks(reg);
+        }
+      });
+    }
 
     document.getElementById('aeOpenProfFromMastery')?.addEventListener('click', openProfileModal);
     document.getElementById('msReset1MBtn')?.addEventListener('click', () => {
       AetherNative.haptic('warning');
       openResetConfirmModal();
     });
+    bindAssetListClicks(host);
   }
 
   // --------------------------------------------------------------------------
@@ -2209,18 +3112,20 @@
 
   function renderHealthVaultHtml(info) {
     const h = info?.health;
-    if (!h) return '';
+    const dx = info?.deepXray;
+    let topVaultHtml = '';
 
-    if (h.kind === 'FINANCIAL') {
+    if (h?.kind === 'FINANCIAL') {
       const fn = h.financial100k;
-      return `
+      const baseLbl = fn?.partnerBaseTL ? fmtTL(fn.partnerBaseTL) : '100.000 ₺';
+      topVaultHtml = `
         <div class="ae-card" style="background:var(--surface-2);margin-bottom:10px">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px">
-            <strong style="font-size:13.6px">Finans Kasası (100.000 ₺ Ortaklıkta Payın)</strong>
+            <strong style="font-size:13.6px">🏦 Finans Kasası (${baseLbl} Ortaklıkta Payın)</strong>
             <span style="font-size:11.4px;font-weight:700;color:var(--ink-400)">F/K ${h.pe ?? '-'} · PD/DD ${h.pb ?? '-'}</span>
           </div>
           ${fn ? `
-            <p style="margin:0 0 8px;font-size:12.3px;color:var(--ink-200)">${esc(fn.plainSummary)}</p>
+            <p style="margin:0 0 8px;font-size:12.2px;color:var(--ink-200)">${esc(fn.plainSummary)}</p>
             <div class="ms-bakery-grid">
               <div class="ms-bakery-cell"><span>Günlük Net Kâr Payın</span><strong class="${fn.dailyNetProfitTL >= 0 ? 'pos' : 'neg'}">${fn.dailyNetProfitTL >= 0 ? '+' : ''}${fn.dailyNetProfitTL.toLocaleString('tr-TR')} ₺/gün</strong></div>
               <div class="ms-bakery-cell"><span>Yıllık Net Kâr Payın</span><strong class="${fn.annualNetProfitTL >= 0 ? 'pos' : 'neg'}">${fn.annualNetProfitTL >= 0 ? '+' : ''}${fmtTL(fn.annualNetProfitTL)}</strong></div>
@@ -2228,68 +3133,211 @@
               <div class="ms-bakery-cell"><span>Yıllık Net Temettü</span><strong class="${fn.annualNetDivTL > 0 ? 'pos' : ''}">${fn.annualNetDivTL > 0 ? '+' + fmtTL(fn.annualNetDivTL) : 'Yok'}</strong></div>
             </div>
           ` : ''}
-          <div style="font-size:12px;color:var(--ink-200);margin-top:8px">
-            <strong>Hüküm:</strong> ${esc(h.verdict)}
-            ${h.smartMoneyNote ? `<br/><strong>Tahta İzi:</strong> ${esc(h.smartMoneyNote)}` : ''}
-          </div>
         </div>
       `;
-    }
-
-    if (h.kind === 'COMPANY') {
+    } else if (h?.kind === 'COMPANY') {
       const bk = h.bakery100k;
-      return `
+      const baseLbl = bk?.partnerBaseTL ? fmtTL(bk.partnerBaseTL) : '100.000 ₺';
+      topVaultHtml = `
         <div class="ae-card" style="background:var(--surface-2);margin-bottom:10px">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px">
-            <strong style="font-size:13.6px">🥖 Mahalle Fırını Hesabı (100.000 ₺ Ortaklık)</strong>
+            <strong style="font-size:13.6px">🥖 Mahalle Fırını Hesabı (${baseLbl} Ortaklık)</strong>
             ${h.pe != null ? `<span style="font-size:11.4px;font-weight:700;color:var(--ink-400)">F/K ${h.pe} · PD/DD ${h.pb ?? '-'}</span>` : ''}
           </div>
           ${bk ? `
-            <p style="margin:0 0 8px;font-size:12.3px;color:var(--ink-200)">${esc(bk.plainSummary)}</p>
+            <p style="margin:0 0 8px;font-size:12.2px;color:var(--ink-200)">${esc(bk.plainSummary)}</p>
             <div class="ms-bakery-grid">
-              <div class="ms-bakery-cell"><span>Günlük Kasaya Giren</span><strong class="${bk.dailyOcfTL >= 0 ? 'pos' : 'neg'}">${bk.dailyOcfTL >= 0 ? '+' : ''}${bk.dailyOcfTL.toLocaleString('tr-TR')} ₺/gün</strong></div>
-              <div class="ms-bakery-cell"><span>Yıllık Faaliyet Nakdi</span><strong class="${bk.annualOcfTL >= 0 ? 'pos' : 'neg'}">${bk.annualOcfTL >= 0 ? '+' : ''}${fmtTL(bk.annualOcfTL)}</strong></div>
+              <div class="ms-bakery-cell"><span>Günlük Esas Nakit</span><strong class="${bk.dailyOcfTL >= 0 ? 'pos' : 'neg'}">${bk.dailyOcfTL >= 0 ? '+' : ''}${bk.dailyOcfTL.toLocaleString('tr-TR')} ₺/gün</strong></div>
+              <div class="ms-bakery-cell"><span>Yıllık Serbest Nakit (FCF)</span><strong class="${bk.annualFcfTL >= 0 ? 'pos' : 'warn-txt'}">${bk.annualFcfTL >= 0 ? '+' : ''}${fmtTL(bk.annualFcfTL)}</strong></div>
               <div class="ms-bakery-cell"><span>Hazır Kasa Payın</span><strong>${fmtTL(bk.cashShareTL)}</strong></div>
               <div class="ms-bakery-cell"><span>Sırtına Binen Borç</span><strong class="${bk.debtShareTL > bk.cashShareTL * 2 ? 'neg' : ''}">${fmtTL(bk.debtShareTL)}</strong></div>
             </div>
           ` : ''}
-          <div style="font-size:12px;color:var(--ink-200);margin-top:8px">
-            <strong>Kasa Hükmü:</strong> ${esc(h.verdict)}
-            ${h.smartMoneyNote ? `<br/><strong>Tahta Para İzi:</strong> ${esc(h.smartMoneyNote)}` : ''}
-          </div>
         </div>
       `;
-    }
-
-    if (h.kind === 'GOLD_SPREAD') {
-      return `
+    } else if (h?.kind === 'GOLD_SPREAD') {
+      topVaultHtml = `
         <div class="ms-alert ${h.status === 'WARN' ? 'warn' : 'ok'}">
           <strong>Terazi Kontrolü:</strong> Kapalıçarşı 1 Gr Fiziki Altın <strong>${fmtTL(h.spotGramTL)}</strong> vs 100 Adet ALTIN.S1 <strong>${fmtTL(h.s1GramTL)}</strong>.<br/>
           ${esc(h.verdict)}
         </div>
       `;
-    }
-
-    if (h.kind === 'RATE_VS_INF') {
-      return `
+    } else if (h?.kind === 'RATE_VS_INF') {
+      topVaultHtml = `
         <div class="ms-alert ${h.status === 'GOOD' ? 'ok' : 'warn'}">
           <strong>Vergi Sonrası Net Getiri:</strong> Brüt %${h.grossPct.toFixed(1)} -> %${h.stopajPct} stopaj sonrası yıllık <strong>net %${h.netPct}</strong> (TÜFE: %${h.inflationPct.toFixed(1)}). ${esc(h.verdict)}
         </div>
       `;
     }
-    return '';
+
+    let xrayHtml = '';
+    if (dx) {
+      xrayHtml = `
+        <div class="ae-xray-header">
+          <div style="min-width:0;flex:1">
+            <span style="font-size:10.6px;font-weight:800;color:var(--gold-bright);text-transform:uppercase">Adli Kasa & Değerleme Röntgeni</span>
+            <div style="font-size:14.2px;font-weight:900;margin-top:1px">${esc(dx.gradeLabel)}</div>
+            <div style="font-size:11.6px;color:var(--ink-200);margin-top:3px;line-height:1.35">${esc(dx.valueTrapVerdict)}</div>
+          </div>
+          <div class="ae-score-orb ${esc(dx.tone || 'info')}">
+            <span style="font-size:17px">${dx.overallScore}</span>
+            <small style="font-size:9px;opacity:0.8">/100</small>
+          </div>
+        </div>
+
+        <div class="ae-pillar-list" style="margin-bottom:10px">
+          ${(dx.pillars || []).map((pl) => {
+            const barCls = pl.score >= 76 ? 'green' : (pl.score >= 52 ? 'amber' : 'red');
+            return `
+              <div class="ae-pillar-card">
+                <div class="ae-pillar-top">
+                  <span>${esc(pl.label)}</span>
+                  <span style="color:var(--ink-200)">${pl.score}p</span>
+                </div>
+                <div class="ae-pillar-metric">${esc(pl.metric)}</div>
+                <div class="ms-bar-track" style="height:5px"><div class="ms-bar-fill ${barCls}" style="width:${pl.score}%"></div></div>
+                <div class="ae-pillar-exp">${esc(pl.explain)}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        ${(dx.kitchenFindings || []).length > 0 ? `
+          <div class="ae-card" style="background:var(--surface-2);margin-bottom:10px">
+            <strong style="display:block;font-size:12.8px;margin-bottom:6px;color:var(--gold-bright)">🕵️ Canlı Mutfak & Takas İstihbaratı Bulguları</strong>
+            <div class="ms-list">
+              ${dx.kitchenFindings.map((kf) => `
+                <div class="ms-list-row" style="padding:8px 10px;flex-direction:column;align-items:stretch;gap:4px">
+                  <span class="ms-sig-pill ${esc(kf.tone || 'info')}" style="align-self:flex-start">${esc(kf.badge)}</span>
+                  <div style="font-size:11.6px;color:var(--ink-200)">${esc(kf.note)}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+      `;
+    }
+
+    let quantHtml = '';
+    const qp = info?.quantPassport || null;
+    if (qp) {
+      quantHtml = `
+        <details class="ae-guide-acc" open style="margin-bottom:10px">
+          <summary>
+            <span style="display:flex;align-items:center;gap:8px;min-width:0">
+              <span class="ae-step-tag">${esc(qp.badgeTag || (qp.totalBars ? qp.totalBars + 'G' : 'ADİL'))}</span>
+              <span style="line-height:1.28">${esc(qp.title || '10 Yıllık Ampirik İkiz Günler & Adil Değer Testi')}</span>
+            </span>
+          </summary>
+          <div class="ae-guide-body" style="padding-top:10px">
+            <div style="font-size:11.4px;color:var(--ink-400);margin-bottom:8px">
+              ${qp.dateRange ? `Yöntem / Kapsam: <strong style="color:var(--ink-200)">${esc(qp.dateRange)}</strong>` : ''}
+              ${qp.walkForwardHitPct != null ? ` · Walk-Forward İsabet: <strong class="${qp.walkForwardHitPct >= 55 ? 'pos' : 'warn-txt'}">%${qp.walkForwardHitPct}</strong>` : ''}
+            </div>
+
+            <div class="ms-bakery-grid" style="margin-bottom:8px">
+              ${qp.intrinsicPriceTL != null ? `
+                <div class="ms-bakery-cell">
+                  <span>İçsel Adil Değer</span>
+                  <strong style="font-size:13px">${fmtUnitTL(qp.intrinsicPriceTL)}</strong>
+                  <small class="${(qp.marginOfSafetyPct || 0) >= 0 ? 'pos' : 'neg'}">${(qp.marginOfSafetyPct || 0) >= 0 ? `+%${qp.marginOfSafetyPct} Güvenlik Marjı` : `%${qp.marginOfSafetyPct} Primli`}</small>
+                </div>
+              ` : ''}
+              ${qp.piotroskiScore != null ? `
+                <div class="ms-bakery-cell">
+                  <span>9-Kriter Kasa & Kelly</span>
+                  <strong style="font-size:13px" class="${qp.piotroskiScore >= 6 ? 'pos' : (qp.piotroskiScore <= 3 ? 'neg' : '')}">${qp.piotroskiScore}/9 Sağlamlık</strong>
+                  <small>Yarım-Kelly Tavanı: %${qp.kellyPct ?? 0}</small>
+                </div>
+              ` : ''}
+              ${qp.supportTL != null || qp.resistanceTL != null ? `
+                <div class="ms-bakery-cell">
+                  <span>${qp.kind === 'FUNDAMENTAL_QUANT' ? '52H Taban / Tavan' : 'Ampirik Destek / Direnç'}</span>
+                  <strong style="font-size:12.6px">${qp.supportTL != null ? fmtUnitTL(qp.supportTL) : '-'} / ${qp.resistanceTL != null ? fmtUnitTL(qp.resistanceTL) : '-'}</strong>
+                  <small>${qp.cvar95Pct != null ? `CVaR-95 Uç Risk: %${qp.cvar95Pct} · Hurst: ${qp.hurst ?? '-'}` : 'Kademeli Alım/Direnç Bandı'}</small>
+                </div>
+              ` : ''}
+            </div>
+
+            ${(qp.analogs || []).length > 0 ? `
+              <div style="font-size:11.5px;font-weight:800;color:var(--gold-bright);margin-bottom:5px">🪞 Tarihteki En Benzer ${qp.analogs[0].sampleCount || 25} İkiz Günden Sonra Ne Oldu?</div>
+              <div class="ms-list" style="margin-bottom:8px">
+                ${qp.analogs.map((an) => `
+                  <div class="ms-list-row" style="padding:7px 10px;font-size:11.6px">
+                    <span><strong>${esc(an.horizon)} Sonra:</strong> Pozitif %${an.winRatePct} · Mevduatı Geçme %${an.hurdleWinPct ?? '-'}</span>
+                    <strong class="${(an.expectedPct || 0) >= 0 ? 'pos' : 'neg'}">${(an.expectedPct || 0) >= 0 ? '+' : ''}%${an.expectedPct}</strong>
+                  </div>
+                `).join('')}
+              </div>
+            ` : ''}
+
+            ${qp.preRallyHistoryText ? `
+              <div style="font-size:11.5px;color:var(--ink-200);background:var(--surface-2);border-radius:9px;padding:8px 10px;margin-bottom:6px;line-height:1.42">
+                <strong style="color:var(--cyan);display:block;margin-bottom:2px">📜 Büyük Rallilerden Önceki Parmak İzi:</strong>
+                ${esc(qp.preRallyHistoryText)}
+              </div>
+            ` : ''}
+
+            ${qp.bullCondition || qp.bearCondition ? `
+              <div style="display:grid;gap:4px;font-size:11.4px;color:var(--ink-400)">
+                ${qp.bullCondition ? `<div><strong class="pos">Boğa Kuralı:</strong> ${esc(qp.bullCondition)}</div>` : ''}
+                ${qp.bearCondition ? `<div><strong class="neg">Ayı Kuralı:</strong> ${esc(qp.bearCondition)}</div>` : ''}
+              </div>
+            ` : ''}
+          </div>
+        </details>
+      `;
+    }
+
+    return topVaultHtml + xrayHtml + quantHtml;
+  }
+
+  function buildPreTradeMentorBoxHtml(asset) {
+    const G = global.RealInvestmentGuide;
+    if (!G?.getPreTradeMentorCheck || !asset) return '';
+    const chk = G.getPreTradeMentorCheck({
+      assetKey: asset.key,
+      amountTL: draftOrderAmount,
+      door: selectedDoor,
+      maturityDays: selectedMaturity,
+      useMargin: selectedUseMargin
+    });
+    if (!chk) return '';
+    const cls = chk.tone === 'danger' ? 'err' : (chk.tone === 'warn' ? 'warn' : 'info');
+    return `
+      <div class="ms-alert ${cls}" style="margin:0 0 10px;padding:9px 11px;font-size:11.8px">
+        <strong style="display:block;margin-bottom:2px">🧭 ${esc(chk.title)}</strong>
+        <div>${esc(chk.text)}</div>
+        ${chk.altAssetKey ? `<button type="button" class="ms-btn sm" data-jump-order-asset="${esc(chk.altAssetKey)}" style="margin-top:6px;padding:4px 9px;font-size:11px">⚡ ${esc(chk.altLabel || 'Alternatife Geç')}</button>` : ''}
+      </div>
+    `;
+  }
+
+  function bindMentorJumpButtons(root) {
+    root?.querySelectorAll('[data-jump-order-asset]').forEach((b) => {
+      b.addEventListener('click', () => {
+        AetherNative.haptic('light');
+        openAssetDrawer(b.getAttribute('data-jump-order-asset'), 'ORDER');
+      });
+    });
   }
 
   function updateLiveRippleBoxInSheet(asset) {
     const box = document.getElementById('aeLiveRippleBox');
-    if (!box || !asset) return;
-    const ripple = computeOrderRipplePreview(asset, draftOrderAmount);
-    box.innerHTML = `
-      <div class="ms-bakery-cell"><span>Eşleşme & Valör</span><strong style="font-size:12px">${esc(ripple.timingText)}</strong></div>
-      <div class="ms-bakery-cell"><span>Makas / Vergi</span><strong style="font-size:12.5px" class="${ripple.frictionTL > 0 ? 'warn-txt' : 'pos'}">${ripple.frictionTL > 0 ? '-' + fmtTL(ripple.frictionTL) : '0 ₺'}</strong></div>
-      <div class="ms-bakery-cell"><span>Tek Sepet Riski</span><strong style="font-size:12.5px" class="${ripple.newSingleSharePct >= 65 ? 'neg' : ''}">%${ripple.newSingleSharePct}</strong></div>
-      <div class="ms-bakery-cell"><span>Nakit Çarkı</span><strong style="font-size:12.5px" class="pos">${ripple.monthlyDripTL > 0 ? '+' + fmtTL(ripple.monthlyDripTL) + '/ay' : 'Değer Artışı'}</strong></div>
-    `;
+    if (box && asset) {
+      const ripple = computeOrderRipplePreview(asset, draftOrderAmount);
+      box.innerHTML = `
+        <div class="ms-bakery-cell"><span>Eşleşme & Valör</span><strong style="font-size:12px">${esc(ripple.timingText)}</strong></div>
+        <div class="ms-bakery-cell"><span>Makas / Vergi</span><strong style="font-size:12.5px" class="${ripple.frictionTL > 0 ? 'warn-txt' : 'pos'}">${ripple.frictionTL > 0 ? '-' + fmtTL(ripple.frictionTL) : '0 ₺'}</strong></div>
+        <div class="ms-bakery-cell"><span>Tek Sepet Riski</span><strong style="font-size:12.5px" class="${ripple.newSingleSharePct >= 65 ? 'neg' : ''}">%${ripple.newSingleSharePct}</strong></div>
+        <div class="ms-bakery-cell"><span>Nakit Çarkı</span><strong style="font-size:12.5px" class="pos">${ripple.monthlyDripTL > 0 ? '+' + fmtTL(ripple.monthlyDripTL) + '/ay' : 'Değer Artışı'}</strong></div>
+      `;
+    }
+    const mBox = document.getElementById('aeMentorPreCheckBox');
+    if (mBox && asset) {
+      mBox.innerHTML = buildPreTradeMentorBoxHtml(asset);
+      bindMentorJumpButtons(mBox);
+    }
   }
 
   function renderAssetDrawer() {
@@ -2300,7 +3348,6 @@
     const asset = K.getAsset(drawerAssetKey);
     if (!asset) return;
 
-    const info = G.explainAsset(asset);
     const clock = K.getTurkishClock();
     const member = K.getActiveMember();
     const snap = K.evaluateMemberPortfolio(member);
@@ -2309,6 +3356,10 @@
     const existingSpotSnap = snap.spotItems.find((s) => s.assetKey === asset.key) || null;
     const existingTranches = snap.tranches.filter((t) => t.assetKey === asset.key);
     const existingPending = (member.pendingOrders || []).filter((o) => o.assetKey === asset.key);
+    const partnerScaleTL = existingSpotSnap
+      ? Math.max(1000, Math.round(existingSpotSnap.netValTL))
+      : Math.max(1000, Math.round(draftOrderAmount || 100000));
+    const info = G.explainAsset(asset, partnerScaleTL);
 
     const unsettledUsableForBist = (asset.venue === 'BIST' && !micro.isBrutTakas)
       ? (member.settlementQueue || []).filter((x) => x.usableForBist !== false).reduce((s, x) => s + Number(x.grossTL || 0), 0)
@@ -2415,11 +3466,15 @@
         const estGross = Math.max(0, Math.round(grossSaleTL * (1 - sellFeeRate - estStopajRatio)));
         const showPartialRatios = !isIntLot || Math.floor(availQty) >= 2;
 
+        const segAvailLbl = isIntLot
+          ? Math.floor(availQty).toLocaleString('tr-TR') + ' Lot'
+          : (+Number(availQty).toFixed(availQty >= 10 ? 2 : 4)).toLocaleString('tr-TR');
+
         tabContentHtml = `
           ${ !asset.isRateInstrument ? `
             <div class="ae-seg" style="margin-bottom:10px">
               <button type="button" class="ae-seg-btn" data-dside="BUY">Alım Yap</button>
-              <button type="button" class="ae-seg-btn active" data-dside="SELL" style="color:var(--red-ink)">Pozisyon Sat (${availQty} Adet)</button>
+              <button type="button" class="ae-seg-btn active" data-dside="SELL" style="color:var(--red-ink)">Satış (${segAvailLbl})</button>
             </div>
           ` : ''}
 
@@ -2461,11 +3516,16 @@
         `;
       } else {
         const ripple = computeOrderRipplePreview(asset, draftOrderAmount);
+        const segHeldLbl = existingPos && existingPos.qty > 0
+          ? (asset.subVenue === 'BIST_STOCK'
+            ? Math.floor(existingPos.qty).toLocaleString('tr-TR') + ' Lot'
+            : (+Number(existingPos.qty).toFixed(existingPos.qty >= 10 ? 2 : 4)).toLocaleString('tr-TR'))
+          : '';
         tabContentHtml = `
           ${existingPos && existingPos.qty > 0 ? `
             <div class="ae-seg" style="margin-bottom:10px">
               <button type="button" class="ae-seg-btn active" data-dside="BUY" style="color:var(--green-ink)">Alım Ekle</button>
-              <button type="button" class="ae-seg-btn" data-dside="SELL">Satış Yap (${existingPos.qty} Adet)</button>
+              <button type="button" class="ae-seg-btn" data-dside="SELL">Satış (${segHeldLbl})</button>
             </div>
           ` : ''}
 
@@ -2514,6 +3574,9 @@
               <div class="ms-bakery-cell"><span>Nakit Çarkı</span><strong style="font-size:12.5px" class="pos">${ripple.monthlyDripTL > 0 ? '+' + fmtTL(ripple.monthlyDripTL) + '/ay' : 'Değer Artışı'}</strong></div>
             </div>
 
+            <!-- DOSTUN EMİR ÖNCESİ 3 SANİYELİK TERAZİ KONTROLÜ -->
+            <div id="aeMentorPreCheckBox">${buildPreTradeMentorBoxHtml(asset)}</div>
+
             <button type="button" class="ms-btn buy-cta" style="width:100%;padding:13px;font-size:15px" id="msBuyConfirmBtn">
               ${asset.isRateInstrument ? 'Vadeli / Fona Bağla' : (selectedUseMargin ? 'Kredili Alım Emri Ver' : 'Alım Emri Ver')}
             </button>
@@ -2559,7 +3622,7 @@
         .filter((x) => x && x.key !== asset.key);
 
       tabContentHtml = `
-        <div class="ae-card" style="background:var(--surface-2)">
+        <div class="ae-card" style="background:var(--surface-2);margin-bottom:10px">
           <strong style="display:block;font-size:14px;margin-bottom:5px">Parayı Nereden ve Nasıl Kazanır?</strong>
           <p style="margin:0 0 10px;font-size:12.6px;color:var(--ink-200);line-height:1.5">${esc(info.howItWorks)}</p>
           <div style="display:grid;gap:7px;font-size:12.2px">
@@ -2567,6 +3630,20 @@
             <div><strong class="pos">Ne Zaman Güçlenir:</strong> ${esc(info.risesWhen)}</div>
             <div><strong class="neg">Ne Zaman Zorlanır:</strong> ${esc(info.fallsWhen)}</div>
           </div>
+
+          ${info.expertEdge ? `
+            <div style="margin-top:10px;padding:9px 10px;border-radius:10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.24);font-size:12px;color:var(--ink-200);line-height:1.45">
+              <strong style="display:block;color:var(--green-ink);margin-bottom:2px">🎯 Uzmanın Baktığı Öncü Veri (45 Gün Önceden):</strong>
+              ${esc(info.expertEdge)}
+            </div>
+          ` : ''}
+
+          ${info.trapWatch ? `
+            <div style="margin-top:8px;padding:9px 10px;border-radius:10px;background:rgba(244,63,94,0.08);border:1px solid rgba(244,63,94,0.24);font-size:12px;color:var(--ink-200);line-height:1.45">
+              <strong style="display:block;color:var(--red-ink);margin-bottom:2px">⛔ Aceminin Düştüğü Tuzak:</strong>
+              ${esc(info.trapWatch)}
+            </div>
+          ` : ''}
 
           ${relatedAssets.length > 0 ? `
             <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line-subtle)">
@@ -2616,8 +3693,8 @@
 
       <div class="ae-seg" role="tablist">
         <button type="button" class="ae-seg-btn ${drawerSubTab === 'ORDER' ? 'active' : ''}" data-dtab="ORDER">Emir Gişesi</button>
-        <button type="button" class="ae-seg-btn ${drawerSubTab === 'VAULT' ? 'active' : ''}" data-dtab="VAULT">Kasa & Döngü</button>
-        <button type="button" class="ae-seg-btn ${drawerSubTab === 'LOGIC' ? 'active' : ''}" data-dtab="LOGIC">Sokak Mantığı</button>
+        <button type="button" class="ae-seg-btn ${drawerSubTab === 'VAULT' ? 'active' : ''}" data-dtab="VAULT">Kasa & Röntgen</button>
+        <button type="button" class="ae-seg-btn ${drawerSubTab === 'LOGIC' ? 'active' : ''}" data-dtab="LOGIC">Sokak & Uzman</button>
       </div>
 
       ${tabContentHtml}
@@ -2626,6 +3703,7 @@
     `;
 
     bindSheetDragToDismiss();
+    bindMentorJumpButtons(sheet);
     document.getElementById('msCloseModalBtn')?.addEventListener('click', closeModal);
 
     sheet.querySelectorAll('[data-dtab]').forEach((b) => {
@@ -2662,12 +3740,36 @@
     });
 
     const sellQtyInp = document.getElementById('aeSellQtyInp');
-    if (sellQtyInp) {
-      sellQtyInp.addEventListener('change', () => {
-        const v = Number(sellQtyInp.value);
-        if (Number.isFinite(v) && v > 0) {
-          draftSellQty = v;
-          renderAssetDrawer();
+    if (sellQtyInp && existingPos && existingPos.qty > 0) {
+      sellQtyInp.addEventListener('input', () => {
+        const rawV = Number(sellQtyInp.value);
+        const queuedSQ = existingPending.filter((o) => o.side === 'SELL').reduce((s, o) => s + Number(o.qty || 0), 0);
+        const avQ = Math.max(0, +(existingPos.qty - queuedSQ).toFixed(6));
+        const isInt = asset.subVenue === 'BIST_STOCK';
+        if (!Number.isFinite(rawV) || rawV <= 0 || avQ <= 0) return;
+        draftSellQty = rawV;
+        const effQ = isInt ? Math.min(Math.floor(avQ), Math.max(1, Math.floor(rawV))) : Math.min(avQ, +rawV.toFixed(6));
+        const effPct = avQ > 0 ? Math.min(100, Math.round((effQ / avQ) * 100)) : 0;
+        let uBid = asset.priceTL;
+        if (asset.venue === 'TWO_DOOR') {
+          const sp = selectedDoor === 'BAZAAR' ? clock.bazaarSpreadPct : (selectedDoor === 'NOBETCI' ? clock.nobetciSpreadPct : clock.bankSpreadPct);
+          uBid = +(asset.priceTL * (1 - sp / 200)).toFixed(4);
+        }
+        const sFee = asset.venue === 'BIST' ? 0.00084 : (asset.venue === 'GLOBAL_USD' ? 0.0015 : ((asset.venue === 'CRYPTO_24_7' || asset.venue === 'VIOP') ? 0.0010 : 0));
+        const gSale = effQ * uBid;
+        const eStop = (asset.stopajPct > 0 && !asset.isRateInstrument && uBid > existingPos.avgCostTL)
+          ? ((uBid - existingPos.avgCostTL) / uBid) * (asset.stopajPct / 100)
+          : 0;
+        const eGross = Math.max(0, Math.round(gSale * (1 - sFee - eStop)));
+
+        sheet.querySelectorAll('[data-sratio]').forEach((rb) => rb.classList.remove('active'));
+        const prevEl = document.getElementById('aeSellPreviewLine');
+        if (prevEl) {
+          prevEl.innerHTML = `Satılacak: <strong style="color:var(--ink-100)">${effQ} ${isInt ? 'lot' : 'birim'} (%${effPct})</strong> · Tahmini Net Tutar: <strong style="color:var(--ink-100)">~${fmtTL(eGross)}</strong> · ${asset.venue === 'BIST' ? 'BIST kuralıyla satış tutarı T+2 takas kum saatine girer (2 iş günü nakit çekilemez).' : 'Anında nakit kasana geçer.'}`;
+        }
+        const sellBtn = document.getElementById('aeConfirmSellBtn');
+        if (sellBtn) {
+          sellBtn.textContent = `${effQ} ${isInt ? 'Lot' : 'Birim'} (%${effPct}) Satış Emri Ver`;
         }
       });
     }
@@ -2820,10 +3922,19 @@
     const all = K.getAllLeagueMembers();
     const peer = all.find((x) => x.id === peerId);
     if (!peer) return;
+    const me = K.getActiveMember();
+    const isMe = peer.id === me.id;
     modalMode = 'PEER_XRAY';
     inspectedPeerId = peer.id;
     const snap = K.evaluateMemberPortfolio(peer);
     const mastery = K.evaluateInvestorMastery(peer, snap);
+    const archTitle = peer.archetypeTitle || mastery.archetype?.title || 'Piyasa Gözcüsü';
+    const archMotto = peer.archetypeMotto || mastery.archetype?.motto || '';
+    const solvedCases = peer.solvedCasesCount != null
+      ? peer.solvedCasesCount
+      : Object.values(peer.completedFieldCases || {}).filter((c) => c && c.isOptimal).length;
+    const studiedKap = mastery.studiedDisclosureCount || 0;
+    const lastMove = (peer.tradeHistory || [])[0] || null;
     const sheet = document.getElementById('msModalSheet');
     if (!sheet) return;
 
@@ -2835,10 +3946,20 @@
           <span class="ae-avatar" style="width:38px;height:38px;font-size:15px;background:${esc(peer.avatarColor || '#2563eb')}">${esc(initials(peer.name))}</span>
           <div style="min-width:0">
             <h2 style="margin:0;font-size:18px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(peer.name)}</h2>
-            <div style="font-size:11.6px;color:var(--ink-400)">${esc(peer.roleLabel)} · ${esc(peer.deviceLabel || 'Cihaz')} · ${mastery.overallScore}p</div>
+            <div style="font-size:11.6px;color:var(--ink-400)">${esc(peer.roleLabel)} · ${esc(peer.deviceLabel || 'Cihaz')} · Ustalık ${mastery.overallScore}p</div>
           </div>
         </div>
         <button type="button" class="ms-btn sm" id="msCloseModalBtn">Kapat</button>
+      </div>
+
+      <div style="background:var(--surface-2);border:1px solid var(--line-subtle);border-radius:11px;padding:8px 11px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <div style="min-width:0;flex:1">
+          <span class="ms-sig-pill info">🧭 Karakter: ${esc(archTitle)}</span>
+          ${archMotto ? `<div style="font-size:11.3px;color:var(--ink-400);margin-top:3px">${esc(archMotto)}</div>` : ''}
+        </div>
+        <div style="font-size:11.2px;color:var(--gold-bright);font-weight:800;flex-shrink:0">
+          Vaka: ${solvedCases} · KAP: ${studiedKap}
+        </div>
       </div>
 
       <div class="ms-xray-kpi-grid">
@@ -2879,11 +4000,30 @@
           <div style="font-size:12.5px;color:var(--ink-400);padding:8px">Henüz pozisyon açmamış; nakitte bekliyor.</div>
         ` : ''}
       </div>
+
+      ${!isMe ? `
+        <button type="button" class="ms-btn primary" style="width:100%;margin-top:10px;padding:11px" id="aeXrayAskWhyBtn">
+          💬 "${esc(peer.name)}, ${esc(lastMove ? lastMove.name : (snap.spotItems[0]?.ticker || 'bu stratejiyi'))} hamlesini nereden gördün?" Sor
+        </button>
+      ` : ''}
     `;
 
     openModalShell();
     bindSheetDragToDismiss();
     document.getElementById('msCloseModalBtn')?.addEventListener('click', closeModal);
+    document.getElementById('aeXrayAskWhyBtn')?.addEventListener('click', () => {
+      AetherNative.haptic('selection');
+      const targetAssetName = lastMove ? lastMove.name : (snap.spotItems[0]?.ticker || 'bu stratejiyi');
+      closeModal();
+      switchTab('family');
+      setTimeout(() => {
+        const inp = document.getElementById('msBanterInp');
+        if (inp) {
+          inp.value = `${peer.name}, ${targetAssetName} hamlesini nereden gördün, hangi veriye güvendin?`;
+          inp.focus();
+        }
+      }, 60);
+    });
     sheet.querySelectorAll('[data-xray-jump]').forEach((b) => {
       b.addEventListener('click', () => openAssetDrawer(b.getAttribute('data-xray-jump'), 'VAULT'));
     });
@@ -3006,7 +4146,7 @@
     const sheet = document.getElementById('msModalSheet');
     if (!sheet) return;
 
-    const releaseIpaUrl = 'https://github.com/4zyq4sk2tk-collab/AETHER-iOS/releases/download/v14.0.0-ios/AETHER-iOS.ipa';
+    const releaseIpaUrl = 'https://github.com/4zyq4sk2tk-collab/AETHER-iOS/releases/download/v15.1.0-ios/AETHER-iOS.ipa';
     const sideStoreDeepLink = 'sidestore://install?url=' + encodeURIComponent(releaseIpaUrl);
     const isLocalServer = global.location?.port === '3847';
     const directIpaHref = isLocalServer ? './download/AETHER-Sideload.ipa' : releaseIpaUrl;
@@ -3364,11 +4504,13 @@
         }
       }
 
-      // 2) Yeni canlı lig hamlesi düştüyse Dynamic Island bildirimi göster
+      // 2) Yeni canlı lig hamlesi düştüyse Dynamic Island bildirimi göster (yalnızca son 45 sn içindeki taze anlık olaylar)
       const latestEv = K.getState()?.banterFeed?.[0];
       if (latestEv && latestEv.id !== lastKnownTradeFeedId) {
+        const hadPrev = lastKnownTradeFeedId !== null;
         lastKnownTradeFeedId = latestEv.id;
-        if (latestEv.authorId && latestEv.authorId !== K.getActiveMember().id) {
+        const evAgeMs = Math.abs(Date.now() - (Number(latestEv.ts) || 0));
+        if (hadPrev && evAgeMs <= 45000 && latestEv.authorId && latestEv.authorId !== K.getActiveMember().id) {
           AetherNative.haptic('light');
           AetherNative.toast(`Canlı Lig · ${latestEv.authorName}: ${latestEv.text}`, 'info', () => switchTab('family'));
         }

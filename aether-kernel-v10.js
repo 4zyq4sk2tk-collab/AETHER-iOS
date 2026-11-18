@@ -69,6 +69,7 @@
 
   let marketData = global.__AETHER_EMBEDDED_DATA__ || { instruments: [], macro: {}, kitchenIntelSummary: {} };
   let assetCatalog = new Map();
+  let catalogRev = 1;
   let state = null;
   let listeners = new Set();
   let bcChannel = null;
@@ -409,6 +410,7 @@
         isTabanLocked: false,
         isCircuitBreaker: false,
         isBrutTakas: false,
+        sameDaySellBlocked: false,
         marginAllowed: false,
         statusNote: null
       };
@@ -420,6 +422,7 @@
     const isTabanLocked = isEquity && chg <= -9.85;
     const isCircuitBreaker = isEquity && chg <= -5.0 && chg > -9.85;
     const isBrutTakas = Boolean(asset.isBrutTakas);
+    const sameDaySellBlocked = isBrutTakas;
     const marginAllowed = isEquity && !isBrutTakas && !asset.isPumpAnomaly;
 
     let statusNote = null;
@@ -428,7 +431,7 @@
     else if (isCircuitBreaker) statusNote = `Pay Bazında Devre Kesici (%${chg.toFixed(2)}): Aşağı yönlü -%5 eşiği aşıldı; eşleşme bitene kadar işlemler durdu.`;
     else if (isBrutTakas) statusNote = `VBTS Brüt Takas & Kredili İşlem Yasağı: Aynı gün al-sat ve kredili alım kapalıdır; T+2 takas nakdi kullanılamaz.`;
 
-    return { tickSize, isTavanLocked, isTabanLocked, isCircuitBreaker, isBrutTakas, marginAllowed, statusNote };
+    return { tickSize, isTavanLocked, isTabanLocked, isCircuitBreaker, isBrutTakas, sameDaySellBlocked, marginAllowed, statusNote };
   }
 
   // --------------------------------------------------------------------------
@@ -478,6 +481,7 @@
     }
 
     assetCatalog.clear();
+    catalogRev = (catalogRev + 1) >>> 0;
     const kis = marketData?.kitchenIntelSummary || {};
     const bistLookup = kis?.openHorizon?.bistStockLookup || {};
     const pumpSet = new Set(
@@ -486,6 +490,39 @@
     const brutSet = new Set(
       (kis?.forensicBoardPatterns626?.vbtsCandidateAlerts || []).map((x) => String(x.ticker || '').toUpperCase())
     );
+    // Gerçek KAP VBTS / Brüt Takas / Kredili İşlem Tedbiri eşleşmeleri + aşırı spekülatif tahta tedbir adayları
+    for (const hItem of (kis?.openHorizon?.items || [])) {
+      const hTxt = `${hItem?.title || ''} ${hItem?.category || ''} ${hItem?.badge || ''}`;
+      if (/brüt takas|vbts|yakın izleme|kredili işlem|emir paketi|tek fiyat/i.test(hTxt)) {
+        for (const tk of (hItem?.detectedTickers || [])) {
+          const up = String(tk || '').toUpperCase();
+          if (up && bistLookup[up]) brutSet.add(up);
+        }
+      }
+    }
+    for (const fItem of (marketData?.liveRealWorldFeed || [])) {
+      const fTxt = String(fItem?.title || '');
+      if (/brüt takas|vbts|tedbir sistemi/i.test(fTxt)) {
+        const mTk = fTxt.match(/\b[A-Z]{4,5}\b/g) || [];
+        for (const tk of mTk) {
+          if (bistLookup[tk]) brutSet.add(tk);
+        }
+      }
+    }
+    for (const pItem of (kis?.microstructureAndWhale?.telegramPumpAnomalies || [])) {
+      const up = String(pItem?.ticker || '').toUpperCase();
+      const bRow = bistLookup[up];
+      if (up && bRow && ((Number(bRow.volRatio) || 1) >= 1.9 || Math.abs(Number(bRow.perf1M) || 0) >= 32 || (Number(bRow.pb) || 0) >= 12)) {
+        brutSet.add(up);
+      }
+    }
+    for (const dItem of (kis?.mkkFloatDeltaLedger?.highFloatDilutionRisks || [])) {
+      const up = String(dItem?.ticker || '').toUpperCase();
+      const bRow = bistLookup[up];
+      if (up && bRow && (Number(bRow.ocfMillionTL) || 0) < 0 && ((Number(bRow.volRatio) || 1) >= 2.1 || Math.abs(Number(bRow.change1D) || 0) >= 8.5)) {
+        brutSet.add(up);
+      }
+    }
     const gemMap = new Map(
       (kis?.openHorizon?.bist626AccumulationGems || []).map((x) => [String(x.ticker || '').toUpperCase(), x])
     );
@@ -510,6 +547,123 @@
         .map((x) => String(x.ticker || '').toUpperCase())
     );
 
+    // Derin Mutfak İstihbaratı O(1) Varlık Eşleştirme Haritaları
+    const mkkMap = new Map();
+    for (const x of (kis?.mkkFloatDeltaLedger?.tightFloatFortresses || [])) {
+      if (x?.ticker) mkkMap.set(String(x.ticker).toUpperCase(), { kind: 'TIGHT_FLOAT', ...x });
+    }
+    for (const x of (kis?.mkkFloatDeltaLedger?.highFloatDilutionRisks || [])) {
+      if (x?.ticker) mkkMap.set(String(x.ticker).toUpperCase(), { kind: 'HIGH_DILUTION', ...x });
+    }
+    for (const x of mkkAlerts) {
+      if (x?.ticker) mkkMap.set(String(x.ticker).toUpperCase(), { kind: Number(x.deltaFloatShares) > 0 ? 'LOT_EXPANSION' : 'LOT_REDUCTION', ...x });
+    }
+
+    const tms29Map = new Map();
+    for (const x of (kis?.tms29AuditReport?.cashFlowChampions || [])) {
+      if (x?.ticker) tms29Map.set(String(x.ticker).toUpperCase(), { kind: 'CASH_CHAMPION', ...x });
+    }
+    for (const x of (kis?.tms29AuditReport?.tms29IllusionTraps || [])) {
+      if (x?.ticker) tms29Map.set(String(x.ticker).toUpperCase(), { kind: 'ILLUSION_TRAP', ...x });
+    }
+    for (const x of (kis?.tms29AuditReport?.debtWallAlerts || [])) {
+      if (x?.ticker && !tms29Map.has(String(x.ticker).toUpperCase())) {
+        tms29Map.set(String(x.ticker).toUpperCase(), { kind: 'DEBT_WALL', ...x });
+      }
+    }
+
+    const vukMap = new Map();
+    for (const x of (kis?.vukAuditAndRelatedParty?.vukInvoiceCashLeaders || [])) {
+      if (x?.ticker) vukMap.set(String(x.ticker).toUpperCase(), { kind: 'VUK_CASH_LEADER', ...x });
+    }
+    for (const x of (kis?.vukAuditAndRelatedParty?.relatedPartyHollowingAlerts || [])) {
+      if (x?.ticker) vukMap.set(String(x.ticker).toUpperCase(), { kind: 'RELATED_PARTY_RISK', ...x });
+    }
+    for (const x of (kis?.vukAuditAndRelatedParty?.ostBondRolloverRisks || [])) {
+      if (x?.ticker && !vukMap.has(String(x.ticker).toUpperCase())) {
+        vukMap.set(String(x.ticker).toUpperCase(), { kind: 'BOND_ROLLOVER_RISK', ...x });
+      }
+    }
+
+    const capexMap = new Map();
+    for (const x of (kis?.capexHarvestAndEva?.capexHarvestBreakouts || [])) {
+      if (x?.ticker) capexMap.set(String(x.ticker).toUpperCase(), { kind: 'CAPEX_HARVEST', ...x });
+    }
+    for (const x of (kis?.capexHarvestAndEva?.evaMoatChampions || [])) {
+      if (x?.ticker && !capexMap.has(String(x.ticker).toUpperCase())) {
+        capexMap.set(String(x.ticker).toUpperCase(), { kind: 'EVA_MOAT', ...x });
+      }
+    }
+    for (const x of (kis?.capexHarvestAndEva?.taxShieldCapexBuilders || [])) {
+      if (x?.ticker && !capexMap.has(String(x.ticker).toUpperCase())) {
+        capexMap.set(String(x.ticker).toUpperCase(), { kind: 'TAX_SHIELD_CAPEX', ...x });
+      }
+    }
+
+    const forensicPatternMap = new Map();
+    for (const x of (kis?.forensicBoardPatterns626?.pattern1QuietBottomAbsorption || [])) {
+      if (x?.ticker) forensicPatternMap.set(String(x.ticker).toUpperCase(), { patternCode: 'QUIET_BOTTOM', patternLabel: 'Sessiz Dip Emilimi', tone: 'good', ...x });
+    }
+    for (const x of (kis?.forensicBoardPatterns626?.pattern2IronFloorCompression || [])) {
+      if (x?.ticker && !forensicPatternMap.has(String(x.ticker).toUpperCase())) {
+        forensicPatternMap.set(String(x.ticker).toUpperCase(), { patternCode: 'IRON_FLOOR', patternLabel: 'Demir Taban Sıkışması', tone: 'good', ...x });
+      }
+    }
+    for (const x of (kis?.forensicBoardPatterns626?.pattern3InstitutionalBreakout || [])) {
+      if (x?.ticker && !forensicPatternMap.has(String(x.ticker).toUpperCase())) {
+        forensicPatternMap.set(String(x.ticker).toUpperCase(), { patternCode: 'INST_BREAKOUT', patternLabel: 'Kurumsal Hacim Kırılımı', tone: 'good', ...x });
+      }
+    }
+    for (const x of (kis?.forensicBoardPatterns626?.pattern4HiddenDistribution || [])) {
+      if (x?.ticker) {
+        forensicPatternMap.set(String(x.ticker).toUpperCase(), { patternCode: 'HIDDEN_DIST', patternLabel: 'Gizli Mal Dağıtımı', tone: 'danger', ...x });
+      }
+    }
+
+    const whaleMap = new Map(
+      (kis?.microstructureAndWhale?.stealthWhaleConcentration || []).map((x) => [String(x.ticker || '').toUpperCase(), x])
+    );
+    const bddkMap = new Map(
+      (kis?.globalLogisticsAndBddk?.bddkWeeklyBankMatrix || []).map((x) => [String(x.ticker || '').toUpperCase(), x])
+    );
+    const legalArbMap = new Map(
+      (kis?.legalArbitrageAndTender?.mandatoryCallAndTaspArbitrage || []).map((x) => [String(x.ticker || '').toUpperCase(), x])
+    );
+    const fxFortressMap = new Map(
+      (kis?.microstructureAndWhale?.quarterEndFxCashFortresses || []).map((x) => [String(x.ticker || '').toUpperCase(), x])
+    );
+    const epiasMap = new Map(
+      (kis?.physicalFieldAndCustoms?.epiasEnergyField || []).map((x) => [String(x.ticker || '').toUpperCase(), x])
+    );
+    const insFieldMap = new Map(
+      (kis?.physicalFieldAndCustoms?.insuranceAndFinanceField || []).map((x) => [String(x.ticker || '').toUpperCase(), x])
+    );
+    const tierPromoMap = new Map(
+      (kis?.forcedFlowsAndCalendar?.bistTierPromotionCandidates || []).map((x) => [String(x.ticker || '').toUpperCase(), x])
+    );
+    const fundTrimMap = new Map(
+      (kis?.forcedFlowsAndCalendar?.fundCapForcedTrimAlerts || []).map((x) => [String(x.ticker || '').toUpperCase(), x])
+    );
+    const trueSigById = new Map();
+    for (const x of (kis?.trueSignals || [])) {
+      if (x?.id) trueSigById.set(String(x.id), x);
+      if (x?.symbol) trueSigById.set(String(x.symbol).toUpperCase(), x);
+    }
+    const trapAlertById = new Map();
+    for (const x of (kis?.trapsAndAlerts || [])) {
+      if (x?.id) trapAlertById.set(String(x.id), x);
+      if (x?.symbol) trapAlertById.set(String(x.symbol).toUpperCase(), x);
+    }
+    const fortressById = new Map();
+    for (const x of (kis?.fortressArmor || [])) {
+      if (x?.id) fortressById.set(String(x.id), x);
+    }
+    const anomalyMap = new Map();
+    for (const ev of (kis?.realtimeAnomalyLog?.recentEvents || [])) {
+      const sym = String(ev?.symbol || '').toUpperCase();
+      if (sym && !anomalyMap.has(sym)) anomalyMap.set(sym, ev);
+    }
+
     const usdTry = Number(marketData?.macro?.usdTry)
       || Number((marketData?.instruments || []).find((i) => i.id === 'doviz-usd')?.currentPrice)
       || 50.44;
@@ -519,12 +673,69 @@
       const sym = String(inst.symbol || '');
       const rawTicker = sym.includes(':') ? sym.split(':')[1] : sym;
       const tUp = rawTicker.toUpperCase();
-      const bistRow = sym.startsWith('BIST:') ? (bistLookup[tUp] || null) : null;
+      let bistRow = sym.startsWith('BIST:') ? (bistLookup[tUp] || null) : null;
       const isForeignUsd = FOREIGN_GVK80_IDS.has(inst.id) || /^(AMEX:|NASDAQ:|OTC:|TVC:PLATINUM|TVC:PALLADIUM)/.test(sym);
       const rawPrice = Number(inst.currentPrice) || 0;
       const priceTL = inst.isRateInstrument
         ? 1.0
         : (isForeignUsd ? +(rawPrice * usdTry).toFixed(2) : +rawPrice.toFixed(4));
+
+      // BIST'te işlem gören ama TradingView 'stock' taraması dışında kalan YO/GSYO payları (ISGSY, VERTU vb.) için fundamentals'tan bistRow üret
+      if (!bistRow && sym.startsWith('BIST:') && inst.fundamentals && !TAXABLE_175_BIST_ETFS.has(sym) && !EQUITY_EXEMPT_BIST_ETFS.has(sym) && sym !== 'BIST:ALTIN' && !sym.includes('D1!') && sym !== 'BIST:XU100' && sym !== 'BIST:XU030' && sym !== 'BIST:XBANK') {
+        const fn = inst.fundamentals;
+        const h52 = Number(fn.high52W) || priceTL;
+        const l52 = Number(fn.low52W) || priceTL;
+        const ocfM = fn.ocf != null ? Math.round(Number(fn.ocf) / 1e6) : 0;
+        const fcfM = fn.fcf != null ? Math.round(Number(fn.fcf) / 1e6) : ocfM;
+        const totDebtM = fn.totalDebt != null ? Math.round(Number(fn.totalDebt) / 1e6) : 0;
+        const cashM = fn.cash != null ? Math.round(Number(fn.cash) / 1e6) : 0;
+        const netDebtM = fn.netDebt != null ? Math.round(Number(fn.netDebt) / 1e6) : (totDebtM - cashM);
+        const mcapB = fn.marketCap != null ? +(Number(fn.marketCap) / 1e9).toFixed(2) : 0;
+        bistRow = {
+          ticker: tUp,
+          name: inst.name || tUp,
+          sector: inst.id.startsWith('girisim-') ? 'Girişim & Yatırım Ortaklığı' : (inst.subCategory || 'Borsa İstanbul Şirketi'),
+          industry: inst.id.startsWith('girisim-') ? 'Investment Trusts/Mutual Funds' : '',
+          entityKind: inst.id.startsWith('girisim-') ? 'vc_yo' : 'industrial',
+          close: priceTL,
+          change1D: Number(inst.change1D) || 0,
+          perf1W: Number(inst.perf1W) || 0,
+          perf1M: Number(inst.perf1M) || 0,
+          perf3M: Number(inst.perf3M) || 0,
+          perf6M: Number(inst.perf6M) || 0,
+          perf1Y: Number(inst.perf1Y) || 0,
+          drawdown52WPct: h52 > 0 ? +(((priceTL - h52) / h52) * 100).toFixed(1) : 0,
+          low52W: l52,
+          high52W: h52,
+          volRatio: Number(fn.relVol) || 1,
+          relVol: Number(fn.relVol) || 1,
+          turnoverMillionTL: mcapB > 0 ? +(mcapB * 12).toFixed(1) : 25,
+          rsi: fn.rsi != null ? Number(fn.rsi) : null,
+          cmf20: fn.cmf != null ? Number(fn.cmf) : (inst.trainedDaily?.radar?.cmf20 ?? 0),
+          marketCapBillionTL: mcapB,
+          pe: fn.pe != null ? +Number(fn.pe).toFixed(1) : null,
+          pb: fn.pb != null ? +Number(fn.pb).toFixed(2) : null,
+          dividendYield: Number(fn.divYield) || 0,
+          evEbitda: fn.evEbitda != null ? +Number(fn.evEbitda).toFixed(2) : null,
+          roic: fn.roic != null ? +Number(fn.roic).toFixed(1) : null,
+          roe: fn.roe != null ? +Number(fn.roe).toFixed(1) : null,
+          fcfMillionTL: fcfM,
+          ocfMillionTL: ocfM,
+          capexMillionTL: -(Math.max(0, ocfM - fcfM)),
+          totalDebtMillionTL: totDebtM,
+          cashMillionTL: cashM,
+          netDebtMillionTL: netDebtM,
+          isNetCash: netDebtM < 0,
+          floatPct: 35,
+          fdpdMillionTL: mcapB > 0 ? Math.round(mcapB * 350) : 500,
+          currentRatio: fn.currentRatio != null ? +Number(fn.currentRatio).toFixed(2) : null,
+          opMarginPct: fn.operatingMargin != null ? +Number(fn.operatingMargin).toFixed(1) : null,
+          netIncomeMillionTL: (fn.pe > 0 && mcapB > 0) ? Math.round((mcapB * 1000) / fn.pe) : ocfM,
+          sloanAccrualPct: null,
+          cashConversionRatio: null,
+          netDebtToEbitda: null
+        };
+      }
 
       let venue = 'SPOT_24_7';
       let subVenue = 'OTHER';
@@ -603,9 +814,13 @@
         perf3Y: tlPerf?.perf3Y ?? netPerf?.perf3Y ?? (inst.perf3Y != null ? Number(inst.perf3Y) : null),
         perf5Y: tlPerf?.perf5Y ?? netPerf?.perf5Y ?? (inst.perf5Y != null ? Number(inst.perf5Y) : null),
         stopajPct,
+        taxNote: inst.taxNote || null,
+        sourceName: inst.sourceName || null,
+        subCategory: inst.subCategory || null,
         bsmvBuyPct: venue === 'TWO_DOOR' ? 0.20 : 0,
         isGvk80: isForeignUsd,
         bistRow,
+        fundamentals: inst.fundamentals || null,
         trainedDaily: inst.trainedDaily || null,
         isPumpAnomaly: pumpSet.has(tUp),
         isBrutTakas: brutSet.has(tUp),
@@ -615,6 +830,23 @@
         isCashChampion: cashChampSet.has(tUp),
         isPatronSelling: patronSellSet.has(tUp),
         isShareBuyback: shareBuybackSet.has(tUp),
+        mkkAlert: mkkMap.get(tUp) || null,
+        tms29Record: tms29Map.get(tUp) || null,
+        vukRecord: vukMap.get(tUp) || null,
+        capexRecord: capexMap.get(tUp) || null,
+        forensicPattern: forensicPatternMap.get(tUp) || null,
+        whaleRecord: whaleMap.get(tUp) || null,
+        bddkRecord: bddkMap.get(tUp) || null,
+        legalArbRecord: legalArbMap.get(tUp) || null,
+        fxFortressRecord: fxFortressMap.get(tUp) || null,
+        epiasRecord: epiasMap.get(tUp) || null,
+        insFieldRecord: insFieldMap.get(tUp) || null,
+        tierPromoRecord: tierPromoMap.get(tUp) || null,
+        fundTrimRecord: fundTrimMap.get(tUp) || null,
+        trueSignalRecord: trueSigById.get(inst.id) || trueSigById.get(sym.toUpperCase()) || null,
+        trapAlertRecord: trapAlertById.get(inst.id) || trapAlertById.get(sym.toUpperCase()) || null,
+        fortressRecord: fortressById.get(inst.id) || null,
+        anomalyEvent: anomalyMap.get(sym.toUpperCase()) || null,
         verifyUrl: inst.verifyUrl || null
       };
 
@@ -648,6 +880,20 @@
         existing.isCashChampion = cashChampSet.has(tUp);
         existing.isPatronSelling = patronSellSet.has(tUp);
         existing.isShareBuyback = shareBuybackSet.has(tUp);
+        existing.mkkAlert = mkkMap.get(tUp) || existing.mkkAlert || null;
+        existing.tms29Record = tms29Map.get(tUp) || existing.tms29Record || null;
+        existing.vukRecord = vukMap.get(tUp) || existing.vukRecord || null;
+        existing.capexRecord = capexMap.get(tUp) || existing.capexRecord || null;
+        existing.forensicPattern = forensicPatternMap.get(tUp) || existing.forensicPattern || null;
+        existing.whaleRecord = whaleMap.get(tUp) || existing.whaleRecord || null;
+        existing.bddkRecord = bddkMap.get(tUp) || existing.bddkRecord || null;
+        existing.legalArbRecord = legalArbMap.get(tUp) || existing.legalArbRecord || null;
+        existing.fxFortressRecord = fxFortressMap.get(tUp) || existing.fxFortressRecord || null;
+        existing.epiasRecord = epiasMap.get(tUp) || existing.epiasRecord || null;
+        existing.insFieldRecord = insFieldMap.get(tUp) || existing.insFieldRecord || null;
+        existing.tierPromoRecord = tierPromoMap.get(tUp) || existing.tierPromoRecord || null;
+        existing.fundTrimRecord = fundTrimMap.get(tUp) || existing.fundTrimRecord || null;
+        existing.anomalyEvent = anomalyMap.get(bistKey) || existing.anomalyEvent || null;
         if (!existing.perf6M && row.perf6M) existing.perf6M = Number(row.perf6M) || 0;
         assetCatalog.set(tUp, existing);
         assetCatalog.set('bist-' + tUp.toLowerCase(), existing);
@@ -677,6 +923,9 @@
         perf3Y: null,
         perf5Y: null,
         stopajPct: 0,
+        taxNote: null,
+        sourceName: 'Borsa İstanbul & KAP',
+        subCategory: row.sector || null,
         bsmvBuyPct: 0,
         isGvk80: false,
         bistRow: row,
@@ -689,6 +938,23 @@
         isCashChampion: cashChampSet.has(tUp),
         isPatronSelling: patronSellSet.has(tUp),
         isShareBuyback: shareBuybackSet.has(tUp),
+        mkkAlert: mkkMap.get(tUp) || null,
+        tms29Record: tms29Map.get(tUp) || null,
+        vukRecord: vukMap.get(tUp) || null,
+        capexRecord: capexMap.get(tUp) || null,
+        forensicPattern: forensicPatternMap.get(tUp) || null,
+        whaleRecord: whaleMap.get(tUp) || null,
+        bddkRecord: bddkMap.get(tUp) || null,
+        legalArbRecord: legalArbMap.get(tUp) || null,
+        fxFortressRecord: fxFortressMap.get(tUp) || null,
+        epiasRecord: epiasMap.get(tUp) || null,
+        insFieldRecord: insFieldMap.get(tUp) || null,
+        tierPromoRecord: tierPromoMap.get(tUp) || null,
+        fundTrimRecord: fundTrimMap.get(tUp) || null,
+        trueSignalRecord: trueSigById.get(bistKey) || null,
+        trapAlertRecord: trapAlertById.get(bistKey) || null,
+        fortressRecord: null,
+        anomalyEvent: anomalyMap.get(bistKey) || null,
         verifyUrl: `https://tr.tradingview.com/symbols/BIST-${tUp}/`
       };
       const oldP = prevPrices.get(desc.key);
@@ -943,6 +1209,7 @@
       footprints: [],
       equityCurve: [{ ts: now, nw: DEFAULT_STARTING_CAPITAL_TL, base: DEFAULT_STARTING_CAPITAL_TL }],
       studiedDisclosures: {},
+      completedFieldCases: {},
       seenNewsIds: [],
       idleErosionLog: {
         lastCheckedMs: now,
@@ -954,7 +1221,8 @@
         waitedSettlementOrValor: false,
         inspectedCashScale: false,
         wroteInvestmentThesis: false,
-        studiedNightDisclosure: false
+        studiedNightDisclosure: false,
+        completedFieldCase: false
       }
     };
   }
@@ -966,7 +1234,7 @@
       : ('inv_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4));
     const me = createDeviceInvestor(deviceId, '', '1 Milyon ₺ Portföy Yöneticisi');
     return {
-      version: '14.0.0',
+      version: '15.1.0',
       roomCode: DEFAULT_ROOM_CODE,
       localDeviceId: deviceId,
       me,
@@ -1001,6 +1269,7 @@
       ? me.equityCurve
       : [{ ts: me.createdAt || Date.now(), nw: me.baselineCapitalTL || DEFAULT_STARTING_CAPITAL_TL, base: me.baselineCapitalTL || DEFAULT_STARTING_CAPITAL_TL }];
     me.studiedDisclosures = me.studiedDisclosures && typeof me.studiedDisclosures === 'object' ? me.studiedDisclosures : {};
+    me.completedFieldCases = me.completedFieldCases && typeof me.completedFieldCases === 'object' ? me.completedFieldCases : {};
     me.seenNewsIds = Array.isArray(me.seenNewsIds) ? me.seenNewsIds : [];
     me.livedMilestones = me.livedMilestones || {};
     parsed.roomCode = String(parsed.roomCode || DEFAULT_ROOM_CODE).toUpperCase();
@@ -1270,7 +1539,11 @@
       footprints: (inv.footprints || []).slice(0, 6),
       equityCurve: (inv.equityCurve || []).slice(-24),
       masteryScore: mastery.overallScore,
-      masteryRank: mastery.rankTitle
+      masteryRank: mastery.rankTitle,
+      solvedCasesCount: mastery.solvedFieldCaseCount || 0,
+      studiedCount: mastery.studiedDisclosureCount || 0,
+      archetypeTitle: mastery.archetype?.title || '',
+      archetypeMotto: mastery.archetype?.motto || ''
     };
   }
 
@@ -2004,6 +2277,8 @@
       assetKey: asset.key,
       ticker: asset.ticker,
       name: asset.name,
+      qty: sellQty,
+      grossProceedsTL: grossTL,
       amountTL: netAfterFeeAndStopajTL,
       priceTL: effectiveBidTL,
       realizedPnlPct,
@@ -2041,8 +2316,11 @@
 
   function executeOrder(params = {}) {
     const member = getActiveMember();
-    processTimeHooksForMember(member);
-    const clock = getTurkishClock();
+    const customNowMs = params.now != null
+      ? (params.now instanceof Date ? params.now.getTime() : Number(params.now))
+      : undefined;
+    processTimeHooksForMember(member, customNowMs);
+    const clock = getTurkishClock(customNowMs);
     const nowMs = clock.ms;
     const side = String(params.side || 'BUY').toUpperCase();
 
@@ -2315,6 +2593,12 @@
       }
 
       if (amountTL > maxTotalPower) {
+        if (micro.isBrutTakas && (member.settlementQueue || []).length > 0) {
+          return {
+            ok: false,
+            reason: `VBTS Brüt Takas kuralı gereği T+2 takasta bekleyen satış tutarıyla ${asset.ticker} alınamaz; yalnızca hesabındaki net çekilebilir nakit (${member.cashTL.toLocaleString('tr-TR')} ₺) kullanılabilir!`
+          };
+        }
         if (asset.venue !== 'BIST' && (member.settlementQueue || []).length > 0) {
           return {
             ok: false,
@@ -3231,8 +3515,17 @@
       }
     }
     const thesisWrittenCount = Object.values(m.positions || {}).filter((p) => p.thesisNote && p.thesisNote.length >= 4).length;
-    const studiedCount = Object.keys(m.studiedDisclosures || {}).length;
-    const disciplineScore = Math.max(25, Math.min(98, 72 + thesisWrittenCount * 7 + Math.min(12, studiedCount * 3) - rumCnt * 14 + (m.livedMilestones?.inspectedCashScale ? 8 : 0)));
+    const localStudiedCount = Object.keys(m.studiedDisclosures || {}).length;
+    const studiedCount = localStudiedCount > 0 ? localStudiedCount : (Number(m.studiedCount) || 0);
+    const localSolvedCount = Object.values(m.completedFieldCases || {}).filter((c) => c && c.isOptimal).length;
+    const solvedFieldCaseCount = localSolvedCount > 0 ? localSolvedCount : (Number(m.solvedCasesCount) || 0);
+    const disciplineScore = Math.max(
+      25,
+      Math.min(
+        99,
+        72 + thesisWrittenCount * 6 + Math.min(12, studiedCount * 3) + Math.min(14, solvedFieldCaseCount * 2) - rumCnt * 14 + (m.livedMilestones?.inspectedCashScale ? 6 : 0)
+      )
+    );
 
     // 6) Enflasyon Kalkanı & Nakit Çarkı
     let shieldScore = 60;
@@ -3250,7 +3543,8 @@
     );
 
     let rankTitle = 'Gözlemci Çırak';
-    if (overallScore >= 85) rankTitle = 'Keskin Gözlü Kasa Ustası';
+    if (overallScore >= 90 && solvedFieldCaseCount >= 6) rankTitle = 'Saha Görmüş Baş Stratejist';
+    else if (overallScore >= 85) rankTitle = 'Keskin Gözlü Kasa Ustası';
     else if (overallScore >= 74) rankTitle = 'Soğukkanlı Stratejist';
     else if (overallScore >= 62) rankTitle = 'Pazar Sezgisi Açık Yatırımcı';
 
@@ -3324,12 +3618,21 @@
       };
     }
 
+    if (m.id !== state?.me?.id && m.archetypeTitle) {
+      archetype = {
+        ...archetype,
+        title: m.archetypeTitle,
+        motto: m.archetypeMotto || archetype.motto
+      };
+    }
+
     return {
       overallScore,
       rankTitle,
       mentorVoice,
       archetype,
       studiedDisclosureCount: studiedCount,
+      solvedFieldCaseCount,
       axes: [
         { label: 'Kasa & Nakit Kalitesi', score: qualityScore },
         { label: 'Sepet Dengesi', score: balanceScore },
@@ -3344,6 +3647,93 @@
         rumorCount: rumCnt,
         rumorAvgPct: rumCnt > 0 ? +(rumSum / rumCnt).toFixed(2) : null
       }
+    };
+  }
+
+  function evaluateImpatienceLedger(member) {
+    const m = member || getActiveMember();
+    const history = Array.isArray(m?.tradeHistory) ? m.tradeHistory : [];
+    let missedUpsideTotalTL = 0;
+    let savedDownsideTotalTL = 0;
+    const decisions = [];
+
+    for (const th of history) {
+      if (!th || th.side !== 'SATIŞ' || !th.assetKey) continue;
+      const soldPrice = Number(th.priceTL);
+      const netAmt = Number(th.amountTL);
+      if (!Number.isFinite(soldPrice) || soldPrice <= 0 || !Number.isFinite(netAmt) || netAmt <= 0) continue;
+      const asset = getAsset(th.assetKey);
+      if (!asset || !(Number(asset.priceTL) > 0) || asset.isRateInstrument) continue;
+      const curPrice = Number(asset.priceTL);
+      if (!Number.isFinite(curPrice) || Math.abs(curPrice - soldPrice) / soldPrice < 0.004) continue;
+      const exactUnits = (Number.isFinite(Number(th.qty)) && Number(th.qty) > 0)
+        ? Number(th.qty)
+        : ((Number.isFinite(Number(th.grossProceedsTL)) && Number(th.grossProceedsTL) > 0) ? (Number(th.grossProceedsTL) / soldPrice) : (netAmt / soldPrice));
+      if (!Number.isFinite(exactUnits) || exactUnits <= 0) continue;
+      const diffTL = Math.round(exactUnits * (curPrice - soldPrice));
+      const diffPct = +(((curPrice / soldPrice) - 1) * 100).toFixed(2);
+      if (diffTL > 25) {
+        missedUpsideTotalTL += diffTL;
+        decisions.push({
+          id: th.id,
+          ts: th.ts,
+          ticker: asset.ticker,
+          name: asset.name,
+          assetKey: asset.key,
+          soldPriceTL: soldPrice,
+          currentPriceTL: curPrice,
+          diffTL,
+          diffPct,
+          kind: 'MISSED_UPSIDE'
+        });
+      } else if (diffTL < -25) {
+        const saved = Math.abs(diffTL);
+        savedDownsideTotalTL += saved;
+        decisions.push({
+          id: th.id,
+          ts: th.ts,
+          ticker: asset.ticker,
+          name: asset.name,
+          assetKey: asset.key,
+          soldPriceTL: soldPrice,
+          currentPriceTL: curPrice,
+          diffTL: saved,
+          diffPct,
+          kind: 'SAVED_DOWNSIDE'
+        });
+      }
+    }
+
+    decisions.sort((a, b) => b.diffTL - a.diffTL);
+    return {
+      missedUpsideTotalTL: Math.round(missedUpsideTotalTL),
+      savedDownsideTotalTL: Math.round(savedDownsideTotalTL),
+      decisions: decisions.slice(0, 8)
+    };
+  }
+
+  function recordFieldCaseAttempt(caseId, choiceId, isOptimal) {
+    if (!caseId || !choiceId) return { ok: false };
+    const m = getActiveMember();
+    if (!m.completedFieldCases || typeof m.completedFieldCases !== 'object') {
+      m.completedFieldCases = {};
+    }
+    const prev = m.completedFieldCases[String(caseId)];
+    m.completedFieldCases[String(caseId)] = {
+      choiceId: String(choiceId),
+      isOptimal: Boolean(isOptimal),
+      attempts: (Number(prev?.attempts) || 0) + 1,
+      ts: Date.now()
+    };
+    if (!m.livedMilestones) m.livedMilestones = {};
+    if (isOptimal) m.livedMilestones.completedFieldCase = true;
+    m.updatedAt = Date.now();
+    m.rev = (Number(m.rev) || 1) + 1;
+    saveState(true, true);
+    return {
+      ok: true,
+      isOptimal: Boolean(isOptimal),
+      solvedCount: Object.values(m.completedFieldCases).filter((x) => x && x.isOptimal).length
     };
   }
 
@@ -3429,12 +3819,14 @@
     }];
     target.footprints = [];
     target.studiedDisclosures = {};
+    target.completedFieldCases = target.completedFieldCases && typeof target.completedFieldCases === 'object' ? target.completedFieldCases : {};
     target.livedMilestones = {
       executedRealOrder: false,
       waitedSettlementOrValor: false,
       inspectedCashScale: false,
       wroteInvestmentThesis: false,
-      studiedNightDisclosure: false
+      studiedNightDisclosure: false,
+      completedFieldCase: Object.values(target.completedFieldCases).some((c) => c && c.isOptimal)
     };
     target.equityCurve = [{ ts: now, nw: DEFAULT_STARTING_CAPITAL_TL, base: DEFAULT_STARTING_CAPITAL_TL }];
     target.idleErosionLog = { lastCheckedMs: now, cumulativeInflationLossTL: 0, missedSukukNetTL: 0 };
@@ -3794,6 +4186,13 @@
             row.cmf20 = +Number(d[7] ?? row.cmf20 ?? 0).toFixed(3);
             if (d[8] != null) row.pe = +Number(d[8]).toFixed(1);
             if (d[9] != null) row.pb = +Number(d[9]).toFixed(2);
+            if (row.totalSharesRaw > 0) row.marketCapBillionTL = +((row.totalSharesRaw * row.close) / 1e9).toFixed(2);
+            if (row.floatSharesRaw > 0) row.fdpdMillionTL = +((row.floatSharesRaw * row.close) / 1e6).toFixed(1);
+            if (row.high52W > 0) {
+              if (row.close > row.high52W) row.high52W = row.close;
+              if (row.low52W > 0 && row.close < row.low52W) row.low52W = row.close;
+              row.drawdown52WPct = +(((row.close - row.high52W) / row.high52W) * 100).toFixed(1);
+            }
             if (row.entityKind !== 'bank' && row.entityKind !== 'insurance' && row.entityKind !== 'fin_other') {
               if (d[10] != null) row.totalDebtMillionTL = Math.round(d[10] / 1e6);
               if (d[11] != null) row.cashMillionTL = Math.round(d[11] / 1e6);
@@ -3805,6 +4204,17 @@
               if (d[17] != null) row.netIncomeMillionTL = Math.round(d[17] / 1e6);
               if (d[18] != null) row.totalAssetsMillionTL = Math.round(d[18] / 1e6);
               if (d[19] != null) row.ebitdaMillionTL = Math.round(d[19] / 1e6);
+              row.fcfMillionTL = (Number(row.ocfMillionTL) || 0) - Math.abs(Number(row.capexMillionTL) || 0);
+              row.isNetCash = (Number(row.netDebtMillionTL) || 0) < 0;
+              if (row.totalAssetsMillionTL > 1 && row.netIncomeMillionTL != null && row.ocfMillionTL != null) {
+                row.sloanAccrualPct = +(((row.netIncomeMillionTL - row.ocfMillionTL) / row.totalAssetsMillionTL) * 100).toFixed(2);
+              }
+              if (row.netIncomeMillionTL > 0.1 && row.ocfMillionTL != null) {
+                row.cashConversionRatio = +(row.ocfMillionTL / row.netIncomeMillionTL).toFixed(2);
+              }
+              if (row.ebitdaMillionTL > 0.1 && row.netDebtMillionTL != null) {
+                row.netDebtToEbitda = +(row.netDebtMillionTL / row.ebitdaMillionTL).toFixed(2);
+              }
             }
           }
         }
@@ -4010,6 +4420,7 @@
     init,
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     getMarketData: () => marketData,
+    getCatalogRev: () => catalogRev,
     getLastLiveSyncMs: () => lastLiveSyncMs,
     getPriceFlash: (key) => priceFlashMap.get(key) || null,
     getAllAssets: () => Array.from(new Set(assetCatalog.values())).filter((a) => !a.isSyntheticIpo),
@@ -4035,6 +4446,8 @@
     evaluateMemberPortfolio,
     evaluateRateTranche,
     evaluateInvestorMastery,
+    evaluateImpatienceLedger,
+    recordFieldCaseAttempt,
     executeOrder,
     participateInIpo,
     completeOnboarding,
