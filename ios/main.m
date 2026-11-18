@@ -332,15 +332,127 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
                                                  name:UIApplicationDidBecomeActiveNotification
                                                object:nil];
 
-    NSURL *wwwDir = [[[NSBundle mainBundle] resourceURL] URLByAppendingPathComponent:@"www" isDirectory:YES];
-    NSURL *indexUrl = [wwwDir URLByAppendingPathComponent:@"index.html"];
-    if ([[NSFileManager defaultManager] fileExistsAtPath:[indexUrl path]]) {
-        [self.webView loadFileURL:indexUrl allowingReadAccessToURL:wwwDir];
+    NSURL *activeWwwDir = [self prepareLocalLiveWwwDirectory];
+    NSURL *indexUrl = activeWwwDir ? [activeWwwDir URLByAppendingPathComponent:@"index.html"] : nil;
+    if (indexUrl && [[NSFileManager defaultManager] fileExistsAtPath:[indexUrl path]]) {
+        [self.webView loadFileURL:indexUrl allowingReadAccessToURL:activeWwwDir];
     } else {
         NSURL *cloudUrl = [NSURL URLWithString:@"https://4zyq4sk2tk-collab.github.io/AETHER-iOS/?source=ios-native"];
         if (cloudUrl) {
             [self.webView loadRequest:[NSURLRequest requestWithURL:cloudUrl]];
         }
+    }
+
+    __weak typeof(self) weakSelf = self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(4.5 * NSEC_PER_SEC)), dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+        [weakSelf checkCloudOtaBundleInBackground];
+    });
+}
+
+- (NSURL *)prepareLocalLiveWwwDirectory {
+    NSFileManager *fm = [NSFileManager defaultManager];
+    NSURL *bundledWww = [[[NSBundle mainBundle] resourceURL] URLByAppendingPathComponent:@"www" isDirectory:YES];
+    NSArray<NSURL *> *supDirs = [fm URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask];
+    NSURL *appSup = supDirs.firstObject;
+    if (!appSup) return bundledWww;
+
+    [fm createDirectoryAtURL:appSup withIntermediateDirectories:YES attributes:nil error:nil];
+    NSURL *liveDir = [appSup URLByAppendingPathComponent:@"AETHER_LiveWWW" isDirectory:YES];
+    NSURL *liveIndex = [liveDir URLByAppendingPathComponent:@"index.html"];
+
+    NSString *bundleVer = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] ?: @"1600";
+    NSString *bundleShort = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"16.0.0";
+    NSUserDefaults *ud = [NSUserDefaults standardUserDefaults];
+    NSString *savedBundleVer = [ud stringForKey:@"aether_live_bundle_ver"];
+
+    BOOL needsSeed = (!savedBundleVer || ![savedBundleVer isEqualToString:bundleVer] || ![fm fileExistsAtPath:[liveIndex path]]);
+    if (needsSeed && [fm fileExistsAtPath:[bundledWww path]]) {
+        [fm removeItemAtURL:liveDir error:nil];
+        NSError *cpErr = nil;
+        if ([fm copyItemAtURL:bundledWww toURL:liveDir error:&cpErr] && !cpErr) {
+            [ud setObject:bundleVer forKey:@"aether_live_bundle_ver"];
+            [ud setObject:bundleShort forKey:@"aether_live_ota_ver"];
+            [ud synchronize];
+        }
+    }
+    if ([fm fileExistsAtPath:[liveIndex path]]) {
+        return liveDir;
+    }
+    return bundledWww;
+}
+
+- (NSData *)syncFetchUrlData:(NSURL *)url {
+    if (!url) return nil;
+    __block NSData *resultData = nil;
+    dispatch_semaphore_t sem = dispatch_semaphore_create(0);
+    NSMutableURLRequest *req = [NSMutableURLRequest requestWithURL:url
+                                                       cachePolicy:NSURLRequestReloadIgnoringLocalCacheData
+                                                   timeoutInterval:14.0];
+    [req setValue:@"AETHER-iOS-OTA/16.0" forHTTPHeaderField:@"User-Agent"];
+    NSURLSessionDataTask *t = [[NSURLSession sharedSession] dataTaskWithRequest:req
+                                                              completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+        if (!error && [response isKindOfClass:[NSHTTPURLResponse class]] && ((NSHTTPURLResponse *)response).statusCode == 200) {
+            resultData = data;
+        }
+        dispatch_semaphore_signal(sem);
+    }];
+    [t resume];
+    dispatch_semaphore_wait(sem, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(16.0 * NSEC_PER_SEC)));
+    return resultData;
+}
+
+- (void)checkCloudOtaBundleInBackground {
+    NSString *baseStr = @"https://4zyq4sk2tk-collab.github.io/AETHER-iOS/";
+    NSData *manifestData = [self syncFetchUrlData:[NSURL URLWithString:[baseStr stringByAppendingString:@"manifest.json"]]];
+    if (!manifestData || manifestData.length < 40) return;
+
+    NSDictionary *manifest = [NSJSONSerialization JSONObjectWithData:manifestData options:0 error:nil];
+    if (![manifest isKindOfClass:[NSDictionary class]]) return;
+    NSString *remoteVer = [manifest[@"version"] isKindOfClass:[NSString class]] ? manifest[@"version"] : @"";
+    if (remoteVer.length == 0) return;
+
+    NSUserDefaults *ud = [NSUserDefaults standardUserDefaults];
+    NSString *localVer = [ud stringForKey:@"aether_live_ota_ver"] ?: @"";
+    if ([remoteVer isEqualToString:localVer]) return;
+
+    NSFileManager *fm = [NSFileManager defaultManager];
+    NSURL *appSup = [fm URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask].firstObject;
+    if (!appSup) return;
+    NSURL *liveDir = [appSup URLByAppendingPathComponent:@"AETHER_LiveWWW" isDirectory:YES];
+    NSURL *stageDir = [appSup URLByAppendingPathComponent:@"AETHER_StageWWW" isDirectory:YES];
+    [fm removeItemAtURL:stageDir error:nil];
+
+    if ([fm fileExistsAtPath:[liveDir path]]) {
+        if (![fm copyItemAtURL:liveDir toURL:stageDir error:nil]) return;
+    } else {
+        return;
+    }
+
+    NSArray<NSString *> *coreFiles = @[
+        @"index.html",
+        @"million-sim.css",
+        @"aether-kernel-v10.js",
+        @"real-investment-guide.js",
+        @"million-sim-app.js",
+        @"manifest.json"
+    ];
+    for (NSString *fname in coreFiles) {
+        NSData *fData = [self syncFetchUrlData:[NSURL URLWithString:[baseStr stringByAppendingString:fname]]];
+        if (!fData || fData.length < 100) {
+            [fm removeItemAtURL:stageDir error:nil];
+            return;
+        }
+        NSURL *dest = [stageDir URLByAppendingPathComponent:fname];
+        if (![fData writeToURL:dest options:NSDataWritingAtomic error:nil]) {
+            [fm removeItemAtURL:stageDir error:nil];
+            return;
+        }
+    }
+
+    [fm removeItemAtURL:liveDir error:nil];
+    if ([fm moveItemAtURL:stageDir toURL:liveDir error:nil]) {
+        [ud setObject:remoteVer forKey:@"aether_live_ota_ver"];
+        [ud synchronize];
     }
 }
 

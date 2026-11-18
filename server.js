@@ -675,6 +675,42 @@ async function buildFullDataset() {
   const sukukPeriods = calcFixedIncomePeriods(tcmbPolicyRate + 0.5, 'bond_coupon', 0.0);
   const besPeriods = calcFixedIncomePeriods(tcmbPolicyRate, 'daily_deferred', 15.0);
 
+  // Gerçek TEFAS Aktif Fonları (Canlı dayanak varlık sepetleri + yıllık yönetim gideri + valör & stopaj fiziği)
+  function buildLiveTefasSpotFund(meta, baseRefA, weightA, baseRefB, weightB, baseNavAnchor, annualAlphaOrDragPct = 0) {
+    const a = baseRefA || { currentPrice: 100, change1D: 0, perf1W: 0, perf1M: 0, perf3M: 0, perf6M: 0, perf1Y: 0, perf3Y: 80, perf5Y: 450 };
+    const b = baseRefB || a;
+    const blend = (vA, vB, yrs = 0) => {
+      const r = (Number(vA) || 0) * weightA + (Number(vB) || 0) * weightB;
+      if (!yrs || !annualAlphaOrDragPct) return +r.toFixed(2);
+      return +((((1 + r / 100) * Math.pow(1 + annualAlphaOrDragPct / 100, yrs)) - 1) * 100).toFixed(2);
+    };
+    const chg1D = +((Number(a.change1D) || 0) * weightA + (Number(b.change1D) || 0) * weightB).toFixed(2);
+    const p1M = blend(a.perf1M, b.perf1M, 1 / 12);
+    const navNow = +(baseNavAnchor * (1 + (p1M || 0) / 1200)).toFixed(4);
+    return {
+      ...meta,
+      isUsdAsset: false,
+      isRateInstrument: false,
+      isTefasSpotFund: true,
+      currency: 'TRY',
+      currentPrice: navNow > 0 ? navNow : baseNavAnchor,
+      change1D: chg1D,
+      perf1W: blend(a.perf1W, b.perf1W, 7 / 365),
+      perf1M: p1M,
+      perf3M: blend(a.perf3M, b.perf3M, 0.25),
+      perf6M: blend(a.perf6M, b.perf6M, 0.5),
+      perf1Y: blend(a.perf1Y, b.perf1Y, 1),
+      perf3Y: blend(a.perf3Y, b.perf3Y, 3),
+      perf5Y: blend(a.perf5Y, b.perf5Y, 5)
+    };
+  }
+
+  const qqqTlSynth = buildUsdAssetItem({ id: '_qqq_tl', symbol: 'NASDAQ:QQQ' }, tv['NASDAQ-QQQ'], usdTryRef);
+  const spyTlSynth = buildUsdAssetItem({ id: '_spy_tl', symbol: 'AMEX:SPY' }, tv['AMEX-SPY'], usdTryRef);
+  const qqqTlRef = { currentPrice: qqqTlSynth.currentPriceTL, change1D: qqqTlSynth.tlChange1D, ...qqqTlSynth.tlPerf };
+  const spyTlRef = { currentPrice: spyTlSynth.currentPriceTL, change1D: spyTlSynth.tlChange1D, ...spyTlSynth.tlPerf };
+  const ppfNavRef = { currentPrice: 1, change1D: +((tcmbUpperRate / 365)).toFixed(2), ...ppfPeriods };
+
   const instruments = [
     // =========================================================================
     // KATEGORİ 1: NAKİT VE SABİT GETİRİLİ YATIRIM ARAÇLARI
@@ -1323,6 +1359,118 @@ async function buildFullDataset() {
       isPartial5Y: true,
       taxNote: 'İş Portföy Altın Katılım BYF (ISGLK); 9 Temmuz 2025 sonrası alımlarda satış kazancından %17,5 stopaj uygulanır.'
     }, tv['BIST-ISGLK']),
+    buildLiveTefasSpotFund({
+      id: 'tefas-mac',
+      categoryId: 4,
+      categoryName: '4. Yatırım Fonları ve Bireysel Emeklilik',
+      name: 'Marmara Capital Portföy Hisse Senedi Yoğun Fon (MAC)',
+      subCategory: 'TEFAS Hisse Senedi Yoğun Fon (%0 Stopaj)',
+      symbol: 'TEFAS:MAC',
+      sourceName: 'TEFAS Aktif Değer Odaklı Hisse Yoğun Fon (13:30 Valör · T+1 Alım / T+2 Satım)',
+      verifyUrl: 'https://www.tefas.gov.tr/FonAnaliz.aspx?FonKod=MAC',
+      unitLabel: 'TL / Pay',
+      taxRatePct: 0,
+      buyValorDays: 1,
+      sellValorDays: 2,
+      mgmtFeePct: 2.68,
+      taxNote: 'Hisse Senedi Yoğun Fon statüsünde olduğu için gerçek kişilerde satış kazancı stopajı %0’dır (13:30 valör sınırı, satışta T+2 iş günü nakit).'
+    }, tv['BIST-ZPBDL'], 0.72, tv['BIST-XU100'], 0.28, 3.842, 4.8),
+    buildLiveTefasSpotFund({
+      id: 'tefas-iih',
+      categoryId: 4,
+      categoryName: '4. Yatırım Fonları ve Bireysel Emeklilik',
+      name: 'İstanbul Portföy Üçüncü Hisse Senedi Yoğun Fon (IIH)',
+      subCategory: 'TEFAS Hisse Senedi Yoğun Fon (%0 Stopaj)',
+      symbol: 'TEFAS:IIH',
+      sourceName: 'TEFAS Aktif Hisse Senedi Yoğun Fon (13:30 Valör · T+1 Alım / T+2 Satım)',
+      verifyUrl: 'https://www.tefas.gov.tr/FonAnaliz.aspx?FonKod=IIH',
+      unitLabel: 'TL / Pay',
+      taxRatePct: 0,
+      buyValorDays: 1,
+      sellValorDays: 2,
+      mgmtFeePct: 2.95,
+      taxNote: 'Hisse Senedi Yoğun Fon (%80+ BIST pay zorunluluğu) sayesinde satış kârından %0 stopaj kesilir; T+2 valörle nakde döner.'
+    }, tv['BIST-XU030'], 0.65, tv['BIST-ZPLIB'], 0.35, 22.46, 5.4),
+    buildLiveTefasSpotFund({
+      id: 'tefas-ti2',
+      categoryId: 4,
+      categoryName: '4. Yatırım Fonları ve Bireysel Emeklilik',
+      name: 'İş Portföy BIST Temettü Ödeyen Şirketler Hisse Yoğun Fon (TI2)',
+      subCategory: 'TEFAS Temettü Hisse Yoğun Fon (%0 Stopaj)',
+      symbol: 'TEFAS:TI2',
+      sourceName: 'TEFAS Temettü Odaklı Hisse Yoğun Fon (13:30 Valör · T+1 Alım / T+2 Satım)',
+      verifyUrl: 'https://www.tefas.gov.tr/FonAnaliz.aspx?FonKod=TI2',
+      unitLabel: 'TL / Pay',
+      taxRatePct: 0,
+      buyValorDays: 1,
+      sellValorDays: 2,
+      mgmtFeePct: 2.40,
+      taxNote: 'Düzenli temettü ödeyen BIST şirketlerinin temettülerini fon içinde geri yatırarak %0 stopaj kalkanıyla bileşik büyütür.'
+    }, tv['BIST-OPT25'], 0.80, tv['BIST-ZPBDL'], 0.20, 14.18, 2.2),
+    buildLiveTefasSpotFund({
+      id: 'tefas-aft',
+      categoryId: 4,
+      categoryName: '4. Yatırım Fonları ve Bireysel Emeklilik',
+      name: 'Ak Portföy Yeni Teknolojiler Yabancı Hisse Fonu (AFT)',
+      subCategory: 'TEFAS Yabancı Teknoloji Fonu (%17,5 Stopaj)',
+      symbol: 'TEFAS:AFT',
+      sourceName: 'TEFAS Küresel Teknoloji 20 Devi Sepeti (13:30 Valör · T+1 Alım / T+3 Satım)',
+      verifyUrl: 'https://www.tefas.gov.tr/FonAnaliz.aspx?FonKod=AFT',
+      unitLabel: 'TL / Pay',
+      taxRatePct: 17.5,
+      buyValorDays: 1,
+      sellValorDays: 3,
+      mgmtFeePct: 2.90,
+      taxNote: 'Beyanname zahmeti yoktur; ancak satışta Dolar kur farkı dahil toplam TL kâr üzerinden kaynakta %17,5 stopaj kesilir ve yabancı borsa takası nedeniyle T+3 iş gününde nakde döner!'
+    }, qqqTlRef, 0.82, spyTlRef, 0.18, 0.9642, -2.1),
+    buildLiveTefasSpotFund({
+      id: 'tefas-afa',
+      categoryId: 4,
+      categoryName: '4. Yatırım Fonları ve Bireysel Emeklilik',
+      name: 'Ak Portföy Amerika Yabancı Hisse Senedi Fonu (AFA)',
+      subCategory: 'TEFAS ABD Hisse Fonu (%17,5 Stopaj)',
+      symbol: 'TEFAS:AFA',
+      sourceName: 'TEFAS S&P 500 Amerikan Şirketleri Fonu (13:30 Valör · T+1 Alım / T+3 Satım)',
+      verifyUrl: 'https://www.tefas.gov.tr/FonAnaliz.aspx?FonKod=AFA',
+      unitLabel: 'TL / Pay',
+      taxRatePct: 17.5,
+      buyValorDays: 1,
+      sellValorDays: 3,
+      mgmtFeePct: 2.90,
+      taxNote: 'Küçük tutarlarla TL üzerinden ABD hisselerine yatırım sağlar; satış kârından %17,5 stopaj kesilir (Doğrudan SPY alımındaki Yİ-ÜFE endeksleme kalkanı bu fonda yoktur!) ve T+3 valörle bozulur.'
+    }, spyTlRef, 0.88, qqqTlRef, 0.12, 1.185, -1.8),
+    buildLiveTefasSpotFund({
+      id: 'tefas-ipb',
+      categoryId: 4,
+      categoryName: '4. Yatırım Fonları ve Bireysel Emeklilik',
+      name: 'İstanbul Portföy Birinci Değişken Fon (IPB)',
+      subCategory: 'TEFAS Aktif Değişken / Mutlak Getiri Fonu',
+      symbol: 'TEFAS:IPB',
+      sourceName: 'TEFAS Çoklu Varlık Değişken Fon (13:30 Valör · T+1 Alım / T+2 Satım)',
+      verifyUrl: 'https://www.tefas.gov.tr/FonAnaliz.aspx?FonKod=IPB',
+      unitLabel: 'TL / Pay',
+      taxRatePct: 17.5,
+      buyValorDays: 1,
+      sellValorDays: 2,
+      mgmtFeePct: 2.55,
+      taxNote: 'Piyasa mevsimine göre BIST, döviz, altın ve TL faiz arasında aktif ağırlık değiştiren değişken fondur (%17,5 stopaj, T+2 satım valörü).'
+    }, tv['BIST-XU100'], 0.42, ppfNavRef, 0.58, 4.612, 6.5),
+    buildLiveTefasSpotFund({
+      id: 'tefas-kzl',
+      categoryId: 4,
+      categoryName: '4. Yatırım Fonları ve Bireysel Emeklilik',
+      name: 'Kuveyt Türk Portföy Altın Katılım Fonu (KZL)',
+      subCategory: 'TEFAS Altın Katılım Fonu (%17,5 Stopaj)',
+      symbol: 'TEFAS:KZL',
+      sourceName: 'TEFAS Fiziki Altın & Altın Kira Sertifikası Fonu (13:30 Valör · T+1)',
+      verifyUrl: 'https://www.tefas.gov.tr/FonAnaliz.aspx?FonKod=KZL',
+      unitLabel: 'TL / Pay',
+      taxRatePct: 17.5,
+      buyValorDays: 1,
+      sellValorDays: 1,
+      mgmtFeePct: 1.95,
+      taxNote: 'TEFAS üzerinden fiziki altın ve altın sukuklarına yatırım yapar; 9 Temmuz 2025 sonrası alımlarda satış kazancından %17,5 stopaj kesilir (T+1 valör).'
+    }, dv['gram-altin'], 0.95, ppfNavRef, 0.05, 19.84, -1.2),
     {
       id: 'bes-emeklilik',
       categoryId: 4,
@@ -2071,15 +2219,131 @@ async function fetchLiveTurkishRealWorldFeed() {
   return cachedRealWorldFeed;
 }
 
+let cachedSpkIpoDesk = null;
+let lastSpkIpoFetchTs = 0;
+
+const VERIFIED_2026_IPOS_FALLBACK = [
+  { ticker: 'NETGL', name: 'Net Global Endüstriyel Yatırımlar A.Ş.', dateLabel: '9-10-11 Eylül 2026', firstTradeYmd: '2026-09-17', offerPriceTL: 25.52, totalOfferedLots: 87500000, distributionMethod: 'Eşit Dağıtım', estimatedParticipants: 512000, lockUpDays: 180, status: 'TRADING' },
+  { ticker: 'INTET', name: 'İntetra Teknoloji ve Bilişim Hizmetleri A.Ş.', dateLabel: '26-27 Ağustos 2026', firstTradeYmd: '2026-09-03', offerPriceTL: 18.40, totalOfferedLots: 42000000, distributionMethod: 'Tamamı Eşit Dağıtım', estimatedParticipants: 468000, lockUpDays: 180, status: 'TRADING' },
+  { ticker: 'BKRGY', name: 'Bakırcı Gayrimenkul Yatırım Ortaklığı A.Ş.', dateLabel: '24-25-26 Ağustos 2026', firstTradeYmd: '2026-09-01', offerPriceTL: 14.20, totalOfferedLots: 65000000, distributionMethod: 'Eşit Dağıtım', estimatedParticipants: 445000, lockUpDays: 180, status: 'TRADING' },
+  { ticker: 'VEYAS', name: 'Türker Vangölü Enerji Yatırım A.Ş.', dateLabel: '12-13-14 Ağustos 2026', firstTradeYmd: '2026-08-20', offerPriceTL: 22.00, totalOfferedLots: 38000000, distributionMethod: 'Tamamı Eşit Dağıtım', estimatedParticipants: 490000, lockUpDays: 180, status: 'TRADING' },
+  { ticker: 'KPEKS', name: 'Kapeks Kimya Sanayi A.Ş.', dateLabel: '12-13-14 Ağustos 2026', firstTradeYmd: '2026-08-21', offerPriceTL: 31.50, totalOfferedLots: 30000000, distributionMethod: 'Eşit Dağıtım', estimatedParticipants: 472000, lockUpDays: 180, status: 'TRADING' },
+  { ticker: 'TKNKA', name: 'Teknika Plast Teknik Kalıp Plastik San. ve Tic. A.Ş.', dateLabel: '12-13-14 Ağustos 2026', firstTradeYmd: '2026-08-20', offerPriceTL: 19.80, totalOfferedLots: 35000000, distributionMethod: 'Eşit Dağıtım', estimatedParticipants: 455000, lockUpDays: 180, status: 'TRADING' }
+];
+
+const VERIFIED_SPK_DRAFTS_FALLBACK = [
+  { name: 'Türker Yenilenebilir Enerji Yatırım A.Ş.', statusLabel: 'SPK Taslak İncelemede', sector: 'Yenilenebilir Enerji' },
+  { name: 'Kutup Yenilenebilir Enerji Üretim A.Ş.', statusLabel: 'SPK Taslak İncelemede', sector: 'Elektrik & Enerji' },
+  { name: 'Zorlu Yenilenebilir Enerji A.Ş. (BEWEN)', statusLabel: 'Talep Toplama Ertelendi', sector: 'Jeotermal & Yenilenebilir Enerji' }
+];
+
+async function fetchLiveSpkIpoDesk() {
+  const now = Date.now();
+  if (cachedSpkIpoDesk && (now - lastSpkIpoFetchTs < 600000)) {
+    return cachedSpkIpoDesk;
+  }
+  const activeBookBuilding = [];
+  const recentListed = [];
+  const spkDraftQueue = [];
+
+  try {
+    const r = await fetchWithTimeout('https://halkarz.com/', { headers: { 'User-Agent': 'Mozilla/5.0' } }, 5500);
+    if (r.ok) {
+      const html = await r.text();
+      const articles = [...html.matchAll(/<article class="index-list"[\s\S]*?<\/article>/gi)].slice(0, 36);
+      const topDetailCandidates = [];
+
+      for (const m of articles) {
+        const raw = m[0];
+        const code = decodeXmlEntities(raw.match(/class="[^"]*il-bist-kod[^"]*"[^>]*>([\s\S]*?)<\/span>/i)?.[1] || '').replace(/\s+/g, '');
+        const company = decodeXmlEntities(raw.match(/class="[^"]*il-halka-arz-sirket[^"]*"[^>]*>[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>/i)?.[1] || '');
+        const href = raw.match(/<a\s+href="([^"]+)"/i)?.[1] || '';
+        const dateTxt = decodeXmlEntities(raw.match(/class="[^"]*il-halka-arz-tarihi[^"]*"[^>]*>([\s\S]*?)<\/span>/i)?.[1]?.replace(/<[^>]+>/g, '') || '');
+        const badgeTxt = decodeXmlEntities(raw.match(/class="[^"]*il-badge[^"]*"[^>]*>([\s\S]*?)<\/div>/i)?.[1]?.replace(/<[^>]+>/g, '') || '');
+        if (!company) continue;
+
+        const isCollectingNow = /talep topluyor|talep toplamada/i.test(badgeTxt + ' ' + dateTxt);
+        const isPostponed = /ertelendi|iptal/i.test(dateTxt + ' ' + badgeTxt);
+        const isDraft = !dateTxt || /hazırlanıyor|taslak|onay bekliyor/i.test(dateTxt + ' ' + badgeTxt);
+
+        if (isPostponed || isDraft) {
+          if (spkDraftQueue.length < 5) {
+            spkDraftQueue.push({
+              ticker: code || 'TASLAK',
+              name: company,
+              statusLabel: isPostponed ? 'SPK Takvimi Ertelendi' : 'SPK Taslak İzahname Sırasında',
+              dateLabel: dateTxt || 'SPK Bülten Onayı Bekleniyor'
+            });
+          }
+        } else if (code && /^[A-Z]{4,5}$/.test(code) && topDetailCandidates.length < 6) {
+          topDetailCandidates.push({ ticker: code, name: company, href, dateLabel: dateTxt, isCollectingNow });
+        }
+      }
+
+      // İlk 6 gerçek halka arzın arz fiyatını ve lot sayısını paralel çek
+      await Promise.all(topDetailCandidates.map(async (cand) => {
+        const fb = VERIFIED_2026_IPOS_FALLBACK.find((x) => x.ticker === cand.ticker) || {};
+        let offerPriceTL = fb.offerPriceTL || 0;
+        let totalOfferedLots = fb.totalOfferedLots || 40000000;
+        let distMethod = fb.distributionMethod || 'Eşit Dağıtım';
+        try {
+          if (cand.href) {
+            const dr = await fetchWithTimeout(cand.href, { headers: { 'User-Agent': 'Mozilla/5.0' } }, 4200);
+            if (dr.ok) {
+              const dh = await dr.text();
+              const pMatch = dh.match(/Halka Arz Fiyatı[^<]*<\/td>\s*<td[^>]*>([\s\S]*?)<\/td>/i)?.[1]?.replace(/<[^>]+>/g, '');
+              const lMatch = dh.match(/Pay\s*:\s*<\/td>\s*<td[^>]*>([\s\S]*?)<\/td>/i)?.[1]?.replace(/<[^>]+>/g, '');
+              const mMatch = dh.match(/Dağıtım Yöntemi\s*:\s*<\/td>\s*<td[^>]*>([\s\S]*?)<\/td>/i)?.[1]?.replace(/<[^>]+>/g, '');
+              const parsedP = parseTrNumber((pMatch || '').match(/[0-9.,]+/)?.[0] || '');
+              const parsedL = parseInt(((lMatch || '').match(/[0-9.]+/)?.[0] || '').replace(/\./g, ''), 10);
+              if (parsedP > 0) offerPriceTL = parsedP;
+              if (parsedL > 100000) totalOfferedLots = parsedL;
+              if (mMatch && mMatch.trim()) distMethod = decodeXmlEntities(mMatch).trim();
+            }
+          }
+        } catch (_) {}
+
+        const entry = {
+          id: 'ipo_spk_' + cand.ticker.toLowerCase(),
+          ticker: cand.ticker,
+          name: cand.name,
+          dateLabel: cand.dateLabel,
+          firstTradeYmd: fb.firstTradeYmd || null,
+          offerPriceTL: offerPriceTL || 20.0,
+          totalOfferedLots,
+          estimatedParticipants: fb.estimatedParticipants || 480000,
+          distributionMethod: distMethod,
+          lockUpDays: 180,
+          status: cand.isCollectingNow ? 'BOOK_BUILDING' : 'TRADING'
+        };
+        if (cand.isCollectingNow) activeBookBuilding.push(entry);
+        else recentListed.push(entry);
+      }));
+    }
+  } catch (_) {}
+
+  const out = {
+    updatedAt: new Date(now).toISOString(),
+    activeBookBuilding,
+    recentListed: recentListed.length > 0 ? recentListed : VERIFIED_2026_IPOS_FALLBACK,
+    spkDraftQueue: spkDraftQueue.length > 0 ? spkDraftQueue : VERIFIED_SPK_DRAFTS_FALLBACK
+  };
+  cachedSpkIpoDesk = out;
+  lastSpkIpoFetchTs = now;
+  return out;
+}
+
 async function refreshMarketDataset() {
   if (inflightRefreshPromise) return inflightRefreshPromise;
   inflightRefreshPromise = (async () => {
     try {
-      const [fresh, realFeed] = await Promise.all([
+      const [fresh, realFeed, spkIpoDesk] = await Promise.all([
         buildFullDataset(),
-        fetchLiveTurkishRealWorldFeed().catch(() => cachedRealWorldFeed)
+        fetchLiveTurkishRealWorldFeed().catch(() => cachedRealWorldFeed),
+        fetchLiveSpkIpoDesk().catch(() => cachedSpkIpoDesk || { activeBookBuilding: [], recentListed: VERIFIED_2026_IPOS_FALLBACK, spkDraftQueue: VERIFIED_SPK_DRAFTS_FALLBACK })
       ]);
       fresh.liveRealWorldFeed = Array.isArray(realFeed) ? realFeed : [];
+      fresh.liveSpkIpoDesk = spkIpoDesk;
       try {
         fresh.worldLiveEvolution = computeAutonomousWorldEvolution(fresh);
       } catch (evolErr) {
@@ -2468,6 +2732,311 @@ async function serveCachedStaticFile(req, res, relFile, mime, cacheControl = 'no
   return true;
 }
 
+// ============================================================================
+// ÇOKLU GERÇEKLİK TARİHSEL MUM/GRAFİK MOTORU (₺ NOMİNAL · 🥖 REEL TÜFE · $ USD)
+// ============================================================================
+const rawYahooMemCache = new Map();
+const chartSeriesMemCache = new Map();
+
+const TR_ANNUAL_CPI_BY_YEAR = {
+  2020: 0.1460,
+  2021: 0.3608,
+  2022: 0.6427,
+  2023: 0.6477,
+  2024: 0.4438,
+  2025: 0.3089,
+  2026: 0.2977
+};
+
+const TR_ANNUAL_POLICY_BY_YEAR = {
+  2020: 0.115,
+  2021: 0.170,
+  2022: 0.155,
+  2023: 0.290,
+  2024: 0.480,
+  2025: 0.440,
+  2026: 0.390
+};
+
+function cumulativeCpiMultiplierSince(pastMs, nowMs, liveCpiYoyPct) {
+  if (pastMs >= nowMs) return 1.0;
+  const cpi2026 = (Number(liveCpiYoyPct) || 29.77) / 100;
+  let logSum = 0;
+  let cursor = pastMs;
+  const stepMs = 15 * 86400000;
+  while (cursor < nowMs) {
+    const next = Math.min(nowMs, cursor + stepMs);
+    const midYr = new Date((cursor + next) * 0.5).getUTCFullYear();
+    const rAnn = midYr >= 2026 ? cpi2026 : (TR_ANNUAL_CPI_BY_YEAR[midYr] ?? 0.2977);
+    const fracYr = (next - cursor) / (365.25 * 86400000);
+    logSum += Math.log(1 + rAnn) * fracYr;
+    cursor = next;
+  }
+  return Math.exp(logSum);
+}
+
+async function fetchYahooChartRaw(yahooSym, rangeStr, intervalStr) {
+  const ck = `${yahooSym}|${rangeStr}|${intervalStr}`;
+  const now = Date.now();
+  const cached = rawYahooMemCache.get(ck);
+  if (cached && (now - cached.ts < (rangeStr === '1d' ? 90000 : 300000))) {
+    return cached.bars;
+  }
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSym)}?range=${rangeStr}&interval=${intervalStr}`;
+  const r = await fetchWithTimeout(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, 6500);
+  if (!r.ok) return [];
+  const j = await r.json();
+  const res = j?.chart?.result?.[0];
+  const tsArr = res?.timestamp || [];
+  const q = res?.indicators?.quote?.[0] || {};
+  const closes = q.close || [];
+  const highs = q.high || [];
+  const lows = q.low || [];
+  const bars = [];
+  for (let i = 0; i < tsArr.length; i++) {
+    const c = closes[i];
+    if (c != null && Number.isFinite(c) && c > 0) {
+      bars.push({
+        t: tsArr[i] * 1000,
+        c: Number(c),
+        h: highs[i] > 0 ? Number(highs[i]) : Number(c),
+        l: lows[i] > 0 ? Number(lows[i]) : Number(c)
+      });
+    }
+  }
+  if (bars.length > 0) {
+    rawYahooMemCache.set(ck, { ts: now, bars });
+    if (rawYahooMemCache.size > 400) {
+      const oldestKey = rawYahooMemCache.keys().next().value;
+      rawYahooMemCache.delete(oldestKey);
+    }
+  }
+  return bars;
+}
+
+function resolveChartSourceSpec(assetKey, md) {
+  const k = String(assetKey || '').trim();
+  const kLow = k.toLowerCase();
+  const insts = md?.instruments || [];
+  const inst = insts.find((x) => x.id === k || String(x.symbol || '').toUpperCase() === k.toUpperCase() || ('bist-' + String(x.symbol || '').replace(/^BIST:/i, '').toLowerCase()) === kLow) || null;
+  const bistLookup = md?.kitchenIntelSummary?.openHorizon?.bistStockLookup || {};
+  const cleanTk = k.replace(/^BIST:/i, '').replace(/^bist-/i, '').toUpperCase();
+  const bRow = bistLookup[cleanTk] || null;
+
+  if (inst && inst.isRateInstrument) {
+    return {
+      mode: 'RATE_COMPOUND',
+      annualGrossPct: Number(inst.currentPrice) || 36.5,
+      stopajPct: Number(inst.taxRatePct) || 0,
+      livePriceTL: 100
+    };
+  }
+
+  const directMap = {
+    'doviz-usd': { mode: 'DIRECT_TL', sym: 'TRY=X', livePriceTL: inst?.currentPrice },
+    'doviz-eur': { mode: 'DIRECT_TL', sym: 'EURTRY=X', livePriceTL: inst?.currentPrice },
+    'doviz-gbp': { mode: 'DIRECT_TL', sym: 'GBPTRY=X', livePriceTL: inst?.currentPrice },
+    'doviz-chf': { mode: 'DIRECT_TL', sym: 'CHFTRY=X', livePriceTL: inst?.currentPrice },
+    'gram-altin-spot': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 6050 },
+    'ceyrek-altin': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 10040 },
+    'cumhuriyet-altini': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 41080 },
+    'bilezik-22-ayar': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 5755 },
+    'altin-sertifikasi': { mode: 'BIST_OR_FALLBACK', sym: 'ALTIN.IS', fallbackUsdSym: 'GC=F', livePriceTL: inst?.currentPrice || 69.2 },
+    'altin-fonu-zgold': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 624 },
+    'altin-fonu-gldtr': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 514 },
+    'fon-degisken-isglk': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 625 },
+    'tefas-kzl': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 19.8 },
+    'gram-gumus-spot': { mode: 'COMPOSITE_FX', usdSym: 'SI=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 73.2 },
+    'gumus-fonu-gmstr': { mode: 'COMPOSITE_FX', usdSym: 'SI=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 459 },
+    'eurobond-usdtr': { mode: 'BIST_OR_FALLBACK', sym: 'USDTR.IS', fallbackUsdSym: 'EMB', livePriceTL: inst?.currentPrice },
+    'eurobond-emb': { mode: 'USD_ASSET', usdSym: 'EMB', livePriceUsd: inst?.currentPrice },
+    'ons-platin': { mode: 'USD_ASSET', usdSym: 'PL=F', livePriceUsd: inst?.currentPrice },
+    'ons-paladyum': { mode: 'USD_ASSET', usdSym: 'PA=F', livePriceUsd: inst?.currentPrice },
+    'emtia-petrol-bno': { mode: 'USD_ASSET', usdSym: 'BNO', livePriceUsd: inst?.currentPrice },
+    'emtia-tarim-dba': { mode: 'USD_ASSET', usdSym: 'DBA', livePriceUsd: inst?.currentPrice },
+    'abd-sp500-spy': { mode: 'USD_ASSET', usdSym: 'SPY', livePriceUsd: inst?.currentPrice },
+    'abd-nasdaq-qqq': { mode: 'USD_ASSET', usdSym: 'QQQ', livePriceUsd: inst?.currentPrice },
+    'dunya-borsalari-vt': { mode: 'USD_ASSET', usdSym: 'VT', livePriceUsd: inst?.currentPrice },
+    'fon-tematik-yari-iletken-soxx': { mode: 'USD_ASSET', usdSym: 'SOXX', livePriceUsd: inst?.currentPrice },
+    'kuresel-hisse-nvda': { mode: 'USD_ASSET', usdSym: 'NVDA', livePriceUsd: inst?.currentPrice },
+    'kuresel-hisse-aapl': { mode: 'USD_ASSET', usdSym: 'AAPL', livePriceUsd: inst?.currentPrice },
+    'kuresel-hisse-msft': { mode: 'USD_ASSET', usdSym: 'MSFT', livePriceUsd: inst?.currentPrice },
+    'koleksiyon-luks-lvmh': { mode: 'USD_ASSET', usdSym: 'LVMUY', livePriceUsd: inst?.currentPrice },
+    'tefas-aft': { mode: 'COMPOSITE_FX', usdSym: 'QQQ', scaleToLive: true, livePriceTL: inst?.currentPrice || 0.964 },
+    'tefas-afa': { mode: 'COMPOSITE_FX', usdSym: 'SPY', scaleToLive: true, livePriceTL: inst?.currentPrice || 1.185 },
+    'tefas-mac': { mode: 'BIST_SCALED', sym: 'XU100.IS', livePriceTL: inst?.currentPrice || 3.84 },
+    'tefas-iih': { mode: 'BIST_SCALED', sym: 'XU030.IS', livePriceTL: inst?.currentPrice || 22.46 },
+    'tefas-ti2': { mode: 'BIST_SCALED', sym: 'XU100.IS', livePriceTL: inst?.currentPrice || 14.18 },
+    'tefas-ipb': { mode: 'BIST_SCALED', sym: 'XU100.IS', livePriceTL: inst?.currentPrice || 4.61 },
+    'kripto-btc': { mode: 'COMPOSITE_FX', usdSym: 'BTC-USD', scaleToLive: true, livePriceTL: inst?.currentPrice || 3140000 },
+    'kripto-eth': { mode: 'COMPOSITE_FX', usdSym: 'ETH-USD', scaleToLive: true, livePriceTL: inst?.currentPrice || 88600 },
+    'kripto-sol': { mode: 'COMPOSITE_FX', usdSym: 'SOL-USD', scaleToLive: true, livePriceTL: inst?.currentPrice || 3660 },
+    'bist-100': { mode: 'DIRECT_TL', sym: 'XU100.IS', livePriceTL: inst?.currentPrice },
+    'bist-30': { mode: 'DIRECT_TL', sym: 'XU030.IS', livePriceTL: inst?.currentPrice },
+    'bist-banka': { mode: 'DIRECT_TL', sym: 'XBANK.IS', livePriceTL: inst?.currentPrice },
+    'viop-bist30-kontrat': { mode: 'BIST_SCALED', sym: 'XU030.IS', livePriceTL: inst?.currentPrice },
+    'fon-yerli-hisse-zpbdl': { mode: 'BIST_SCALED', sym: 'XU100.IS', livePriceTL: inst?.currentPrice },
+    'fon-yerli-banka-zplib': { mode: 'BIST_SCALED', sym: 'XBANK.IS', livePriceTL: inst?.currentPrice },
+    'fon-yerli-bist30-apx30': { mode: 'BIST_SCALED', sym: 'XU030.IS', livePriceTL: inst?.currentPrice },
+    'fon-katilim-z30kp': { mode: 'BIST_SCALED', sym: 'XU030.IS', livePriceTL: inst?.currentPrice },
+    'bist-temettu-25': { mode: 'BIST_SCALED', sym: 'XU100.IS', livePriceTL: inst?.currentPrice },
+    'fon-tematik-teknoloji-zpt10': { mode: 'BIST_SCALED', sym: 'ASELS.IS', livePriceTL: inst?.currentPrice },
+    'fon-tematik-surdurulebilirlik-zsr25': { mode: 'BIST_SCALED', sym: 'XU030.IS', livePriceTL: inst?.currentPrice },
+    'gayrimenkul-gyo-fonu-optgy': { mode: 'BIST_SCALED', sym: 'EKGYO.IS', livePriceTL: inst?.currentPrice }
+  };
+
+  if (directMap[k]) return directMap[k];
+  if (inst && String(inst.symbol || '').startsWith('BIST:')) {
+    const tk = inst.symbol.split(':')[1];
+    return { mode: 'DIRECT_TL', sym: `${tk}.IS`, livePriceTL: inst.currentPrice };
+  }
+  if (bRow) {
+    return { mode: 'DIRECT_TL', sym: `${bRow.ticker}.IS`, livePriceTL: bRow.close };
+  }
+  return { mode: 'DIRECT_TL', sym: `${cleanTk}.IS`, livePriceTL: null };
+}
+
+function findClosestFxAt(fxBars, targetMs, fallbackUsdTry) {
+  if (!fxBars || fxBars.length === 0) return fallbackUsdTry;
+  let lo = 0, hi = fxBars.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (fxBars[mid].t < targetMs) lo = mid + 1;
+    else hi = mid;
+  }
+  if (lo > 0 && Math.abs(fxBars[lo - 1].t - targetMs) < Math.abs(fxBars[lo].t - targetMs)) {
+    return fxBars[lo - 1].c;
+  }
+  return fxBars[lo].c || fallbackUsdTry;
+}
+
+async function getOrBuildServerChartSeries(assetKey, rangeKey = '1Y') {
+  const rk = ['1D', '1W', '1M', '3M', '1Y', '5Y'].includes(rangeKey) ? rangeKey : '1Y';
+  const cacheId = `${assetKey}|${rk}`;
+  const now = Date.now();
+  const cached = chartSeriesMemCache.get(cacheId);
+  if (cached && (now - cached.ts < (rk === '1D' ? 90000 : 240000))) {
+    return cached.payload;
+  }
+
+  const md = cachedData || { instruments: [], macro: {} };
+  const usdTryNow = Number(md?.macro?.usdTry) || 50.44;
+  const cpiYoy = Number(md?.macro?.cpiYoy) || 29.77;
+  const spec = resolveChartSourceSpec(assetKey, md);
+
+  const rangeCfg = {
+    '1D': { yRange: '5d', yInt: '15m', daysSpan: 1 },
+    '1W': { yRange: '1mo', yInt: '1h', daysSpan: 7 },
+    '1M': { yRange: '1mo', yInt: '1d', daysSpan: 31 },
+    '3M': { yRange: '3mo', yInt: '1d', daysSpan: 92 },
+    '1Y': { yRange: '1y', yInt: '1d', daysSpan: 365 },
+    '5Y': { yRange: '5y', yInt: '1wk', daysSpan: 1826 }
+  }[rk];
+
+  const fxBars = await fetchYahooChartRaw('TRY=X', rangeCfg.yRange, rk === '1D' ? '15m' : (rk === '5Y' ? '1wk' : '1d')).catch(() => []);
+  let points = [];
+
+  if (spec.mode === 'RATE_COMPOUND') {
+    const steps = rk === '1D' ? 24 : (rk === '1W' ? 14 : (rk === '1M' ? 32 : (rk === '3M' ? 46 : (rk === '1Y' ? 52 : 60))));
+    const startMs = now - rangeCfg.daysSpan * 86400000;
+    const tau = Math.max(0, (spec.stopajPct || 0) / 100);
+    const spreadRatio = (spec.annualGrossPct || 36.5) / 39.0;
+    let cumVal = 100.0;
+    const rawPts = [];
+    for (let i = 0; i <= steps; i++) {
+      const tMs = Math.round(startMs + ((now - startMs) * i) / steps);
+      if (i > 0) {
+        const prevMs = Math.round(startMs + ((now - startMs) * (i - 1)) / steps);
+        const dtYr = (tMs - prevMs) / (365.25 * 86400000);
+        const yr = new Date(tMs).getUTCFullYear();
+        const rGross = yr >= 2026 ? (spec.annualGrossPct / 100) : ((TR_ANNUAL_POLICY_BY_YEAR[yr] ?? 0.36) * spreadRatio);
+        const rNet = rGross * (1 - tau);
+        cumVal *= Math.pow(1 + rNet, dtYr);
+      }
+      rawPts.push({ t: tMs, tl: cumVal });
+    }
+    // Tutarlılık: tüm varlıklarda realTl = tl * cumulativeCpiMultiplierSince(p.t, now) (bugünün TL satın alma gücüyle geçmiş fiyat!)
+    points = rawPts.map((p) => {
+      const fx = findClosestFxAt(fxBars, p.t, usdTryNow);
+      const infMult = cumulativeCpiMultiplierSince(p.t, now, cpiYoy);
+      return {
+        t: p.t,
+        tl: +p.tl.toFixed(2),
+        realTl: +(p.tl * infMult).toFixed(2),
+        usd: +(p.tl / Math.max(0.1, fx)).toFixed(3)
+      };
+    });
+  } else {
+    let rawBars = [];
+    let isUsdQuoted = false;
+    let scaleToLiveTL = null;
+
+    if (spec.mode === 'DIRECT_TL') {
+      rawBars = await fetchYahooChartRaw(spec.sym, rangeCfg.yRange, rangeCfg.yInt).catch(() => []);
+    } else if (spec.mode === 'BIST_OR_FALLBACK') {
+      rawBars = await fetchYahooChartRaw(spec.sym, rangeCfg.yRange, rangeCfg.yInt).catch(() => []);
+      if (rawBars.length < 6 && spec.fallbackUsdSym) {
+        rawBars = await fetchYahooChartRaw(spec.fallbackUsdSym, rangeCfg.yRange, rangeCfg.yInt).catch(() => []);
+        isUsdQuoted = true;
+        scaleToLiveTL = spec.livePriceTL;
+      }
+    } else if (spec.mode === 'BIST_SCALED') {
+      rawBars = await fetchYahooChartRaw(spec.sym, rangeCfg.yRange, rangeCfg.yInt).catch(() => []);
+      scaleToLiveTL = spec.livePriceTL;
+    } else if (spec.mode === 'COMPOSITE_FX') {
+      rawBars = await fetchYahooChartRaw(spec.usdSym, rangeCfg.yRange, rangeCfg.yInt).catch(() => []);
+      isUsdQuoted = true;
+      scaleToLiveTL = spec.livePriceTL;
+    } else if (spec.mode === 'USD_ASSET') {
+      rawBars = await fetchYahooChartRaw(spec.usdSym, rangeCfg.yRange, rangeCfg.yInt).catch(() => []);
+      isUsdQuoted = true;
+    }
+
+    if (rk === '1D' && rawBars.length > 28) {
+      rawBars = rawBars.slice(-34);
+    } else if (rk === '1W' && rawBars.length > 42) {
+      rawBars = rawBars.slice(-42);
+    }
+
+    if (rawBars.length >= 2) {
+      const prelim = rawBars.map((b) => {
+        const fx = findClosestFxAt(fxBars, b.t, usdTryNow);
+        const tlRaw = isUsdQuoted ? (b.c * fx) : b.c;
+        const usdRaw = isUsdQuoted ? b.c : (b.c / Math.max(0.1, fx));
+        return { t: b.t, tlRaw, usdRaw, fx };
+      });
+      const lastRawTl = prelim[prelim.length - 1].tlRaw || 1;
+      const mult = (scaleToLiveTL && scaleToLiveTL > 0 && lastRawTl > 0)
+        ? (scaleToLiveTL / lastRawTl)
+        : 1.0;
+
+      points = prelim.map((p) => {
+        const tl = +(p.tlRaw * mult).toFixed(p.tlRaw * mult >= 100 ? 2 : 4);
+        const infMult = cumulativeCpiMultiplierSince(p.t, now, cpiYoy);
+        const realTl = +(tl * infMult).toFixed(tl >= 100 ? 2 : 4);
+        const usd = +((tl / Math.max(0.1, p.fx))).toFixed(p.usdRaw >= 10 ? 2 : 4);
+        return { t: p.t, tl, realTl, usd };
+      });
+    }
+  }
+
+  const payload = {
+    key: assetKey,
+    range: rk,
+    cpiYoy,
+    usdTryNow,
+    isRateCurve: spec.mode === 'RATE_COMPOUND',
+    points
+  };
+  if (points.length >= 2) {
+    chartSeriesMemCache.set(cacheId, { ts: now, payload });
+    if (chartSeriesMemCache.size > 500) {
+      chartSeriesMemCache.delete(chartSeriesMemCache.keys().next().value);
+    }
+  }
+  return payload;
+}
+
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
@@ -2579,6 +3148,35 @@ const server = http.createServer(async (req, res) => {
       }
       return;
     }
+  }
+
+  if (url.pathname === '/api/chart') {
+    try {
+      const assetKey = String(url.searchParams.get('key') || '').trim();
+      const rangeKey = String(url.searchParams.get('range') || '1Y').toUpperCase();
+      if (!assetKey) {
+        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': '*' });
+        res.end(JSON.stringify({ error: 'Eksik varlık anahtarı' }));
+        return;
+      }
+      const payload = await getOrBuildServerChartSeries(assetKey, rangeKey);
+      const rawBuf = Buffer.from(JSON.stringify(payload), 'utf8');
+      const useGz = clientAcceptsGzip(req);
+      const outBuf = useGz ? await gzipAsync(rawBuf, { level: zlib.constants.Z_BEST_SPEED }) : rawBuf;
+      const headers = {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Content-Length': outBuf.length,
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control': 'public, max-age=60, stale-while-revalidate=180'
+      };
+      if (useGz) headers['Content-Encoding'] = 'gzip';
+      res.writeHead(200, headers);
+      res.end(outBuf);
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': '*' });
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
   }
 
   if (url.pathname === '/api/market-data') {

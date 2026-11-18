@@ -1256,6 +1256,76 @@
       risesWhen: 'Uluslararası uçuş ve kargo trafiği büyüdüğünde.',
       fallsWhen: 'İmtiyaz/lisans iptali veya bölgesel havacılık kesintilerinde.',
       relatedKeys: ['bist-tavhl', 'bist-thyao', 'bist-doco']
+    },
+    'tefas-mac': {
+      shortDesc: 'Marmara Capital Hisse Senedi Fonu (MAC · Hisse Yoğun · %0 Stopaj). Bilanço ve çarpan disipliniyle seçilmiş konsantre Türk hisse portföyü.',
+      howItWorks: 'Portföyünün en az %80’ini devamlı BIST paylarında tuttuğu için "Hisse Senedi Yoğun Fon" statüsündedir; yıllarca taşısan da kârından %0 stopaj kesilir! Saat 13:30 valör kuralıyla T+1 iş gününde alınır, T+2 iş gününde nakde döner.',
+      expertEdge: 'Tek tek bilanço takip etmeye vakti olmayan yatırımcı için %0 vergi kalkanıyla aktif değer yatırımı disiplinini birleştirir; KAP’taki aylık "Portföy Dağılım Raporu"ndan hangi hisseleri topladığı şeffafça okunur!',
+      trapWatch: 'Hisse yoğun fon olduğu için kural gereği borsa düşerken nakde kaçamaz (%80 hisse zorunluluğu vardır); kısa vadeli al-sat aracı değildir.',
+      rawInputs: ['Seçili Değer Hisseleri İskontosu', 'BIST 100 Genel Çarpan Seviyesi', 'Yıllık Yönetim Ücreti'],
+      risesWhen: 'Temeli sağlam iskontolu sanayi ve hizmet şirketleri gerçek değerine yürüdüğünde.',
+      fallsWhen: 'Borsa İstanbul genelinde sert sistemik satış yaşandığında.',
+      relatedKeys: ['tefas-iih', 'fon-yerli-hisse-zpbdl', 'bist-100']
+    },
+    'tefas-iih': {
+      shortDesc: 'İstanbul Portföy Üçüncü Hisse Senedi Fonu (IIH · Hisse Yoğun · %0 Stopaj). Yüksek alfa ve katalizör odaklı aktif BIST hisse fonu.',
+      howItWorks: 'BIST 100 endeksini yenmeyi hedefleyen aktif hisse seçim stratejisi uygular. Hisse yoğun şemsiyesi sayesinde kazanç üzerinden kesilen stopaj %0’dır; 13:30 öncesi emirlerde T+1 alım, T+2 satış valörü işler.',
+      expertEdge: 'Aylık KAP Portföy Dağılım Raporunda fonun sektör ağırlık değişimlerini (banka, havacılık, perakende rotasyonu) okumak kurumsal aklın nereye kaydığını gösterir.',
+      trapWatch: '13:30 valör saatinden sonra verilen emir 2 iş günü sonraki fiyattan eşleşir; panik gününde fon bozulmaz.',
+      rawInputs: ['BIST Sektör Rotasyonu', 'Yabancı Kurumsal Akış', 'Şirket Bilanço Katalizörleri'],
+      risesWhen: 'BIST’te bilanço ve faiz indirim döngüsü başladığında.',
+      fallsWhen: 'Yüksek faiz ve likidite daralması borsayı baskıladığında.',
+      relatedKeys: ['tefas-mac', 'tefas-ti2', 'bist-30']
+    },
+    'tefas-ti2': {
+      shortDesc: 'İş Portföy İş’te Kadın Hisse Senedi Fonu (TI2 · Hisse Yoğun · %0 Stopaj). Yönetiminde ve istihdamında kadın liderliği güçlü kurumsal BIST şirketleri fonu.',
+      howItWorks: 'Kurumsal yönetişimi güçlü büyük ve orta ölçekli BIST şirketlerine yatırım yapar; Hisse Yoğun Fon olduğu için satış kârından %0 stopaj kesilir (T+1 alım / T+2 satış valörü).',
+      expertEdge: 'Kurumsal yönetişim kalitesi yüksek şirketler ilişkili taraf sızıntısı ve patron tuzaklarına çok daha az yakalanır.',
+      trapWatch: '%80+ hisse taşıma zorunluluğu nedeniyle genel borsa düzeltmelerinden etkilenir.',
+      rawInputs: ['BIST Kurumsal Şirket Kârları', 'Yabancı ESG Fon Girişleri'],
+      risesWhen: 'Mavi çip (blue-chip) BIST devlerine kurumsal para girdiğinde.',
+      fallsWhen: 'Genel endeks satışlarında.',
+      relatedKeys: ['tefas-mac', 'fon-tematik-surdurulebilirlik-zsr25', 'bist-kchol']
+    },
+    'tefas-aft': {
+      shortDesc: 'Ak Portföy Yeni Teknolojiler Yabancı Hisse Fonu (AFT · %17,5 Stopaj · T+1/T+3 Valör). Apple, Nvidia, Microsoft ve küresel teknoloji devlerine TL ile yatırım.',
+      howItWorks: 'Küresel teknoloji devlerinden oluşan sepeti TL ile kolayca almanı sağlar, beyanname uğraşı yoktur. ANCAK çok kritik vergi farkı vardır: Satarken Dolar/TL kur artışından kaynaklanan TL farkı dahil tüm kârdan kaynağında %17,5 stopaj kesilir ve bozum parası T+3 iş gününde yatar!',
+      expertEdge: 'Uzman Hesabı: Küçük tutarda ve beyanname sınırıyla uğraşmak istemeyen için AFT pratiktir; ancak büyük tutarda ve Yİ-ÜFE üretici enflasyonu >= %10 iken doğrudan QQQ ETF almak, kur/enflasyon farkını vergiden düştüğü için net getiride AFT’yi geçebilir!',
+      trapWatch: 'Hem %17,5 kur+kâr stopajını hem de satışta T+3 iş günü (13:30 sonrası T+4!) nakit bekleme süresini hesaba katmamak.',
+      rawInputs: ['Nasdaq Teknoloji Devleri ($)', 'USD/TRY Kuru', '%17,5 Stopaj & Yıllık %2,9 Yönetim Ücreti'],
+      risesWhen: 'Küresel yapay zeka/teknoloji hisseleri ve Dolar/TL birlikte yükseldiğinde.',
+      fallsWhen: 'ABD teknoloji çarpanları daraldığında veya TL reel olarak değerlendiğinde.',
+      relatedKeys: ['abd-nasdaq-qqq', 'tefas-afa', 'kuresel-hisse-nvda']
+    },
+    'tefas-afa': {
+      shortDesc: 'Ak Portföy Amerika Yabancı Hisse Senedi Fonu (AFA · %17,5 Stopaj · T+1/T+3 Valör). ABD S&P 500 devlerine tek tıkla TL üzerinden ortaklık.',
+      howItWorks: 'ABD ekonomisinin en büyük şirketlerine yatırım yapar; beyanname gerektirmez fakat satış anında TL bazlı toplam kazanç üzerinden %17,5 stopaj kesilir ve bozum valörü T+3 iş günüdür.',
+      expertEdge: 'Doğrudan S&P 500 (SPY) ETF’sindeki GVK Mükerrer 80 Yİ-ÜFE %10 endeksleme kalkanı ile AFA’nın %17,5 otomatik stopajı arasındaki net vergi farkını vade ve enflasyona göre kıyasla!',
+      trapWatch: 'Acil nakit lazım olduğunda ABD tatili + T+3 TEFAS valörü yüzünden paranın 4–5 gün sonra hesaba geçmesi.',
+      rawInputs: ['ABD S&P 500 Endeksi ($)', 'USD/TRY Kuru', '%17,5 Kaynakta Stopaj'],
+      risesWhen: 'ABD şirket kârları büyürken Dolar/TL yükseldiğinde.',
+      fallsWhen: 'Fed şahinleşip küresel borsalar düzeltmeye girdiğinde.',
+      relatedKeys: ['abd-sp500-spy', 'tefas-aft', 'dunya-hisse-vt']
+    },
+    'tefas-ipb': {
+      shortDesc: 'İstanbul Portföy Birinci Değişken Fon (IPB · %17,5 Stopaj · T+1/T+2 Valör). Piyasa mevsimine göre hisse, altın, döviz ve VİOP ağırlığını değiştiren esnek fon.',
+      howItWorks: 'Hisse yoğun fonların aksine %80 hisse taşıma mecburiyeti yoktur! Fon yöneticisi fırtına gördüğünde hisse azaltıp altın, döviz veya sabit getiriye geçebilir; karşılığında kârdan %17,5 stopaj kesilir.',
+      expertEdge: 'Piyasa yönü belirsizken aktif koruma arayan yatırımcılar için tasarlanmıştır; başarısı tamamen fon yönetiminin zamanlama isabetine bağlıdır.',
+      trapWatch: 'Ralli dönemlerinde saf hisse yoğun fonların (%0 stopajlı MAC/IIH) gerisinde kalabilmesi ve %17,5 stopaj kesintisi.',
+      rawInputs: ['Aktif Varlık Dağılımı (BIST / Altın / Döviz / VİOP)', '%17,5 Stopaj'],
+      risesWhen: 'Fon yönetimi makro dönüşleri doğru yakaladığında.',
+      fallsWhen: 'Ters pozisyonda veya ani piyasa dönüşlerinde.',
+      relatedKeys: ['tefas-mac', 'kira-sertifikasi-sukuk', 'gram-altin-spot']
+    },
+    'tefas-kzl': {
+      shortDesc: 'Kuveyt Türk Portföy Altın Katılım Fonu (KZL · %17,5 Stopaj · T+1/T+1 Valör). Banka saklamalı, faizsiz altın katılım fonu.',
+      howItWorks: 'Evde çalınma riski veya gece banka makası olmadan altın fiyatına ortak eder; ancak satış kârından %17,5 stopaj kesilir ve 13:30 valörüyle T+1 iş gününde nakde döner.',
+      expertEdge: 'Uzman Kıyaslaması: Gündüz Kapalıçarşı fiziki altın (%0,40 makas, %0 stopaj) veya makası düşükken ALTIN.S1 (%0 stopaj), uzun vadede %17,5 stopaj kesen altın fonundan çok daha fazla net para bırakır!',
+      trapWatch: 'Altın %50 yükseldiğinde kazancın %17,5’ini stopaj vergisi olarak masada bırakmak.',
+      rawInputs: ['Ons Altın ($)', 'USD/TRY Kuru', '%17,5 Stopaj Kesintisi'],
+      risesWhen: 'Ons altın ve Dolar/TL yükseldiğinde.',
+      fallsWhen: 'Küresel reel faizler artıp altın gerilediğinde.',
+      relatedKeys: ['gram-altin-spot', 'altin-sertifikasi', 'fon-altin-byf-zgold']
     }
   };
 
@@ -1606,13 +1676,13 @@
   function isPreciousMetalAsset(a) {
     if (!a) return false;
     const id = String(a.id || '');
-    return a.subVenue === 'PHYSICAL_METAL' || a.subVenue === 'DARPHANE_S1' || id === 'fon-degisken-isglk' || id.includes('altin') || id.includes('gumus') || id.includes('platin') || id.includes('paladyum');
+    return a.subVenue === 'PHYSICAL_METAL' || a.subVenue === 'DARPHANE_S1' || id === 'fon-degisken-isglk' || id === 'tefas-kzl' || id.includes('altin') || id.includes('gumus') || id.includes('platin') || id.includes('paladyum');
   }
 
   function isFxLinkedShieldAsset(a) {
     if (!a) return false;
     const id = String(a.id || '');
-    return id.startsWith('doviz-') || id === 'eurobond-usdtr' || id === 'eurobond-emb' || a.isForeignUsd || isPreciousMetalAsset(a);
+    return id.startsWith('doviz-') || id === 'eurobond-usdtr' || id === 'eurobond-emb' || id === 'tefas-aft' || id === 'tefas-afa' || a.isForeignUsd || isPreciousMetalAsset(a);
   }
 
   function isFinancialEntityRow(r) {
@@ -3890,244 +3960,427 @@
   }
 
   // --------------------------------------------------------------------------
-  // 13. 12 İNTERAKTİF GERÇEK SAHA VAKASI ("SEN OLSAN NE YAPARDIN?")
+  // 13. 24 İNTERAKTİF GERÇEK SAHA VAKASI (4 ŞIKLI · A/B/C/D DENGELİ · TANI AÇIKLAMALI)
   // --------------------------------------------------------------------------
   function getFieldCaseCatalog() {
     const K = global.AetherKernelV10;
     const dInfo = K?.getDarphanePremiumInfo ? K.getDarphanePremiumInfo() : { spotGramPrice: 6058, s1GramEquiv: 6917, premiumPct: 14.1, diffTL: 859 };
-    const be32 = computeBreakevenComparison(100000, 32) || { usdNow: 50.44, breakevenUsdBazaar: 52.25, sukuk: { netGainTL: 3190 } };
+    const be32 = computeBreakevenComparison(100000, 32) || { usdNow: 50.44, breakevenUsdBazaar: 52.25, sukuk: { netGainTL: 3190, annualGross: 36.5 } };
 
     return [
       {
         id: 'case_01_kap_mkk_trap',
         category: 'KAP & MKK Takas',
+        difficulty: 'Uzman',
         title: 'Vaka 1: Gece 21:30’da Düşen "Dev Sipariş" Haberi ve MKK Patron İzi',
-        situation: 'Gece 21:30’da sığ bir teknoloji hissesi KAP’a "Şirketimiz 28 Milyon $ yeni iş sözleşmesi imzaladı!" bildirimi gönderdi. Sosyal medya "Sabah tavan!" diye yıkılıyor. Açıp AETHER Mutfak Radarına baktığında ise patronun 3 gün önce MKK’ya başvurup 35 milyon kapalı lotu borsada satılabilir tipe dönüştürdüğünü ve son 20 günde CMF para akışının -0,24 (kurumsal çıkış) olduğunu görüyorsun.',
-        question: 'Sabah 09:55 açılış eşleşmesinde 200.000 ₺ nakdinle ne yaparsın?',
+        situation: 'Gece 21:30’da sığ bir teknoloji hissesi KAP’a "Şirketimiz 28 Milyon $ yeni iş sözleşmesi imzaladı!" bildirimi attı. Sosyal medya "Sabah tavan!" diye coşuyor. Ancak AETHER Mutfak Radarına baktığında 3 gün önce ortakların MKK’da 35 milyon kapalı lotu borsada satılabilir tipe dönüştürdüğünü ve 20 günlük CMF para akışının -0,24 (kurumsal çıkış) olduğunu görüyorsun.',
+        question: 'Sabah 09:55 açılış eşleşmesinde 200.000 ₺ nakdinle en doğru hamle nedir?',
         choices: [
-          { id: 'A', label: 'Sabah 09:55’te tavandan piyasa alım emri yazarım; ihale haberi hisseyi uçurur.', isOptimal: false },
-          { id: 'B', label: 'Uzak dururum; MKK tipe dönüşüm + negatif CMF varken atılan parlak haber, patronun kalabalığa mal çıkma likiditesi olabilir.', isOptimal: true },
-          { id: 'C', label: 'Kredili (margin) alım açıp açılışta %5 alıp hemen satarım.', isOptimal: false }
+          { id: 'A', label: '09:45’te tavandan serbest fiyatlı alım yazarım; KAP ihale haberi gelen tahta ilk gün kesin tavan kilitler.', isOptimal: false, why: 'MKK’dan dönüşen 35 milyon lot tam olarak sabah açılış eşleşmesinde senin gibi alıcı beklemektedir; tavan çözülürse aynı gün -%18 marj yersin.' },
+          { id: 'B', label: '09:52’de alış yazar, tavan bozulacak gibi olursa 09:54’te emrimi iptal ederim.', isOptimal: false, why: 'Borsa İstanbul kural hatası! Saat 09:50:00’den 09:55 eşleşmesine kadar emir iptali ve azaltımı kilitlenir; 09:54’te iptal tuşu çalışmaz!' },
+          { id: 'C', label: 'Tahtadan uzak dururum; MKK tipe dönüşüm + negatif CMF varken atılan parlak haber, ortak satışı için alıcı toplama likiditesi olabilir.', isOptimal: true, why: 'Doğru teşhis! Arka kapıdan (MKK) mal kamyonu yanaşmışken ön vitrindeki parlak haber kalabalığa likidite yaratmak için kullanılabilir.' },
+          { id: 'D', label: 'Kredili (margin) alım açıp açılışta %3 kâr görünce hemen satarım.', isOptimal: false, why: 'Sığ tahtada patron satışı başladığında kademeler boşalır; kredili pozisyon hem komisyon/faiz yakar hem de tabana kilitlenirse çıkamazsın.' }
         ],
-        consequence100k: 'Sabah tavandan atlayan 100.000 ₺, öğleden sonra patronun MKK’dan dönüşen 35 milyon lotu tahtaya basmasıyla günü tabanda (-%10) kapattı ve 1 haftada 76.000 ₺’ye eridi!',
-        proRule: 'Uzman Kuralı: İyi haber tek başına hiçbir şeydir! Haberin geldiği tahtada 1) MKK Fiili Dolaşım Lot Değişimine, 2) CMF-20 Kurumsal Para Akışına, 3) Yeni işin yıllık ciroya oranına bakmadan tek lot alınmaz.',
+        consequence100k: 'Sabah 09:55 eşleşmesinde tavandan atlayan 100.000 ₺, öğleden sonra MKK’dan dönüşen lotların tahtaya basılmasıyla günü tabanda kapattı ve 5 iş gününde 74.200 ₺’ye eridi.',
+        proRule: 'Uzman Kuralı: KAP haberini tek başına okuma! 1) MKK Fiili Dolaşım Lot Değişimine, 2) CMF-20 Kurumsal Para Akışına, 3) 09:50 emir iptal kilidine bakmadan açılışa girilmez.',
         linkedKeys: ['reel-yazilim-miatk', 'bist-asels', 'reel-yazilim-logo']
       },
       {
         id: 'case_02_gold_three_doors',
         category: 'Makas & Vergi Arbitrajı',
-        title: 'Vaka 2: Aynı Altının Üç Farklı Kapısı — Hava Parası mı, Vergi mi, Saf Gram mı?',
-        situation: `Cumartesi değil, çarşamba öğlen saat 14:00. 300.000 ₺ ile altın almak istiyorsun. Kapalıçarşı fiziki gram altın ${Math.round(dInfo.spotGramPrice).toLocaleString('tr-TR')} ₺ (%0,40 makas, %0 vergi), borsadaki ALTIN.S1 sertifikasının gram karşılığı ${Math.round(dInfo.s1GramEquiv).toLocaleString('tr-TR')} ₺ (+%${dInfo.premiumPct} prim, %0 vergi), altın BYF fonu (ZGOLD) ise spot fiyata yakın ama satış kârından %17,5 stopaj kesiyor.`,
-        question: '300.000 ₺ ile en çok saf altını ve en yüksek vergi sonrası net parayı hangi kapı bırakır?',
+        difficulty: 'Temel',
+        title: 'Vaka 2: Aynı Altının Dört Kapısı — Hava Parası mı, %17,5 Stopaj mı, Saf Gram mı?',
+        situation: `Çarşamba öğlen saat 14:00, piyasalar açık. 300.000 ₺ ile altın biriktireceksin. Kapalıçarşı fiziki gram altın ${Math.round(dInfo.spotGramPrice).toLocaleString('tr-TR')} ₺ (%0,40 makas, %0 vergi), borsadaki ALTIN.S1 sertifikasının gram karşılığı ${Math.round(dInfo.s1GramEquiv).toLocaleString('tr-TR')} ₺ (+%${dInfo.premiumPct} prim, %0 vergi), altın fonu (ZGOLD/KZL) ise kârdan %17,5 stopaj kesiyor.`,
+        question: 'Gündüz mesai saatinde 300.000 ₺ ile en çok saf altını ve en yüksek vergi sonrası net parayı hangi kapı bırakır?',
         choices: [
-          { id: 'A', label: 'ALTIN.S1 alırım; borsada komisyon çok düşük ve vergi %0.', isOptimal: false },
-          { id: 'B', label: 'Gündüz açıkken Kapalıçarşı fiziki gram altın alırım (%0,40 dar makas, %0 stopaj, sıfır hava parası).', isOptimal: true },
-          { id: 'C', label: 'Akşam 19:00’u bekleyip mobil bankadan alırım; telefonumdan çıkmama gerek kalmaz.', isOptimal: false }
+          { id: 'A', label: 'Gündüz açıkken Kapalıçarşı dar makasından (%0,40) fiziki gram altın alırım (%0 stopaj, %0 BSMV, sıfır hava parası).', isOptimal: true, why: 'En temiz matematik! Hem +%14 hava parasından hem %17,5 fon stopajından hem de %0,2 banka kambiyo vergisinden kurtulursun.' },
+          { id: 'B', label: 'Borsadan ALTIN.S1 sertifikası alırım; komisyonu onbinde 8 ve stopajı %0 olduğu için en ucuzudur.', isOptimal: false, why: `Stopaj %0 olsa da ALTIN.S1 şu an fiziki altından +%${dInfo.premiumPct} pahalı! Baştan fazladan hava parası ödersin; prim daraldığında altın düşmese bile zarar yazarsın.` },
+          { id: 'C', label: 'Altın fonu (ZGOLD veya KZL) alırım; makas derdi yoktur ve kârın tamamı cebime kalır.', isOptimal: false, why: 'Altın fonlarında (BYF ve TEFAS katılım/altın fonları) satış anında toplam TL kâr üzerinden %17,5 stopaj kesilir!' },
+          { id: 'D', label: 'Akşam 20:00’de evden mobil bankadan gram altın alırım.', isOptimal: false, why: 'Akşam 18:00 sonrasında bankalar makası %3,5–%4,5 seviyesine açar ve üstüne binde 2 (%0,20) BSMV kambiyo vergisi keser.' }
         ],
-        consequence100k: `100.000 ₺ ile ALTIN.S1 alan kişi baştan ~${Math.round(100000 * (dInfo.premiumPct / (100 + dInfo.premiumPct))).toLocaleString('tr-TR')} ₺ hava parası ödedi; prim normale döndüğünde altın hiç düşmediği halde zarara geçti!`,
-        proRule: 'Uzman Kuralı: Aynı varlığın ambalajına fazladan hava parası veya gereksiz stopaj ödenmez. ALTIN.S1 primi +%3,5 altındaysa alınır; +%10 üstündeyse satılıp fiziki altına geçilerek bedavadan gramaj artırılır.',
-        linkedKeys: ['gram-altin-spot', 'altin-sertifikasi', 'altin-fonu-zgold']
+        consequence100k: `100.000 ₺ ile yüksek primli ALTIN.S1 alan kişi baştan ~${Math.round(100000 * (dInfo.premiumPct / (100 + dInfo.premiumPct))).toLocaleString('tr-TR')} ₺ hava parası ödedi; altın fonu alan ise %50 yükselişte 8.750 ₺ stopaj vergisi bıraktı!`,
+        proRule: 'Uzman Kuralı: ALTIN.S1 primi +%3,5 altındaysa sertifika caziptir; prim +%10 üstündeyse Kapalıçarşı fiziki altın rakipsizdir (hatta eldeki S1 satılıp fizikiye geçilerek gramaj artırılır).',
+        linkedKeys: ['gram-altin-spot', 'altin-sertifikasi', 'tefas-kzl']
       },
       {
         id: 'case_03_tms29_illusion',
         category: 'Bilanço & TMS-29',
-        title: 'Vaka 3: "F/K 4x Çok Ucuz!" Denilen Şirket mi, Kağıt Kârı Düşük Nakit Makinesi mi?',
-        situation: 'Önünde iki sanayi şirketi var: X Şirketi manşette +1,2 Milyar ₺ Net Kâr açıkladı (F/K 4,5x görünüyor) ama Nakit Akış Tablosunda Esas Faaliyet Nakdi (OCF) -1,8 Milyar ₺ ekside! Y Şirketi (TCELL benzeri) TMS-29 amortismanı yüzünden kağıt üstünde sadece +20 Milyar ₺ kâr gösterdi ama kasasına +132 Milyar ₺ gerçek sıcak nakit (OCF) girdi.',
-        question: 'Mahalle fırını mantığıyla hangisine ortak olursun?',
+        difficulty: 'Orta',
+        title: 'Vaka 3: "F/K 4x Bedava!" Denilen Şirket mi, Kağıt Kârı Düşük Nakit Makinesi mi?',
+        situation: 'İki sanayi şirketini inceliyorsun: X Şirketi manşette +1,4 Milyar ₺ Net Kâr açıkladı (F/K 4,2x görünüyor) ama Nakit Akış Tablosunda Esas Faaliyet Nakdi (OCF) -1,9 Milyar ₺ ekside! Y Şirketi ise TMS-29 yüksek amortismanı yüzünden manşette sadece +18 Milyar ₺ kâr gösterdi (F/K 14x) ama kasasına +128 Milyar ₺ gerçek sıcak faaliyet nakdi (OCF) koydu.',
+        question: 'Mahalle fırını ve adli muhasebe gözüyle hangisi gerçek servet üretir?',
         choices: [
-          { id: 'A', label: 'X Şirketini alırım; herkes F/K oranına bakar, 4,5x F/K bedavadır.', isOptimal: false },
-          { id: 'B', label: 'Y Şirketine ortak olurum; kağıt kâr muhasebe görüşüdür, kasaya giren gerçek nakit (OCF & FCF) ise su götürmez gerçektir!', isOptimal: true },
-          { id: 'C', label: 'İkisini yarı yarıya alırım.', isOptimal: false }
+          { id: 'A', label: 'X Şirketini alırım; borsa ekranlarında herkes F/K’ya bakar, 4,2x F/K 14x’ten üç kat ucuzdur.', isOptimal: false, why: 'X’in net kârı borçlarının TMS-29 parasal pozisyon kazancından gelmektedir; kasada ekmek parası yok, aksine 1,9 Milyar ₺ nakit yanmıştır!' },
+          { id: 'B', label: 'İkisine de girmem; F/K yüksekse pahalıdır, OCF negatifse geçicidir.', isOptimal: false, why: 'Y Şirketinin F/K’sını yüksek gösteren şey nakit çıkışı olmayan TMS-29 fabrika amortismanıdır; böyle gizli nakit kalelerini kaçırmak büyük fırsat maliyetidir.' },
+          { id: 'C', label: 'X Şirketine %70, Y Şirketine %30 yatırırım ki ucuz F/K ağırlıklı olsun.', isOptimal: false, why: 'Nakit yakan (Sloan tahakkuku şişik) şirkete ağırlık vermek portföyü yüksek faizli borç duvarına çarptırır.' },
+          { id: 'D', label: 'Y Şirketine ortak olurum; Net Kâr muhasebe görüşüdür, kasaya giren +128 Milyar ₺ OCF ve Serbest Nakit Akışı (FCF) ise su götürmez gerçektir!', isOptimal: true, why: 'Tam isabet! TMS-29 amortismanı yüzünden kağıt kârı baskılanan ama kasası oluk oluk nakit dolan şirketler kurumsal yatırımcının en sevdiği avdır.' }
         ],
-        consequence100k: 'X Şirketinin kârı TMS-29 parasal pozisyon kazancından (borç enflasyon düzeltmesinden) geliyordu; 2 çeyrek sonra nakit sıkışıklığıyla %42 faizle kredi çekmek zorunda kaldı ve hisse yarıya düştü.',
-        proRule: 'Uzman Kuralı: Bilançoda ilk bakılacak satır Net Kâr değil, "İşletme Faaliyetlerinden Nakit Akışları (OCF)" ve "Sloan Tahakkuk Oranı"dır. Net kâr pozitifken OCF ağır negatifse o kâr makyajdır!',
-        linkedKeys: ['bist-tcell', 'bist-enkai', 'reel-perakende-bimas']
+        consequence100k: 'X Şirketi 2 çeyrek sonra kasa nakdi bittiği için %48 faizle kredi çekip bedelli sermaye artırımına gitti; Y Şirketi ise kasadaki nakitle temettü dağıtıp borcunu sıfırladı.',
+        proRule: 'Uzman Kuralı: Bilançoda ilk bakılacak satır Net Kâr değil, "İşletme Faaliyetlerinden Nakit Akışları (OCF)" ve "OCF / Net Kâr (>1,0x)" oranıdır.',
+        linkedKeys: ['bist-tcell', 'bist-enkai', 'bist-bimas']
       },
       {
         id: 'case_04_usd_breakeven',
         category: 'Faiz-Kur Matematiği',
-        title: 'Vaka 4: "Dolar Kesin Yükselecek!" Diyen Komşu vs 32 Günlük Başabaş Hesabı',
-        situation: `Dolar şu an ${be32.usdNow} ₺. Komşun "Ay sonuna Dolar 51,50 ₺ olacakmış, hemen bütün parayı dolara göm!" diyor. Oysa TEFAS’ta %0 stopajlı Kamu Kira Sertifikası (Sukuk) 32 günde net +${be32.sukuk.netGainTL.toLocaleString('tr-TR')} ₺ (100B ₺ için) kazandırıyor ve Dolar başabaş kuru ${be32.breakevenUsdBazaar} ₺ çıkıyor.`,
-        question: 'Komşunun dediği gibi Dolar 32 gün sonra gerçekten 51,50 ₺ olursa kim daha kârlı çıkar?',
+        difficulty: 'Temel',
+        title: 'Vaka 4: "Ay Sonu Dolar 51,50 ₺ Olacak!" Diyen Komşu vs Başabaş Terazisi',
+        situation: `Dolar şu an ${be32.usdNow} ₺. Komşun "Kesin duyum aldım, 32 gün sonra Dolar 51,50 ₺ olacak!" diyerek tüm parasını dolara çevirdi. Oysa TEFAS’ta %0 stopajlı Kamu Kira Sertifikası (Sukuk) 32 günde 100.000 ₺’ye net +${be32.sukuk.netGainTL.toLocaleString('tr-TR')} ₺ veriyor ve Dolar başabaş kuru ${be32.breakevenUsdBazaar} ₺ çıkıyor.`,
+        question: '32 gün sonra komşunun tahmini birebir tutar ve Dolar tam 51,50 ₺ olursa kim kazanır?',
         choices: [
-          { id: 'A', label: 'Dolar 50,44’ten 51,50’ye çıktığı için kesinlikle Dolar alan daha çok kazanır.', isOptimal: false },
-          { id: 'B', label: `%0 vergili Sukuk alan kazanır! Çünkü Dolar ${be32.breakevenUsdBazaar} ₺ başabaş eşiğini geçemediği için kur artsa bile TL sabit getirinin altında kalmıştır.`, isOptimal: true },
-          { id: 'C', label: 'Vadesiz TL’de bekleyen kazanır.', isOptimal: false }
+          { id: 'A', label: 'Tahmini tuttuğu için Dolar alan komşu daha çok kazanır.', isOptimal: false, why: 'Nominal olarak dolar artsa da %2,1’lik kur artışı (üstelik alış-satış makası düşülünce ~%1,7), Sukuk’un ~%3,2 net getirisinin altında kalmıştır!' },
+          { id: 'B', label: `%0 vergili Sukuk alan kazanır! Dolar ${be32.breakevenUsdBazaar} ₺ başabaş eşiğini aşamadığı için kur tahmini doğru çıkan komşu bile dolar bazında zarar etmiştir.`, isOptimal: true, why: 'Kusursuz terazi hesabı! Sukuk vade sonunda bozulduğunda komşudan daha fazla Dolar satın alabilmektedir.' },
+          { id: 'C', label: 'Mobil bankadan gece dolar alan en yüksek kârı yazar.', isOptimal: false, why: 'Gece mobil banka %3,6 makas + %0,2 BSMV kestiği için 51,50 ₺ kurda anaparadan bile içeride kalır!' },
+          { id: 'D', label: 'Vadesiz TL’de bekleyen risk almadığı için en kârlıdır.', isOptimal: false, why: 'Vadesiz TL hem kura hem enflasyona hem de alternatif Sukuk getirisine karşı %100 erir.' }
         ],
-        consequence100k: `Dolar 51,50 ₺ olduğunda makas sonrası 100.000 ₺ ~101.700 ₺ olurken, %0 vergili Sukuk ${100000 + be32.sukuk.netGainTL} ₺ oldu! Tahmini doğru çıkan komşu bile terazi hesabı bilmediği için para kaybetti.`,
-        proRule: 'Uzman Kuralı: Türkiye’de döviz almadan önce daima "Başabaş Kur = Bugünkü Kur × (1 + Net TL Getirisi) × (1 + Makas)" formülünü kur! Kur bu eşiği aşamayacaksa döviz taşımak reel zarardır.',
+        consequence100k: `32. günde komşunun 100.000 ₺’si makas sonrası ~101.700 ₺ olurken, %0 stopajlı Sukuk ${100000 + be32.sukuk.netGainTL} ₺ oldu!`,
+        proRule: 'Uzman Kuralı: Döviz almadan önce daima "Başabaş Kur = Bugünkü Kur × (1 + Net TL Getirisi) × (1 + Makas)" hesabını yap.',
         linkedKeys: ['kira-sertifikasi-sukuk', 'doviz-usd', 'para-piyasasi-fonu']
       },
       {
         id: 'case_05_oil_strait_domino',
         category: 'Makro Domino',
-        title: 'Vaka 5: Boğazda Tanker Sıkıştı, Brent Petrol Bir Gecede +%25 Fırladı!',
-        situation: 'Sabah uyandığında Hürmüz/Kızıldeniz hattında kriz çıktığını ve Brent petrolün 84 $’dan 105 $’a fırladığını gördün. Portföyünün yarısı havayolu hissesinde, yarısı boş nakitte.',
-        question: 'Sokak zekâsı domino zinciri bu şokta hangi sırayla çalışır?',
+        difficulty: 'Orta',
+        title: 'Vaka 5: Boğazda Tanker Krizi — Brent Petrol Bir Gecede 84 $’dan 106 $’a Fırladı!',
+        situation: 'Sabah uyandığında Hürmüz Boğazı’nda sevkiyat krizi çıktığını ve ham petrolün +%26 fırladığını gördün. Portföyünde THYAO (havayolu), çimento hissesi ve boş nakit var.',
+        question: 'Girdi-çıktı maliyet zincirine göre bu şok sektörlere hangi sırayla vurur?',
         choices: [
-          { id: 'A', label: 'Petrol artışı tüm sanayi ve havayolu şirketlerine yarar; çünkü enflasyon her şeyi yükseltir.', isOptimal: false },
-          { id: 'B', label: 'En büyük gideri jet yakıtı olan havayolları maliyet şoku yer; işlenmiş dizel/jet marjı açılan rafineri (TUPRS), petrol fonu (BNO) ve altın ilk kalkan olur.', isOptimal: true },
-          { id: 'C', label: 'Sadece GYO şirketleri yükselir.', isOptimal: false }
+          { id: 'A', label: 'Petrol artışı enflasyon yaratacağı için havayolu ve çimento kar marjları anında genişler.', isOptimal: false, why: 'Tam tersi! Havayolunun en büyük gideri jet yakıtı, çimentonun en büyük gideri enerji/petrokoktur; girdi maliyeti bir gecede patlar.' },
+          { id: 'B', label: 'Sadece uzun vadeli sabit kuponlu TL tahviller (DİBS) yükselir.', isOptimal: false, why: 'Petrol şoku Türkiye’de akaryakıt enflasyonunu ve faiz beklentisini yukarı iter; sabit tahvil fiyatları baskılanır.' },
+          { id: 'C', label: 'Jet yakıtı/enerji gideri patlayan havayolu ve ağır sanayi baskılanır; dizel/jet işleme marjı (Crack Spread) açılan rafineri (TUPRS), petrol fonu (BNO) ve fiziki altın doğal sigorta olur.', isOptimal: true, why: 'Sokak zekâsı domino okuması! Aynı şokta kimin faturası kabarıyor, kimin işleme makası açılıyor şıp diye ayırdın.' },
+          { id: 'D', label: 'Elimdeki tüm varlıkları sabah 09:55’te tabandan satıp tamamen nakde geçerim.', isOptimal: false, why: 'Panik açılışında tabandan mal satmak en pahalı hatadır; doğru olan önceden karşı-denge (hedge) ayağı taşımaktır.' }
         ],
-        consequence100k: 'Havayollarında yakıt toplam giderin ~%30-35’idir; petrol şokunda rafineri (TUPRS) ve fiziki altın portföyün sigortası olurken korumasız tek sektör sepeti sert darbe yer.',
-        proRule: 'Uzman Kuralı: Portföy kurarken "Aynı şokta biri ağlarken diğeri gülen" doğal denge çiftleri (örneğin THYAO yanına TUPRS veya Fiziki Altın) taşırsan hiçbir fırtına seni yıkamaz.',
-        linkedKeys: ['emtia-petrol-bno', 'bist-tuprs', 'bist-thyao', 'gram-altin-spot']
+        consequence100k: 'Portföyünde THYAO’nun yanında %20 TUPRS ve Fiziki Altın tutan yatırımcı şoku neredeyse sıfır hasarla atlatırken, tek sektör taşıyan sarsıldı.',
+        proRule: 'Uzman Kuralı: Portföyde "Aynı şokta biri maliyet yerken diğeri marj büyüten" doğal denge çiftleri (Havayolu + Rafineri/Altın gibi) bulundur.',
+        linkedKeys: ['bist-tuprs', 'emtia-petrol-bno', 'bist-thyao', 'gram-altin-spot']
       },
       {
         id: 'case_06_value_trap_vs_gem',
         category: 'Değer Tuzağı Testi',
-        title: 'Vaka 6: Zirvesinden %65 Düşmüş İki Hisse — Hangisi Hazine, Hangisi Çürük Elma?',
-        situation: 'İki hisse de geçen yılki zirvesinden %65 düşmüş. A Hissesi: Net Borç/FAVÖK 11x, Cari Oran 0,62, kasadan her çeyrek nakit çıkıyor ve CMF -0,28. B Hissesi: Zirveden %60 düşmüş, PD/DD 0,55x, kasası pozitif faaliyet nakdi (OCF+) üretiyor ve tahtada CMF +0,18 ile sessiz kurumsal toplama var.',
-        question: '"Çok düştü, buradan tepki verir" diyerek hangisini seçersin?',
+        difficulty: 'Orta',
+        title: 'Vaka 6: Zirvesinden %65 Düşmüş İki Hisse — Hangisi Hazine, Hangisi Dipsiz Kuyu?',
+        situation: 'İki BIST şirketi de geçen yılki zirvesinden %65 düşmüş. K Şirketi: PD/DD 0,58x, OCF pozitif (+2,4 Milyar ₺), Net Nakit kasalı ve son 20 günde CMF +0,17. L Şirketi: Zirveden %72 düşmüş, Net Borç/FAVÖK 9,8x, Cari Oran 0,64, OCF negatif ve CMF -0,26.',
+        question: 'Yangın yerinde servet kurmak isteyen yatırımcı nasıl hareket eder?',
         choices: [
-          { id: 'A', label: 'İkisi de %65 düşmüş, daha ne kadar düşebilir ki? Daha çok düşeni alırım.', isOptimal: false },
-          { id: 'B', label: 'Yalnızca B Hissesini kademeli toplarım; A Hissesi %65 düştükten sonra bir %60 daha düşebilen klasik "Değer Tuzağı"dır!', isOptimal: true },
-          { id: 'C', label: 'Düşen hiçbir hisse alınmaz; sadece tavan giden hisse alınır.', isOptimal: false }
+          { id: 'A', label: 'Yalnızca K Şirketini 3 parçalı kademeyle toplarım; L Şirketi %72 düştükten sonra bir %60 daha eriyebilen klasik "Değer Tuzağı"dır!', isOptimal: true, why: 'Doğru! K’da kasa sağlam ve kurumsal emilim (CMF+) başlamış; L’de ise borç sarmalı özsermayeyi kemiriyor.' },
+          { id: 'B', label: 'L Şirketini alırım; %72 düşmüş mal %65 düşenden daha ucuzdur ve daha sert tepki verir.', isOptimal: false, why: 'Borsanın en ölümcül yanılgısı! %80 düşmüş hisse %90 düşüşe indiğinde yatırdığın paranın TAM YARISINI (-%50) daha siler.' },
+          { id: 'C', label: 'İkisini eşit bölerim ki hangisi dönerse yakalayayım.', isOptimal: false, why: 'Çürük bilançoyu sağlam kaleyle karıştırmak bileşik getiriyi zehirler.' },
+          { id: 'D', label: 'Hisse zirvesini yukarı kırana kadar bekler, +%180 çıktıktan sonra alırım.', isOptimal: false, why: 'Güvenlik marjını (0,58x PD/DD iskontosunu) tamamen masada bırakmış olursun.' }
         ],
-        consequence100k: '%80 düşmüş bir hisse, %90 düşüşe giderken elindeki parayı TAM YARI YARIYA (-%50) daha eritir! Çürük bilançoda "dip" yoktur; sağlam kasada ise yangın yeri servet kurdurur.',
-        proRule: 'Uzman Kuralı: Ucuz malı sırf ucuz diye alma! Yangın yerinde mal toplamanın 3 şartı: 1) Pozitif Faaliyet Nakdi (OCF > 0), 2) Çevrilebilir Borç (Cari Oran > 1 / Düşük Net Borç), 3) Kurumsal Emilim (CMF > 0).',
-        linkedKeys: ['bist-enkai', 'bist-petkm', 'girisim-hubvc']
+        consequence100k: 'Sağlam kasalı K Hissesi döngü döndüğünde 2,4 katına çıkarken, borçlu L Hissesi %150 bedelli açıklayıp reel olarak erimeye devam etti.',
+        proRule: 'Uzman Kuralı: Yangın yerinde mal toplamanın 3 filtresi: 1) OCF > 0, 2) Çevrilebilir Borç (Cari Oran > 1,1 / Net Nakit), 3) CMF > 0 kurumsal toplama.',
+        linkedKeys: ['bist-enkai', 'bist-sise', 'bist-hekts']
       },
       {
         id: 'case_07_t2_settlement_trap',
         category: 'Türkiye Piyasa Fiziği',
-        title: 'Vaka 7: Çarşamba Satılan Hissenin Cuma Sabahı Nakit Sürprizi (T+2 Kuralı)',
-        situation: 'Perşembe öğleden sonra tapuda veya ödemede kullanmak ya da Kapalıçarşı’dan fiziki altın almak için nakde ihtiyacın var. Çarşamba saat 15:00’te Borsa İstanbul’daki 250.000 ₺’lik hisseni sattın.',
-        question: 'Perşembe sabahı bu 250.000 ₺’yi banka hesabına çekip kuyumcuya gidebilir misin?',
+        difficulty: 'Temel',
+        title: 'Vaka 7: Çarşamba Satılan Hissenin Perşembe Tapu / Kuyumcu Sürprizi (T+2)',
+        situation: 'Perşembe saat 11:00’de Kapalıçarşı’dan fiziki altın almak veya tapu harcı ödemek için 400.000 ₺ nakde ihtiyacın var. Çarşamba saat 14:30’da Borsa İstanbul’daki 400.000 ₺’lik hisseni sattın ve emir anında eşleşti.',
+        question: 'Perşembe sabahı saat 11:00’de bu 400.000 ₺ ile ne yapabilirsin?',
         choices: [
-          { id: 'A', label: 'Evet, sattığım an para hesabımda görünür, hemen çekerim.', isOptimal: false },
-          { id: 'B', label: 'Hayır! BIST T+2 takas kuralı gereği Çarşamba satılan hissenin parasıyla başka BIST hissesi alabilirsin ama Cuma sabahından önce nakit çekemez ve altına/mevduata dönemezsin!', isOptimal: true },
-          { id: 'C', label: 'Aynı gün akşam 18:10’da çekilir.', isOptimal: false }
+          { id: 'A', label: 'Hisse satıldığı an para vadesiz banka hesabıma geçer; Perşembe sabahı kuyumcudan altınımı alırım.', isOptimal: false, why: 'Yanlış! Borsa İstanbul’da Takasbank nakit takası T+2 iş günüdür; Çarşamba satılan payın nakdi Cuma sabahından önce çekilemez.' },
+          { id: 'B', label: 'Aynı gün akşam 18:10 kapanış seansı bitince para çekilebilir olur.', isOptimal: false, why: '18:10 sadece seans kapanışıdır; T+1 Perşembe, T+2 Cuma günüdür.' },
+          { id: 'C', label: 'T+2 dolana kadar bu parayla Borsa İstanbul’da başka hiçbir hisse de alamam.', isOptimal: false, why: 'Eğer alacağın hissede VBTS Brüt Takas tedbiri YOKSA, T+2 takasta bekleyen satış tutarıyla aynı saniyede başka BIST hissesi alabilirsin!' },
+          { id: 'D', label: 'Bu tutarla Brüt Takas olmayan başka BIST hissesi alabilirim ama Cuma sabahından önce nakit çekemem, mevduata veya fiziki altına dönemem!', isOptimal: true, why: 'Borsa İstanbul Takasbank fiziğini kuruşu kuruşuna biliyorsun! Cuma satılan hissenin nakdi ise hafta sonu yüzünden Salı günü çekilir.' }
         ],
-        consequence100k: 'T+2 takas kuralını bilmeyen yatırımcı Perşembe günü ödemesini yapamaz veya yüksek faizli kredili nakit çekmek zorunda kalır; araya bayram tatili girerse bekleme 5–9 güne uzar!',
-        proRule: 'Uzman Kuralı: Borsa İstanbul’da takas T+2 iş günüdür (Cuma satarsan Salı günü nakde döner!). VBTS Brüt Takas tedbirli hissede ise T+2 nakdiyle aynı gün başka hisse bile alınamaz.',
+        consequence100k: 'T+2 takasını unutarak Çarşamba satış yapan kişi Perşembe tapuda nakitsiz kaldı; aracı kurum T+0 erken nakit avansı için 2 günlük ağır faiz kesti.',
+        proRule: 'Uzman Kuralı: Nakit çekimi planlıyorsan BIST satışını en az 2 tam iş günü (araya resmi tatil/bayram giriyorsa tatil öncesi!) yapmalısın.',
         linkedKeys: ['bist-thyao', 'para-piyasasi-fonu', 'gram-altin-spot']
       },
       {
         id: 'case_08_margin_sleep_killer',
         category: 'Risk & Kaldıraç',
-        title: 'Vaka 8: Kredili İşlemle (Margin) Yakalanan Sürpriz Haber ve Saat 15:00 Tasfiyesi',
-        situation: '1.000.000 ₺ özsermayenin üzerine %50 de aracı kurum kredisi (500.000 ₺ borç, yıllık ~%52 faiz) çekerek 1.500.000 ₺’lik tek hisseye girdin. Beklenmedik bir kararla hisse 2 gün üst üste taban (-%19) açtı ve özsermaye teminat oranın %35 sınırının altına indi.',
-        question: 'Böyle bir durumda gerçek hayatta saat 15:00’te ne yaşanır?',
+        difficulty: 'Orta',
+        title: 'Vaka 8: %50 Kredili (Margin) Pozisyonda İki Taban ve Saat 15:00 Duvarı',
+        situation: '1.000.000 ₺ özsermayenin üstüne 500.000 ₺ aracı kurum kredisi (yıllık ~%52 faiz) çekerek 1.500.000 ₺’lik tek hisseye girdin. Beklenmedik bir regülasyon haberiyle hisse iki günde toplam -%24 düştü ve özsermaye teminat oranın %33’e geriledi.',
+        question: 'Gerçek bir Türk aracı kurumunda o gün saat 15:00’te ne yaşanır?',
         choices: [
-          { id: 'A', label: 'Uzun vadeli yatırımcıyım derim, ekranı kapatır 6 ay beklerim; nasıl olsa geri çıkar.', isOptimal: false },
-          { id: 'B', label: 'Bekleyemezsin! Özsermaye oranı %35 altına indiğinde aracı kurum saat 15:00 Margin Call’da sen istemesen bile hisselerini en dipten zorla satar!', isOptimal: true },
-          { id: 'C', label: 'Kredi faizi düşüş günlerinde işlemez.', isOptimal: false }
+          { id: 'A', label: '"Ben uzun vadeciyim, satmadığım sürece zararda sayılmam" deyip ekranı kapatırım.', isOptimal: false, why: 'Özsermayenle alsaydın bekleyebilirdin; ama krediyle aldığın malda teminat %35 altına inince karar hakkı senden çıkar!' },
+          { id: 'B', label: 'Saat 15:00 Margin Call sınırına kadar dışarıdan nakit eklemezsen, aracı kurum risk birimi hisselerini en dip fiyattan zorla satar!', isOptimal: true, why: 'Acı gerçek! Kaldıraçlı yatırımcı piyasa sonradan toparlasa bile o toparlanmayı göremeden en dipte tasfiye edilir.' },
+          { id: 'C', label: 'Hisse düşüşte olduğu günlerde aracı kurum kredi faizi işletmeyi durdurur.', isOptimal: false, why: 'Aracı kurum kredi faizi hafta sonu ve tatil günleri dahil her takvim günü acımasızca işler.' },
+          { id: 'D', label: 'Teminat açığını kapatmak için VBTS Brüt Takaslı başka bir hisseye geçerim.', isOptimal: false, why: 'VBTS Brüt Takaslı hisselerin kredi teminat katsayısı %0’dır; teminat açığını kapatmak yerine daha da büyütür!' }
         ],
-        consequence100k: 'Özsermayesiyle alan kişi fırtına geçince zararını kurtarabilirken, boyundan büyük borçla giren kişi tam en dip günde zorla tasfiye edildi ve yükselişi dışarıdan izledi!',
-        proRule: 'Uzman Kuralı: Borç parayla alınan malın patronu sen değilsin, saattir! %52+ kredi faiziyle hisse taşımak her gece kasandan kesin para yakar ve ilk fırtınada seni oyun dışına atar.',
+        consequence100k: '1.000.000 ₺ özsermayesiyle kredisiz alan kişi -%24 düşüşten 3 ay sonra kârla çıkarken, kredili giren kişi 640.000 ₺’ye erimiş halde dipte zorla satıldı.',
+        proRule: 'Uzman Kuralı: Türkiye’de %50+ faiz ortamında kredili hisse taşımak, akıntıya karşı taş bağlayıp yüzmektir; kaldıracı sıfır tutan fırtınanın efendisi olur.',
         linkedKeys: ['viop-bist30-kontrat', 'bist-sasa', 'para-piyasasi-fonu']
       },
       {
         id: 'case_09_ipo_allocation_math',
         category: 'SPK Halka Arz & Lock-Up',
-        title: 'Vaka 9: Halka Arza "500.000 ₺ Bastım" Yanılgısı ve 180 Gün Kilidi',
-        situation: 'SPK onaylı "Tamamı Eşit Dağıtımlı" popüler bir halka arza 500.000 ₺ nakit bloke ederek talep girdin (Arz büyüklüğü 18,5 milyon lot, katılımcı 500.000 kişi, hisse 40 ₺). Ayrıca 6 ay önce halka arz olmuş başka bir şirketin yarın 180 günlük "Ortak Satmama Taahhüdü (Lock-Up)" süresi doluyor.',
-        question: 'Gerçek piyasada bu iki işlem nasıl sonuçlanır?',
+        difficulty: 'Temel',
+        title: 'Vaka 9: Eşit Dağıtım Halka Arza 500.000 ₺ Bloke Etmek ve 180. Gün Lock-Up',
+        situation: 'SPK bülteninde onaylanan "Tamamı Eşit Dağıtımlı" 20 milyon lotluk (hisse 30 ₺) halka arza 600.000 katılımcı bekleniyor. Arkadaşın "Çok lot gelsin diye 500.000 ₺ nakit bağladım!" diyor. Ayrıca 6 ay önce halka arz olan başka bir hissenin yarın 180 günlük "Ortak Satmama Taahhüdü (Lock-Up)" doluyor.',
+        question: 'Sermaye verimliliği açısından doğru hesap nedir?',
         choices: [
-          { id: 'A', label: '500.000 ₺ yatırdığım için bana 12.500 lotun tamamı gelir.', isOptimal: false },
-          { id: 'B', label: 'Eşit dağıtımda 500B ₺ de yatırsan kişi başı ~37 lot (~1.480 ₺) düşer, 498.520 ₺ boşta bloke bekler! Diğer hissede ise 180. gün Lock-Up bitişi ortak satışı riski doğurur.', isOptimal: true },
-          { id: 'C', label: 'Halka arz hisseleri asla düşmez.', isOptimal: false }
+          { id: 'A', label: 'Eşit dağıtımda 500B ₺ de bağlasan kişi başı ~34 lot (~1.020 ₺) düşer; ~2.000 ₺ talep yeterlidir, kalan 498.000 ₺’yi PPF/Sukuk’ta çalıştırırım ve 180. gün Lock-Up biten hissede ortak arzına dikkat ederim!', isOptimal: true, why: 'Kusursuz fırsat maliyeti hesabı! Boşuna bloke edilen 498.000 ₺’nin 4 günlük faizini yakmaz, üstelik Lock-Up takvimini izlersin.' },
+          { id: 'B', label: 'Ne kadar çok para yatırırsan eşit dağıtımda da o kadar çok lot alırsın; 500.000 ₺ yatırmak doğrudur.', isOptimal: false, why: 'Tamamı eşit dağıtımda tavan lot sınırı herkese eşittir; fazla yatırılan para 3–4 gün sıfır getiriyle kilitli bekler.' },
+          { id: 'C', label: 'Halka arzdan gelen gelirin %100’ü patronun cebine gidiyor olsa bile ilk 10 gün kesin tavan gider.', isOptimal: false, why: 'Ortak satışı ağırlıklı ve pahalı çarpanlı halka arzlar daha ilk günden arz fiyatının altına sarkabilmektedir!' },
+          { id: 'D', label: '180 günlük Lock-Up süresi dolduğunda hisse fiyatı otomatik ikiye katlanır.', isOptimal: false, why: 'Tam tersi: Lock-Up bitişi, şirket ortaklarının kapalı paylarını borsada satabilme kilidinin açıldığı tarihtir.' }
         ],
-        consequence100k: '500.000 ₺’yi 4 gün boyunca halka arza bloke eden kişi sadece 1.480 ₺’lik lot alırken, kalan 498.520 ₺’nin 4 günlük ~2.100 ₺ PPF/repo getirisini boşuna yaktı!',
-        proRule: 'Uzman Kuralı: Eşit dağıtım halka arzlarda tahmini kişi başı düşecek tutarın 1,5–2 katından fazla nakit bağlanmaz; izahnamede gelirin borç kapamaya mı yoksa yeni fabrikaya mı gideceğine bakılır.',
-        linkedKeys: ['halka-arz-tabgd', 'halka-arz-altny', 'para-piyasasi-fonu']
+        consequence100k: '500.000 ₺’yi 4 gün boşuna bloke eden kişi 1.020 ₺’lik lot için ~2.150 ₺ gecelik nema/PPF getirisini çöpe attı; daha maça eksi yazarak başladı!',
+        proRule: 'Uzman Kuralı: Halka arzda 1) Fon Kullanım Yeri Raporuna (yeni yatırım mı, borç/ortak satışı mı?), 2) Kişi başı tahmini lot tutarına, 3) 180 gün Lock-Up sayacına bakılır.',
+        linkedKeys: ['para-piyasasi-fonu', 'kira-sertifikasi-sukuk', 'bist-tabgd']
       },
       {
         id: 'case_10_capital_increase_types',
         category: 'Sermaye Yapısı',
-        title: 'Vaka 10: Bedelsiz, Bedelli ve Tahsisli Sermaye Artırımı — Hangisi Gerçekten Ne Yapar?',
-        situation: 'Üç şirket KAP attı: 1) A Şirketi "%400 Bedelsiz Sermaye Artırımı" açıkladı. 2) B Şirketi borç çevirmek için "%200 Bedelli Sermaye Artırımı" açıkladı. 3) C Şirketinde patron "Şirkete cebimden nakit koyarak piyasa fiyatından Tahsisli Sermaye Artırımı yapıyorum" dedi.',
-        question: 'Finansal matematik açısından hangisi şirketin kasasını ortakları sulandırmadan/yormadan güçlendirir?',
+        difficulty: 'Orta',
+        title: 'Vaka 10: %400 Bedelsiz Coşkusu vs Bedelli vs Patron Geri Alımı',
+        situation: 'Aynı akşam üç KAP bildirimi düştü: 1) M Şirketi "%400 İç Kaynaklardan Bedelsiz Sermaye Artırımı" açıkladı. 2) N Şirketi kısa vadeli banka borcunu ödemek için "%200 Bedelli" açıkladı. 3) P Şirketi ise kendi serbest nakdiyle borsadan paylarının %5’ini geri alıp iptal edeceğini duyurdu.',
+        question: 'Finans bilimine göre hangisi ortak başına düşen gerçek şirket değerini artırır?',
         choices: [
-          { id: 'A', label: '%400 Bedelsiz en iyisidir; bedavadan 4 kat zengin olurum!', isOptimal: false },
-          { id: 'B', label: 'Bedelsiz bir pizzayı 4 yerine 20 dilime bölmektir (toplam değer değişmez!); Bedelli senden ek nakit ister; Patronun nakit koyduğu Tahsisli / Geri Alım ise kasaya gerçek taze kan sokar.', isOptimal: true },
-          { id: 'C', label: 'Bedelli sermaye artırımı her zaman bedava para dağıtır.', isOptimal: false }
+          { id: 'A', label: 'M Şirketinin %400 Bedelsizi! Elimdeki 100 lot bedavadan 500 lot olacağı için servetim 5 katına çıkar.', isOptimal: false, why: 'Bedelsiz bölünme sabahı lot sayın 5 katına çıkarken hisse fiyatı tam 5’te 1’ine bölünür (100 lot × 100 ₺ = 500 lot × 20 ₺ = 10.000 ₺)!' },
+          { id: 'B', label: 'N Şirketinin %200 Bedellisi; rüçhan kuponu her zaman bedava kârdır.', isOptimal: false, why: 'Borç faizi çevirmek için yapılan bedelli, mevcut ortakların cebinden zorla taze nakit istemektir.' },
+          { id: 'C', label: 'P Şirketinin Serbest Nakitle Pay Geri Alımı! Bedelsiz pizzayı daha küçük dilimlere bölmektir; pay geri alımı ise pastadaki dilim sayısını azaltıp senin ortaklık payını büyütür.', isOptimal: true, why: 'Tam bir kurumsal finansman ustası cevabı! Şirket kendi ucuz hissesini kasadaki nakitle toplayınca hisse başı kâr (HBK) kalıcı büyür.' },
+          { id: 'D', label: 'Üçü de şirket değerini hiç etkilemez.', isOptimal: false, why: 'İskontolu fiyattan yapılan pay geri alımı ile yüksek faizli borç sarmalındaki bedelli arasında devasa değer farkı vardır.' }
         ],
-        consequence100k: '"%400 bedelsiz verecek!" coşkusuyla zirveden atlayan acemi, bölünme sabahı lot sayısının 5’e çıkıp hisse fiyatının 5’te 1’e bölündüğünü (100.000 ₺’nin yine 100.000 ₺ kaldığını) görünce şok yaşadı!',
-        proRule: 'Uzman Kuralı: Bedelsiz sermaye artırımı kasaya 1 kuruş bile yeni para sokmaz, sadece muhasebe kalemleri arası aktarımdır. Gerçek değer yaratımı yalnızca ROIC > Sermaye Maliyeti ve Serbest Nakit Akışıdır.',
-        linkedKeys: ['bist-froto', 'bist-tuprs', 'girisim-hubvc']
+        consequence100k: '"Bedelsiz verecek!" diye 18x PD/DD’den zirvede M Hissesine atlayan yatırımcı, bölünme sabahı toplam portföy tutarının kuruş değişmediğini ve "beklenti bitti" satışıyla -%22 düştüğünü yaşayarak öğrendi.',
+        proRule: 'Uzman Kuralı: Bedelsiz sermaye artırımı şirketin kasasına 1 TL bile sokmaz; sadece özsermaye kalemleri arası muhasebe kaydıdır.',
+        linkedKeys: ['bist-mpark', 'bist-bimas', 'bist-froto']
       },
       {
         id: 'case_11_season_rotation',
         category: 'Mevsim & Döngü',
-        title: 'Vaka 11: Kıştan Bahara Geçiş — Enflasyon ve Faiz Zirveden Dönerken Köylü Bilgeliği',
-        situation: 'Aylarca süren %45+ sıkı faiz kışından sonra aylık enflasyon üst üste 3 ay beklenti altı geldi, 2 yıllık Hazine tahvil faizi geri çekilmeye başladı ve Merkez Bankası ilk faiz indirim sinyallerini verdi.',
-        question: 'Kış biterken portföy çarkını hangi varlıklara doğru kademeli kaydırırsın?',
+        difficulty: 'Orta',
+        title: 'Vaka 11: Faiz Kışından İndirim Baharına Geçiş — Öncü Sinyali Kim Verir?',
+        situation: 'Aylarca süren %45+ sıkı faiz kışından sonra çekirdek enflasyon yavaşladı ve 2 yıllık Hazine gösterge tahvil faizi TCMB henüz faiz indirmeden 400 baz puan geri çekildi.',
+        question: 'Kış bitmeden bahar hazırlığı yapan stratejist portföyünü nasıl evirir?',
         choices: [
-          { id: 'A', label: 'Sonsuza kadar sadece gecelik Para Piyasası Fonunda (PPF) kalırım; hiç kıpırdamam.', isOptimal: false },
-          { id: 'B', label: 'Sabit kuponlu Tahvil (DİBS), iskontolu büyük Bankalar, Konut/Mülk GYO ve faize duyarlı Otomotiv/Sanayi tohumlarını kalabalık uyanmadan kademeli ekerim.', isOptimal: true },
-          { id: 'C', label: 'Faiz düşerken en çok borçlu batık şirketleri tek sepette alırım.', isOptimal: false }
+          { id: 'A', label: 'TCMB faizleri %15’e indirene kadar 1 yıl daha %100 gecelik PPF’de beklerim; resmi karar çıkmadan kıpırdamam.', isOptimal: false, why: 'TCMB faizi %15’e indirdiğinde bankalar, tahviller ve GYO’lar çoktan 2–3 katına gitmiş olur; piyasa geleceği önceden fiyatlar.' },
+          { id: 'B', label: 'Faiz düşecekse tüm paramla en borçlu ve zarar eden spekülatif yan tahtalara girerim.', isOptimal: false, why: 'Ekonomik yavaşlama gecikmeli vurduğu için faiz indiriminin ilk aylarında çürük şirketlerin tahsilat krizi devam eder.' },
+          { id: 'C', label: ' Sabit kuponlu tahvillerimi satıp kısa vadeli mevduata geçerim.', isOptimal: false, why: 'Ters işlem! Piyasa faizi düşerken sabit kuponlu uzun tahvillerin (DİBS) anapara fiyatı YÜKSELİR.' },
+          { id: 'D', label: 'PPF ağırlığımı kademeli azaltıp Sabit Kuponlu Tahvil (DİBS), iskontolu Banka, Net Aktif Değer iskontolu GYO ve kaliteli Otomotiv/Sanayi kalelerine yayarım.', isOptimal: true, why: '2 yıllık tahvil faizinin öncü dönüşünü okudun! Hem tahvil değer kazancı hem çarpan genişlemesi bahar döngüsünü taşır.' }
         ],
-        consequence100k: 'Faiz indirim döngüsü başladığında PPF’nin günlük getirisi her ay erirken, sabit kuponlu DİBS ve 0,5x PD/DD’den toplanan sağlam GYO/Banka/Otomotiv sepeti bahar rallisini sırtladı.',
-        proRule: 'Uzman Kuralı: Borsa bugünü değil, 6 ay sonrasını fiyatlar. Faiz indirimi gazetelerin manşetine çıktığında tren yarı yolu gitmiş olur; öncü sinyal 2Y-10Y tahvil faizinin yön değiştirmesidir!',
-        linkedKeys: ['dibs-tahvil', 'gayrimenkul-konut-ekgyo', 'bist-garan', 'bist-froto']
+        consequence100k: 'Tahvil faizi dönerken kademeli rotasyon yapan portföy, sadece PPF’de kalan portföye 1 yılda +%28 reel fark attı.',
+        proRule: 'Uzman Kuralı: Merkez Bankası manşeti değil, "2 Yıllık Gösterge Tahvil Faizi" ve "Aylık Mevsimsellikten Arındırılmış TÜFE" döngü pusulasıdır.',
+        linkedKeys: ['dibs-tahvil', 'bist-garan', 'bist-ekgyo', 'bist-froto']
       },
       {
         id: 'case_12_gvk80_yiufe_tax',
         category: 'Küresel Yatırım & Vergi',
-        title: 'Vaka 12: ABD S&P 500 (SPY) Satışında "Yİ-ÜFE %10 Endeksleme" Vergi Kalkanı',
-        situation: '1 yıl önce Dolar 38 ₺ iken 380.000 ₺ (10.000 $) ödeyerek S&P 500 ETF (SPY) aldın. Bugün SPY dolar bazında +%10 artarak 11.000 $ oldu, Dolar/TL de 50,44 ₺’ye çıktı (Satış tutarın: ~554.840 ₺ · Kağıt üstü TL fark: +174.840 ₺). Bu sürede TÜİK Yİ-ÜFE üretici enflasyonu +%28 arttı.',
-        question: 'Türkiye vergi kanununa (GVK Mükerrer 80) göre vergin 174.840 ₺’nin tamamı üzerinden mi hesaplanır?',
+        difficulty: 'Uzman',
+        title: 'Vaka 12: ABD S&P 500 (SPY) Satışında "%9,6 vs %10,2 Yİ-ÜFE" Vergi Uçurumu!',
+        situation: 'Dolar 40,00 ₺ iken 400.000 ₺ (10.000 $) ile ABD S&P 500 ETF (SPY) aldın. Bugün SPY dolar bazında +%8 artarak 10.800 $ oldu, Dolar/TL ise 44,50 ₺’ye geldi (Brüt satış: 480.600 ₺ · TL fark: +80.600 ₺). Alış ayından bugüne TÜİK Yİ-ÜFE artışı şu an +%9,6; gelecek ayın 3’ünde açıklanacak veriyle +%10,4 olacağı görülüyor.',
+        question: 'Acil nakit ihtiyacın yoksa vergi kanununa (GVK Mük. 80) göre ne yaparsın?',
         choices: [
-          { id: 'A', label: 'Evet, 174.840 ₺ TL farkının tamamı vergiye tabidir.', isOptimal: false },
-          { id: 'B', label: 'Hayır! Alış-satış arası Yİ-ÜFE artışı %10’u geçtiği için (+%28), 380.000 ₺ alış maliyetin enflasyonla ~486.400 ₺’ye yükseltilir; sadece kalan ~68.440 ₺ "gerçek reel kazanç" vergiye tabi olur!', isOptimal: true },
-          { id: 'C', label: 'Yurt dışı borsalarda Türkiye’de hiçbir vergi beyanı kuralı yoktur.', isOptimal: false }
+          { id: 'A', label: 'Bugün satarım; %9,6 ile %10,4 arasında sadece %0,8 enflasyon farkı var, vergide hiçbir şey değişmez.', isOptimal: false, why: 'DEVASA TUZAK! GVK Mük. 80’de %10,00 keskin bir uçurum eşiğidir (cliff effect): %9,99’da maliyetin HİÇ endekslenmez, %10,00 olduğu an TAMAMI endekslenir!' },
+          { id: 'B', label: 'Ayın 3’ünü bekleyip Yİ-ÜFE farkı %10,00 eşiğini aştığında (%10,4) satarım; 400.000 ₺ maliyetim yasal olarak 441.600 ₺’ye çıkar ve vergi matrahım bir anda yarıdan fazla düşer!', isOptimal: true, why: 'Gerçek vergi uzmanlığı! Sadece birkaç gün bekleyerek kur/enflasyon köpüğünün vergisini ödemekten tamamen yasal olarak kurtuldun.' },
+          { id: 'C', label: 'Yurt dışı ETF’lerde %17,5 otomatik stopaj kesildiği için Yİ-ÜFE’nin önemi yoktur.', isOptimal: false, why: 'Doğrudan yabancı borsadaki ETF (SPY/QQQ) kaynakta stopaja değil, Yİ-ÜFE endekslemeli yıllık beyana tabidir (%17,5 stopaj yerli TEFAS fonlarındadır).' },
+          { id: 'D', label: 'Parayı Türkiye’ye çekmediğim sürece satış yapsam bile vergi doğmaz.', isOptimal: false, why: 'Yanlış şehir efsanesi! Vergiyi doğuran olay paranın banka hesabına transferi değil, hissenin/ETF’nin satıldığı (realize edildiği) tarihtir.' }
         ],
-        consequence100k: 'Yİ-ÜFE %10 eşiğini (örneğin %9,6’da acele satmayıp %10,2 olmasını) bekleyen uzman yatırımcı, kur/enflasyon farkı üzerinden on binlerce lira fazladan vergi ödemekten tamamen yasal olarak kurtuldu!',
-        proRule: 'Uzman Kuralı: Yurt dışı hisse/ETF ve Eurobond satışlarında alış ile satış ayı arasındaki Yİ-ÜFE artışı %10,00 ve üzerindeyse maliyet endekslemesi devreye girer; satmadan önce Yİ-ÜFE farkını mutlaka kontrol et!',
+        consequence100k: 'Yİ-ÜFE %9,6 iken acele satan 80.600 ₺ üzerinden vergi öderken, %10,4’ü bekleyen sadece 39.000 ₺ reel fark üzerinden vergi hesapladı!',
+        proRule: 'Uzman Kuralı: Yurt dışı hisse/ETF ve Eurobond satmadan önce alış ayı ile satıştan önceki ay arasındaki TÜİK Yİ-ÜFE artışının >= %10,00 olduğunu mutlaka doğrula!',
         linkedKeys: ['abd-sp500-spy', 'abd-nasdaq-qqq', 'eurobond-emb']
       },
       {
         id: 'case_13_drought_6month_lead',
         category: 'İklim & Saha Öncüsü',
-        title: 'Vaka 13: Barajlar %28’e İndi, Kuraklık Başladı — 6 Ay Sonra Kimin Kasası Dolacak, Kim Zorlanacak?',
-        situation: 'İlkbahar yağışları mevsim normallerinin %45 altında kaldı; DSİ baraj dolulukları ve EPİAŞ hidroelektrik (HES) üretimi sert düştü, dünya buğday/yem fiyatları kıpırdanmaya başladı. Bilançolarda ise henüz her şey güllük gülistanlık görünüyor!',
-        question: 'Aylar sonrasını bugünden okuyan usta yatırımcı nasıl pozisyon alır?',
+        difficulty: 'Orta',
+        title: 'Vaka 13: Barajlar %26’ya İndi, Kuraklık Başladı — 6 Ay Sonrayı Bugünden Okumak',
+        situation: 'Bahar yağışları normallerin %45 altında kaldı; DSİ baraj dolulukları ve EPİAŞ hidroelektrik (HES) üretimi sert geriledi, yem ve buğday fiyatları kıpırdanıyor. Ancak şirketlerin açıklanan son bilançoları hâlâ geçen kışın yağışlı rakamlarını gösteriyor.',
+        question: 'Bilanço gecikmesini bilen saha yatırımcısı 6 ay sonrası için nasıl hazırlanır?',
         choices: [
-          { id: 'A', label: 'Yüksek döviz borçlu HES elektrik şirketlerine ve vadeli/borçlu küçük gıda fabrikalarına yüklenirim.', isOptimal: false },
-          { id: 'B', label: 'Su bulamayan borçlu HES ve hammadde sıkışması yaşayacak borçlu fabrikadan çıkarım; hammaddeyi peşin alıp zammı aynı sabah rafa yansıtan Net Nakitli Gıda Perakendecisi (BIMAS/MGROS) ve Tarım Emtiası (DBA) seçerim.', isOptimal: true },
-          { id: 'C', label: 'Kuraklığın şirket bilançolarıyla hiçbir ilgisi yoktur.', isOptimal: false }
+          { id: 'A', label: 'Döviz borçlu saf HES santrallerinden ve vadeli satan küçük gıda üreticilerinden uzak durur; peşin satıp maliyet artışını aynı gün rafa yansıtan Net Nakitli Gıda Perakendecisi (BIMAS/MGROS) ve Tarım Emtiası (DBA) seçerim.', isOptimal: true, why: 'Fiziksel dünyayı muhasebeden 6 ay önce okudun! Fiyatlama gücü ve eksi işletme sermayesi olan market zinciri gıda enflasyonunda kâr büyütür.' },
+          { id: 'B', label: 'Son bilançosu iyi geldiği için borçlu HES elektrik şirketini hemen alırım.', isOptimal: false, why: 'Dikiz aynasına bakarak araba kullanmak! Geçen çeyreğin suyu geçti; gelecek 2 çeyrek baraj boşken döviz kredi taksiti ödenecek.' },
+          { id: 'C', label: 'Kuraklık sadece çiftçiyi ilgilendirir, Borsa İstanbul şirketlerini etkilemez.', isOptimal: false, why: 'Gıda enflasyonu -> TCMB faiz patikası -> Elektrik PTF maliyeti -> Sanayi marjları doğrudan birbirine bağlıdır.' },
+          { id: 'D', label: 'Uzun vadeli tarım kredisi kullanan traktör hisselerine krediyle girerim.', isOptimal: false, why: 'Kuraklık + yüksek gıda enflasyonu = sıkı faiz ve çiftçi gelir kaybı; traktör talebi böyle dönemlerde ertelenir.' }
         ],
-        consequence100k: '2 çeyrek sonra su seviyesi düşen borçlu HES santralinin FAVÖK’ü yarıya inerken, raf fiyatlama gücü ve peşin nakit kasası olan market zincirleri enflasyonun üzerinde reel kâr büyüttü!',
-        proRule: 'Uzman Kuralı: Doğadaki fiziksel darboğaz (yağış, baraj, navlun, gümrük tonajı), muhasebe bilançosuna 3 ila 6 ay gecikmeyle düşer. EPİAŞ ve DSİ verisini izleyen fırtınayı herkes uyumadan görür.',
-        linkedKeys: ['emtia-tarim-dba', 'reel-perakende-bimas', 'reel-perakende-mgros']
+        consequence100k: 'EPİAŞ su verisini izleyen yatırımcı, 2 çeyrek sonra gelecek "sürpriz zayıf HES bilançosundan" burnu bile kanamadan kurtuldu.',
+        proRule: 'Uzman Kuralı: Doğadaki fiziksel veri (DSİ su, EPİAŞ MWh, gümrük tonajı) bilançodan 90–180 gün önden yürür.',
+        linkedKeys: ['emtia-tarim-dba', 'bist-bimas', 'bist-mgros']
       },
       {
         id: 'case_14_oem_supplier_leak',
         category: 'Tedarik Zinciri Sızıntısı',
-        title: 'Vaka 14: Ana Sanayi Devi Rekor İhracat Açıkladı — Yan Sanayiye Atlarken Hangi Tuzağa Bakılır?',
-        situation: 'Ayın 3’ünde OSD raporu açıklandı: Ana otomotiv ve savunma devlerinin (FROTO, ASELS) ihracat teslimatları güçlü arttı. Yan sanayi tedarikçisi iki şirketten X’te PD/DD 0,65x ve CMF +0,14 (kurumsal giriş) var; Y’de ise PD/DD 9,5x ve CMF -0,22 (kurumsal çıkış) var.',
-        question: 'Çapraz tedarik zinciri okumasını nasıl uygularsın?',
+        difficulty: 'Uzman',
+        title: 'Vaka 14: Ana Sanayi (OEM) Rekor İhracat Açıkladı — Yan Sanayi Seçim Filtresi',
+        situation: 'Ayın 4’ünde OSD ve TİM verileri açıklandı: Ana otomotiv devlerinin Avrupa ticari araç ihracatı +%24 sıçradı. Bu devlere parça veren iki yan sanayi şirketinden X’te PD/DD 0,72x, OCF pozitif ve CMF +0,15; Y’de ise PD/DD 11,4x ve CMF -0,21 (kurumsal çıkış) var.',
+        question: 'Tedarik zinciri sızıntısını paraya çevirirken hangi kuralı işletirsin?',
         choices: [
-          { id: 'A', label: 'Ana sanayi büyüdüyse bütün yan sanayi hisseleri gözü kapalı tavan gider; Y daha hareketli diye Y’yi alırım.', isOptimal: false },
-          { id: 'B', label: 'Ana sanayi verisini "öncü ciro sinyali" olarak kullanırım ama sadece çarpanı makul ve tahtasında kurumsal toplama (CMF > 0) olan X tedarikçisine girerim!', isOptimal: true },
-          { id: 'C', label: 'Bilanço açıklanana kadar 45 gün bekler, en tepeden alırım.', isOptimal: false }
+          { id: 'A', label: 'Ana sanayi büyüdüyse en sığ ve en pahalı yan sanayi (Y) daha hızlı tavan yapar, Y’yi alırım.', isOptimal: false, why: '11,4x PD/DD zaten gelecek 5 yılın büyümesini peşin fiyatlamış; üstelik CMF -0,21 kurumsalların iyi haberi satış fırsatı yaptığını gösteriyor.' },
+          { id: 'B', label: 'Yan sanayiye hiç bakmam; aylık ihracat verisinin bilançoyla ilgisi yoktur.', isOptimal: false, why: 'Ana sanayi (OEM) üretim bandı hızlandığında aks, lastik, cam ve kablo tedarikçisinin faturası aynı ay kesilir!' },
+          { id: 'C', label: 'OEM ihracat sıçramasını 45 gün öncü ciro sinyali olarak kullanır, fakat yalnızca çarpanı iskontolu (PD/DD 0,72x), OCF+ ve tahtasında kurumsal toplama (CMF > 0) olan X tedarikçisini seçerim!', isOptimal: true, why: 'Hem saha verisini hem değerleme güvenlik marjını hem de tahta akışını birleştiren üçlü kilit!' },
+          { id: 'D', label: 'Bilanço açıklanacağı geceye kadar bekler, ertesi sabah açılışta alırım.', isOptimal: false, why: 'Bilanço gecesi geldiğinde kurumsal fonlar 45 gün önce topladıkları malı manşet okuyanlara devreder.' }
         ],
-        consequence100k: 'Ana firmanın (OEM) aylık bülteni yan sanayinin cirosunu 45 gün önceden sızdırır; ancak çarpanı şişik ve CMF’si negatif olan Y tahtasında iyi haber mal dağıtımı için kullanıldı!',
-        proRule: 'Uzman Kuralı: Ana Sanayi (OEM) -> Yan Sanayi çapraz okumasında 2 filtre şarttır: 1) Yan sanayide makul PD/DD ve pozitif OCF, 2) Tahtada CMF > 0 kurumsal teyidi (Pusula -> Mutfak -> Gümrük & BDDK masasında canlı izlenir).',
-        linkedKeys: ['bist-froto', 'bist-egeen', 'bist-asels']
+        consequence100k: 'İskontolu X tedarikçisi bilanço döneminde +%34 değerlenirken, şişik çarpanlı Y iyi bilançoya rağmen "beklenti bitti" satışıyla -%16 geriledi.',
+        proRule: 'Uzman Kuralı: İyi sektör verisi bile pahalı ve dağıtılan (CMF < 0) tahtayı kurtarmaz; Öncü Veri + Ucuz Çarpan + CMF > 0 birlikte aranır.',
+        linkedKeys: ['bist-froto', 'bist-brisa', 'bist-kords']
       },
       {
         id: 'case_15_barbell_zero_ruin',
         category: 'Portföy Mimarisi',
-        title: 'Vaka 15: Sıfır İflas "Halter (Barbell)" Stratejisi vs Ortada Ezilen Sepet',
-        situation: '1.000.000 ₺ sermayeni yönetirken hem %30 enflasyona ezilmek istemiyorsun hem de ani bir jeopolitik krizde -%40 eriyip oyun dışı kalmak istemiyorsun.',
-        question: 'Kurumsal fon yöneticilerinin kullandığı "Halter (Barbell)" mimarisi bu 1 milyonu nasıl kurar?',
+        difficulty: 'Orta',
+        title: 'Vaka 15: Sıfır İflas "Halter (Barbell)" Mimarisi vs Kırılgan Sepet',
+        situation: '1.000.000 ₺ sermayeni yönetirken ne %30 enflasyona ezilmek istiyorsun ne de beklenmedik bir küresel/iç şokta -%40 çöküp oyun dışı kalmak istiyorsun.',
+        question: 'Nassim Taleb ve kurumsal fonların kullandığı "Halter (Barbell)" stratejisi bu 1 milyonu nasıl kurar?',
         choices: [
-          { id: 'A', label: '1 milyonun tamamıyla ne uzayan ne kısalan borçlu yan tahtalar alıp dua ederim.', isOptimal: false },
-          { id: 'B', label: 'Bir uca %50–65 "Kırılmaz Zırh" (%0 vergili Sukuk, PPF, Fiziki Altın) koyup her ay kesin nakit üretirim; diğer uca %35–50 "Nakit Basan İskontolu Kaleler" (FCF+, ROIC yüksek devler) koyarım, sıfır kaldıraç taşırım!', isOptimal: true },
-          { id: 'C', label: '500.000 ₺ kredi çekip tek hisseye 1.500.000 ₺ basarım.', isOptimal: false }
+          { id: 'A', label: '1 milyonun tamamını orta halli, borçlu 15 farklı yan tahtaya bölerim.', isOptimal: false, why: 'Kriz anında tüm borçlu yan tahtaların korelasyonu 1,00’a çıkar ve hepsi aynı anda taban olur; sahte çeşitlendirmedir!' },
+          { id: 'B', label: '1 milyonun tamamını vadesiz dövizde tutup hiç dokunmam.', isOptimal: false, why: 'ABD/küresel dolar enflasyonu (%3-4) ve Türkiye’deki reel TL getiri dönemlerinde alım gücün erir; nakit akışı sıfırdır.' },
+          { id: 'C', label: '500.000 ₺ kredi kullanarak 1.500.000 ₺ BIST 30 hissesi taşırım.', isOptimal: false, why: 'Kaldıraç sıfır iflas (Zero-Ruin) kuralının tam zıddıdır.' },
+          { id: 'D', label: 'Bir uca %50–60 "Kırılmaz Zırh" (%0 vergili Sukuk, PPF, Fiziki Altın) koyup her ay kesin nakit akışı üretirim; diğer uca %40–50 "Nakit Basan İskontolu Kaleler" (FCF+, Net Nakit devler) koyarım, sıfır borç taşırım!', isOptimal: true, why: 'Kırılmaz mimari! Rallide kaliteli şirketler serveti büyütür; çöküşte ise Kırılmaz Zırh hem uykunu korur hem de dipten fabrika toplayacak mermiyi verir.' }
         ],
-        consequence100k: 'Piyasa +%30 ralli yaptığında kaliteli hisse ucu portföyü yukarı taşır; piyasa -%25 çöktüğünde ise Kırılmaz Zırh hem portföyü korur hem de yangın yerinden bedava fabrika toplayacak sıcak cephaneyi hazır tutar!',
-        proRule: 'Uzman Kuralı: Asla iflas etmeyen (Zero-Ruin) yatırımcı her mevsimde hayatta kalır; bileşik getiri ancak büyük çöküşlerde sıfırlanmayan kasalarda mucize yaratır.',
+        consequence100k: 'Borsa -%25 düzeltme yaptığında Halter portföyü sadece -%4 geri çekildi ve elindeki Sukuk nakdiyle dipten ucuz sanayi devlerini topladı!',
+        proRule: 'Uzman Kuralı: Bileşik getirinin birinci kuralı akışı asla kesmemektir; büyük çöküşte elinde nakit zırhı olan kişi krizin alıcısı olur.',
         linkedKeys: ['kira-sertifikasi-sukuk', 'gram-altin-spot', 'bist-tuprs', 'bist-enkai']
+      },
+      {
+        id: 'case_16_tefas_aft_vs_qqq_tax',
+        category: 'TEFAS vs Yabancı ETF',
+        difficulty: 'Uzman',
+        title: 'Vaka 16: Teknoloji Yatırımında Gizli Vergi Farkı — TEFAS AFT Fonu mu, Doğrudan QQQ mu?',
+        situation: '500.000 ₺ ile 2 yıl vadeli ABD teknoloji devlerine yatırım yapacaksın. 2 yılda Nasdaq dolar bazında +%20, Dolar/TL ise +%55 (Yİ-ÜFE +%52) arttı diyelim (500.000 ₺ -> 930.000 ₺, toplam TL kâr +430.000 ₺). AFT fonunda beyanname yok ama kaynakta %17,5 stopaj ve yıllık ~%2,9 yönetim ücreti var; QQQ ETF’de yönetim ücreti %0,20 ve GVK Mük. 80 Yİ-ÜFE endekslemesi var.',
+        question: '2 yıl sonunda vergi ve fon kesintileri sonrası hangisinin matematiği nasıl işler?',
+        choices: [
+          { id: 'A', label: 'AFT yerli TEFAS fonu olduğu için Hisse Yoğun Fon sayılır ve stopajı %0’dır.', isOptimal: false, why: 'Kritik hata! "%0 Hisse Yoğun" istisnası yalnızca portföyünün >=%80’i BIST (yerli) paylarından oluşan fonlar (MAC/IIH/TI2) içindir; yabancı fonlarda (AFT/AFA) stopaj %17,5’tir!' },
+          { id: 'B', label: 'AFT kur artışından doğan TL farkı dahil tüm 430.000 ₺ üzerinden %17,5 stopaj (~75.250 ₺) + yıllık %2,9 ücret keser; QQQ ise Yİ-ÜFE +%52 olduğu için 500.000 ₺ maliyeti 760.000 ₺’ye endeksler ve sadece 170.000 ₺ reel kazancı beyana tabi tutar!', isOptimal: true, why: 'Türkiye’de yatırımcıların %95’inin bilmediği altın detay! Yüksek enflasyon + büyük tutar + uzun vadede Yİ-ÜFE endekslemesi devasa vergi ve ücret avantajı yaratır.' },
+          { id: 'C', label: 'AFT sattığım gün T+0 anında nakde döner, QQQ ise 15 günde döner.', isOptimal: false, why: 'Yabancı hisse TEFAS fonlarının (AFT/AFA) satış valörü T+3 iş günüdür (13:30 sonrası T+4 iş günü!).' },
+          { id: 'D', label: 'Küçük tutarda (örn. 15.000 ₺) bile her zaman QQQ almak daha kolaydır, beyanname asla gerekmez.', isOptimal: false, why: 'Küçük tutarda beyanname takibi istemeyen için AFT pratik kolaylık sunar; büyük tutar ve uzun vadede ise QQQ maliyet/endeksleme üstünlüğü kurar.' }
+        ],
+        consequence100k: '500.000 ₺’lik 2 yıllık yatırımda yönetim ücreti farkı (~28.000 ₺) ve kur farkı stopajı eklendiğinde iki kapı arasında ~50.000 ₺’yi aşan net servet farkı doğdu!',
+        proRule: 'Uzman Kuralı: TEFAS’ta yerli Hisse Yoğun Fonlar (MAC, IIH, TI2) %0 stopajlıdır; yabancı fonlar (AFT, AFA) ise TL kur farkı dahil %17,5 stopajlı ve T+3 bozum valörlüdür.',
+        linkedKeys: ['tefas-aft', 'abd-nasdaq-qqq', 'tefas-mac']
+      },
+      {
+        id: 'case_17_cyclical_low_pe_trap',
+        category: 'Döngüsel Değerleme',
+        difficulty: 'Uzman',
+        title: 'Vaka 17: Peter Lynch’in Döngüsel Terslik Kuralı — Rafineri ve Çelikte F/K 2,8x Ne Demek?',
+        situation: 'Ağır döngüsel bir çelik veya rafineri şirketinde dünya ürün marjları son 15 yılın rekor zirvesine çıkmış, şirket rekor kâr açıklamış ve ekranda F/K çarpanı 2,8x görünüyor! Tam tersine marjların en dip olduğu yılda ise aynı şirketin F/K’sı 28x veya zararda görünüyor.',
+        question: 'Döngüsel (emtia/çelik/rafineri/petrokimya) şirketlerde F/K terazi kuralı nasıl çalışır?',
+        choices: [
+          { id: 'A', label: 'Döngüsel şirketlerde çarpan TERS çalışır! Marjlar tarihi zirvedeyken F/K en düşük (2,8x) görünür ve tehlikelidir; marjlar dipteyken F/K yüksek görünür ama PD/DD iskontoluysa asıl toplama zamanı orasıdır!', isOptimal: true, why: 'Usta seviye! Döngüsel şirketi rekor marj yılında 2,8x F/K’ya aldanıp tepeden alanlar, marj normale dönünce kârın %70 eridiğini görür.' },
+          { id: 'B', label: '2,8x F/K şirketin kendini 2,8 yılda amorti edeceğini kanıtlar; tüm paramla girerim.', isOptimal: false, why: 'O hesap ancak kâr sabit veya büyüyorsa geçerlidir; emtia döngüsü tepeden döndüğünde gelecek yılın F/K’sı bir anda 16x’e fırlar!' },
+          { id: 'C', label: 'Döngüsel şirketler 28x F/K olduğunda her zaman balon demektir, asla alınmaz.', isOptimal: false, why: 'Emtia marjı tarihi dipteyken paydadaki kâr geçici olarak küçüldüğü için F/K şişik görünür; oysa fabrika özkaynağının yarısına (0,5x PD/DD) satılıyor olabilir!' },
+          { id: 'D', label: 'Çelik ve rafineri şirketlerinde ürün marjının (HRC makası / Crack Spread) önemi yoktur.', isOptimal: false, why: 'Bu şirketlerin kârının %80’ini ton veya varil başına dolar işleme makası belirler.' }
+        ],
+        consequence100k: '2022 emtia zirvesinde "F/K 3x çok ucuz!" diyerek döngüsel hisse alanlar 2 yıl boyunca reel olarak erirken, marj dibinde düşük PD/DD’den toplayanlar döngü dönüşünü yakaladı.',
+        proRule: 'Uzman Kuralı: Döngüsel sanayide (EREGL, KRDMD, TUPRS, PETKM) F/K’ya değil; "Tarihsel Ürün Marjı Konumu (Dip mi, Tepe mi?) + PD/DD + Ton/Kapasite Değeri"ne bak!',
+        linkedKeys: ['bist-eregl', 'bist-tuprs', 'bist-petkm']
+      },
+      {
+        id: 'case_18_kap_revenue_ratio_illusion',
+        category: 'KAP Okuma Sanatı',
+        difficulty: 'Orta',
+        title: 'Vaka 18: KAP’ta "65 Milyon TL Dev Sipariş Aldık!" Başlığı — Gerçekten Dev mi?',
+        situation: 'Yıllık toplam cirosu 52 Milyar ₺ olan bir sanayi şirketi gün ortasında KAP’a "Şirketimiz yurt içinde 65.000.000 ₺ tutarında yeni sipariş almıştır, hayırlı olsun" bildirimi gönderdi. Hisse haberle +%6 sıçradı.',
+        question: 'KAP bildiriminde zorunlu "Son Yıllık Hasılata Oranı (%)" satırını hesapladığında ne görürsün?',
+        choices: [
+          { id: 'A', label: '65 Milyon ₺ çok büyük paradır; hemen +%6’dan alım yaparım.', isOptimal: false, why: 'Bireysel bütçe için 65 Milyon ₺ büyük görünebilir ama 52 Milyar ₺ cirolu fabrika bu tutarı zaten her sabah öğlene kadar (yarım günde!) kesmektedir!' },
+          { id: 'B', label: 'Yıllık cironun %12’si demektir, bilançoyu uçurur.', isOptimal: false, why: 'Bölme hatası: 65 Milyon / 52.000 Milyon = 0,00125 yani sadece BİNDE 1,25 (%0,12)!' },
+          { id: 'C', label: 'Hisseyi açığa satarım.', isOptimal: false, why: 'Sırf rutin sipariş haberi geldi diye trende karşı açığa satış yapmak gereksiz sıkışma riskidir.' },
+          { id: 'D', label: '65 Milyon ₺, 52 Milyar ₺ yıllık cironun sadece %0,12’sidir (fabrikanın 11 saatlik rutin mesaisi!); manşet rakamın büyüsüne kapılıp +%6 primli tahtaya atlamam.', isOptimal: true, why: 'Keskin matematik gözü! KAP’ta mutlak TL rakamına değil, daima "Yıllık Ciroya Oranı (%)" ve "340 Alınan Avanslar" etkisine bakılır.' }
+        ],
+        consequence100k: 'Rutin yarım günlük siparişi "dev ihale" sanıp +%6’dan atlayanlar, seans sonu hissenin başladığı yere dönmesiyle aynı gün -%5,5 içeri girdi.',
+        proRule: 'Uzman Kuralı: Bir yeni iş bildiriminin şirketin kaderini değiştirmesi için yıllık cironun en az %8–%15’i büyüklüğünde olması ve marjının güçlü olması gerekir.',
+        linkedKeys: ['bist-asels', 'bist-astor', 'bist-otkar']
+      },
+      {
+        id: 'case_19_reit_appraisal_pe_illusion',
+        category: 'Sektörel Terazi',
+        difficulty: 'Orta',
+        title: 'Vaka 19: GYO Hissesinde "F/K 1,9x" İlüzyonu vs Kira ve Net Aktif Değer',
+        situation: 'Bir Gayrimenkul Yatırım Ortaklığı (GYO) yıl sonu bilançosunda 8 Milyar ₺ Net Kâr açıkladı ve F/K çarpanı 1,9x’e düştü! Ancak dipnota baktığında bu 8 Milyar ₺’nin 7,7 Milyar ₺’sinin "Yatırım Amaçlı Gayrimenkul Ekspertiz Değer Artış Kazancı" olduğunu, kasaya giren gerçek kira/satış nakdinin (OCF) ise sadece 300 Milyon ₺ ve döviz borcunun 6 Milyar ₺ olduğunu gördün.',
+        question: 'GYO analizinde hangi yargı doğrudur?',
+        choices: [
+          { id: 'A', label: '1,9x F/K şirketin her 2 yılda bir kendi piyasa değeri kadar nakit kazandığını gösterir; kaçırılmaz fırsattır.', isOptimal: false, why: 'Ekspertiz raporuyla AVM’nin kağıt üstü değerini artırmak kasaya 1 lira bile nakit sokmaz; o kârla borç ödenemez ve temettü dağıtılamaz!' },
+          { id: 'B', label: 'GYO’lar %25 kurumlar vergisi ödediği için net kârları çok kalitelidir.', isOptimal: false, why: 'Bilgi hatası: GYO’lar Türkiye’de kurumlar vergisinden istisnadır (%0), fakat kârlarının çoğu nakit olmayan yıl sonu değerlemesidir.' },
+          { id: 'C', label: 'GYO’larda F/K çarpanı ekspertiz değerlemesi yüzünden yanıltıcıdır! Tek doğru terazi "PD/DD (Net Aktif Değer İskontosu)" ve "Yıllık Düzenli Kira Nakdi / Net Borç" oranıdır; bu borçlu şirketten uzak dururum.', isOptimal: true, why: 'Sektörel terazi ustalığı! Nakit kira üreten borçsuz GYO ile ekspertiz kârı yazan döviz borçlu GYO’yu bıçak gibi ayırdın.' },
+          { id: 'D', label: 'Döviz kuru yükseldiğinde döviz borçlu GYO’ların kârı artar.', isOptimal: false, why: 'AVM kiraları TL iken banka kredisi döviz olan GYO kur şokunda ağır kambiyo zararı yazar.' }
+        ],
+        consequence100k: '1,9x F/K’ya aldanan yatırımcı, sonraki 3 ara çeyrekte ekspertiz değerlemesi yapılmadığı için şirketin finansman gideriyle zarar açıkladığını görünce şok oldu.',
+        proRule: 'Uzman Kuralı: Sanayi terazisiyle GYO tartılmaz! GYO’da "PD/DD < 0,60x + Düzenli Kira Geliri + Net Nakit Kasa" üçlüsü aranır.',
+        linkedKeys: ['bist-ekgyo', 'bist-rygyo', 'bist-isgyo']
+      },
+      {
+        id: 'case_20_deposit_break_vs_sukuk_ladder',
+        category: 'Nakit Yönetimi',
+        difficulty: 'Temel',
+        title: 'Vaka 20: 181 Gün Vadeli Mevduatın 150. Gününde Çıkan Yangın Yeri Fırsatı!',
+        situation: 'Stopajı %17,5 yerine %15 olsun diye 1.000.000 ₺’nin tamamını tek parça 181 gün vadeli banka mevduatına bağladın. Vadenin 150. gününde (~145.000 ₺ net faiz birikmişken) borsada 5 yılda bir gelen dev bir yangın yeri iskontosu oluştu ve nakit lazım oldu.',
+        question: 'Bankadaki 181 günlük vadeli mevduatı 150. günde bozarsan gerçek hayatta ne olur?',
+        choices: [
+          { id: 'A', label: '150 günlük birikmiş 145.000 ₺ net faizimi alır, kalan 31 günün faizinden vazgeçerim.', isOptimal: false, why: 'Banka vadeli mevduat sözleşmesinde erken bozumda geçmiş 150 günün tüm faizi YANAR (vadesiz faizi ~%0 uygulanır)!' },
+          { id: 'B', label: '150 günlük birikmiş ~145.000 ₺ faizin TAMAMI sıfırlanır, eline sadece 1.000.000 ₺ anapara geçer! Bu yüzden uzman yatırımcı nakit zırhını tek vade yerine günlük işleyen PPF ve %0 stopajlı Kira Sertifikasına (Sukuk) böler.', isOptimal: true, why: 'Tam isabet! %2,5 stopaj avantajı alayım derken 5 aylık tüm getiriyi ve likidite esnekliğini kilitlemenin bedeli çok ağırdır.' },
+          { id: 'C', label: 'Banka anaparadan da %10 ceza keser, 900.000 ₺ verir.', isOptimal: false, why: 'Vadeli mevduatta anaparadan kesinti olmaz ama birikmiş tüm faiz sıfırlanır.' },
+          { id: 'D', label: 'Vadeli mevduat vade dolmadan teknik olarak asla kapatılamaz.', isOptimal: false, why: 'İstediğin gün kapatabilirsin ancak tüm işlemiş faiz yanar.' }
+        ],
+        consequence100k: 'Tek parça uzun vadeli mevduata kilitlenen kişi ya 145.000 ₺ faizini yakmak ya da borsadaki tarihi fırsatı eli kolu bağlı izlemek zorunda kaldı.',
+        proRule: 'Uzman Kuralı: Fırsat cephaneni asla tek uzun vadeye kilitleme; PPF (13:30 öncesi T+0) + %0 stopajlı Kamu Sukuk (T+1) her gün üstüne koyarak likit kalır.',
+        linkedKeys: ['mevduat-tl', 'kira-sertifikasi-sukuk', 'para-piyasasi-fonu']
+      },
+      {
+        id: 'case_21_bedelli_ruchan_expiry',
+        category: 'Yatırımcı Hakları',
+        difficulty: 'Uzman',
+        title: 'Vaka 21: Portföyde Unutulan "Rüçhan Kuponu (.R)" — Son Gün Saat 17:00’de Ne Olur?',
+        situation: 'Portföyündeki bir şirket %100 Bedelli Sermaye Artırımı başlattı ve hesabına ana hissenin yanında "XYZ.R (Rüçhan Hakkı Kuponu)" tanımlandı. Bedelliye yeni para koymak istemiyorsun ama ekrana 15 gün boyunca hiç bakmadın.',
+        question: 'Rüçhan kuponu pazarının son gününe kadar ne bedelliye katılırsan ne de .R kuponlarını satarsan sonuç ne olur?',
+        choices: [
+          { id: 'A', label: 'Kullanılmayan ve rüçhan pazarında satılmayan .R kuponları süre sonunda tamamen SIFIRLANIR (yanar)! Bölünme sabahı ana hisseden düşen değer kadar cebinden geri dönüşsüz servet buharlaşır!', isOptimal: true, why: 'Türkiye’de her yıl binlerce küçük yatırımcının ekranına bakmadığı için yaşadığı en acı teknik kayıp! Katılmayacaksan rüçhan kuponunu süresi bitmeden pazarda satıp nakde çevirmelisin.' },
+          { id: 'B', label: 'Aracı kurum son gün kuponlarımı benim adıma otomatik nakde çevirip hesabıma yatırır.', isOptimal: false, why: 'Aracı kurum izinsiz emir göndermez; süresi dolan rüçhan kuponu değersiz kâğıt olarak silinir (birincil piyasada kalan payları şirket satar ama para şirkete gider, sana değil!).' },
+          { id: 'C', label: 'Bedelliye katılmazsam ana hissemin fiyatı bölünmeden önceki yüksek fiyatta kalır.', isOptimal: false, why: 'Bölünme sabahı herkesin hissesi teorik fiyata bölünür; aradaki fark .R kuponuna geçer. Kuponu yakarsan doğrudan zarar edersin.' },
+          { id: 'D', label: 'Rüçhan kuponu 5 yıl boyunca geçerlidir, istediğim zaman kullanırım.', isOptimal: false, why: 'Rüçhan hakkı kullanım süresi genellikle sadece 15 takvim günüdür (rüçhan pazarı daha da erken kapanır!).' }
+        ],
+        consequence100k: '100.000 ₺’lik hissede yüksek oranlı bedellinin rüçhan kuponunu unutan yatırımcı, hisse hiç düşmediği halde bir gecede 25.000–40.000 ₺ hakkını çöpe attı!',
+        proRule: 'Uzman Kuralı: Portföyünde ".R" uzantılı rüçhan kuponu gördüğün an iki seçeneğin var: Ya nakit yatırıp yeni paya çevir ya da Rüçhan Pazarında kuponu sat — ASLA kendi haline bırakma!',
+        linkedKeys: ['bist-hekts', 'bist-sasa', 'bist-petkm']
+      },
+      {
+        id: 'case_22_viop_evening_tlref_basis',
+        category: 'VİOP & Arbitraj',
+        difficulty: 'Uzman',
+        title: 'Vaka 22: Akşam 21:00’de VİOP BIST30 Kontratı Spotun +%3,2 Üstünde — Boğa Sinyali mi, Faiz mi?',
+        situation: 'Akşam saat 21:00’de VİOP akşam seansına bakıyorsun: BIST 30 spot endeks 18:10’da 11.000 puandan kapanmış, 30 gün vadeli VİOP BIST30 kontratı ise 11.352 puanda (spotun +%3,20 üzerinde) işlem görüyor! Yıllık gecelik TLREF faizi ise %39.',
+        question: 'Ertesi sabah saat 10:00’da spot borsanın +%3,20 ralliyle açılacağını mı düşünürsün?',
+        choices: [
+          { id: 'A', label: 'Evet! Vadeli kontrat spotun %3,2 üstündeyse sabah borsa %3,2 yukarıda açılır.', isOptimal: false, why: 'Klasik acemi tuzağı! Vadeli kontrat fiyatı zaten vade sonuna kadarki taşıma faizini (Spot × Faiz × Gün/365) içinde barındırır!' },
+          { id: 'B', label: 'Hayır, sabah borsa kesinlikle -%3,2 düşüşle açılır.', isOptimal: false, why: '%3,2 fark düşüş sinyali değil, 30 günlük normal TLREF taşıma maliyetidir (~%39 / 12 = %3,25).' },
+          { id: 'C', label: 'VİOP akşam seansında oluşan fiyatlar tamamen sanaldır, gerçek para dönmez.', isOptimal: false, why: '19:00–23:00 VİOP akşam seansı Takasbank güvenceli %100 gerçek canlı piyasadır.' },
+          { id: 'D', label: 'Hayır! Yıllık %39 faizde 30 günlük teorik taşıma maliyeti zaten ~%3,20’dir; yani VİOP şu an yatay (%0,0) bir sabah açılışını fiyatlıyor! Gerçek sinyal ancak VİOP’un 18:15 kapanışına göre değişiminden okunur.', isOptimal: true, why: 'Profesyonel masa bilgisi! Teorik vadeli makas (Basis = Spot × r × t) ile akşam seansı net değişimini kusursuz ayırdın.' }
+        ],
+        consequence100k: 'VİOP teorik faiz makasını "ralli" sanıp sabah 09:55’te heyecanla alım yapan acemi, borsanın yatay açıldığını görünce neye uğradığını şaşırdı.',
+        proRule: 'Uzman Kuralı: Sabah açılış ipucu için "VİOP Fiyatı − Spot" farkına değil, "VİOP’un Akşam 19:00 Sonrası Yüzde Değişimine" veya "Gerçek Makas − Teorik TLREF Makası" farkına bakılır (AETHER bunu otomatik hesaplar!).',
+        linkedKeys: ['viop-bist30-kontrat', 'bist-30', 'bist-100']
+      },
+      {
+        id: 'case_23_related_party_cash_drain',
+        category: 'Adli Muhasebe',
+        difficulty: 'Uzman',
+        title: 'Vaka 23: Kasadaki Nakit Nereye Gitti? — Dipnotlardaki "İlişkili Taraf Alacağı"',
+        situation: 'Borsada işlem gören bir sanayi şirketi geçen yıl halka arzdan ve faaliyetlerinden 2,2 Milyar ₺ nakit topladı. Ancak yeni bilançonun "Ticari Olmayan İlişkili Taraf Alacakları" dipnotuna baktığında, şirketin bu 2 Milyar ₺’yi borsada açık olmayan "Patronun Özel İnşaat Şirketine" uzun vadeli borç verdiğini gördün!',
+        question: 'Adli bilanço denetçisi bu tabloya hangi teşhisi koyar?',
+        choices: [
+          { id: 'A', label: 'Alacak da bir varlıktır; bilançonun aktif büyüklüğü arttığı için olumludur.', isOptimal: false, why: 'Halka açık şirketin kasasındaki sıcak nakdin, küçük ortakların payı olmayan dışarıdaki özel grup şirketini fonlaması kurumsal yönetişim alarmıdır!' },
+          { id: 'B', label: 'Patron şirketi olduğu için tahsilat riski sıfırdır, PD/DD ucuzsa alınır.', isOptimal: false, why: 'Borsa tarihinde iflas eden veya yıllarca sürünen birçok şirkette asıl delik tam olarak tahsil edilemeyen grup içi (ilişkili taraf) alacaklarıdır.' },
+          { id: 'C', label: 'Kırmızı Bayrak (Kasa Sızıntısı)! Halka açık şirketin nakdi ortaklara temettü veya fabrika yatırımı olmak yerine patronun özel şirketine aktarılmaktadır; çarpanı ne kadar ucuz görünürse görünsün elimi sürmem.', isOptimal: true, why: 'Adli muhasebenin bir numaralı kalkanı! Ortaklarına dürüst davranmayan yönetime 0,3x PD/DD’de bile para emanet edilmez.' },
+          { id: 'D', label: 'Sadece teknik grafikte 200 günlük ortalamayı kırmasına bakarım, dipnot önemsizdir.', isOptimal: false, why: 'İçi boşaltılan kasanın teknik grafiği bir sabah gelen SPK/denetçi uyarısıyla paramparça olur.' }
+        ],
+        consequence100k: 'Dipnot okumayıp "ucuz" diye girenler yıllarca beklerken, paralarını şeffaf kurumsal yönetişimli (temettü/geri alım yapan) şirketlere koyanlar servet büyüttü.',
+        proRule: 'Uzman Kuralı: KAP finansal raporunda `CTRL+F -> "İlişkili Taraf"` araması yapmadan bir şirkete büyük sermaye bağlanmaz!',
+        linkedKeys: ['bist-kchol', 'bist-froto', 'tefas-ti2']
+      },
+      {
+        id: 'case_24_tcmb_1400_liquidity_whipsaw',
+        category: 'Merkez Bankası & Likidite',
+        difficulty: 'Orta',
+        title: 'Vaka 24: Perşembe Saat Tam 14:00:05 — TCMB Kararı Saniyesindeki Testere (Whipsaw)',
+        situation: 'Perşembe saat 14:00’te TCMB faiz kararını açıkladı. Karar metnindeki tek bir cümle yüzünden saat 14:00:10’da bankacılık endeksi (XBANK) önce +%3,8 fırladı, algoritmik robotların kademeleri taramasıyla 14:03’te -%2,5’e çakıldı ve 14:30’da yönünü buldu.',
+        question: 'Perşembe 14:00 karar saniyesinde soğukkanlı profesyonel ne yapar?',
+        choices: [
+          { id: 'A', label: '14:00:05’te gördüğüm ilk yeşil mumda tüm paramla serbest fiyatlı (piyasa) alım emri gönderirim.', isOptimal: false, why: 'Karar saniyesinde emir defteri (order book) kademeleri bomboştur! Serbest fiyatlı piyasa emri en üst kademeden eşleşip 90 saniyede -%5 zarar yazar.' },
+          { id: 'B', label: '14:00–14:15 arasındaki algoritmik testerede piyasa emri göndermem; PPK karar metnindeki "politika duruşu + likidite/enflasyon vurgusunu" ve 2Y tahvil faizinin tepkisini okuyup limit fiyatlı kademeli işlem yaparım!', isOptimal: true, why: 'Tam bir masa ustası refleksi! İlk 3 dakika robotların likidite avıdır; gerçek yönü metnin satır araları ve tahvil faizi belirler.' },
+          { id: 'C', label: '14:00’ten 1 dakika önce 10x kaldıraçlı VİOP pozisyonu açıp yazı-tura atarım.', isOptimal: false, why: 'Çift yönlü iğne barı (önce +%3,8 sonra -%2,5) iki yönlü yüksek kaldıracı da aynı 3 dakika içinde patlatır!' },
+          { id: 'D', label: 'TCMB kararlarının banka ve GYO hisseleri üzerinde hiçbir etkisi yoktur.', isOptimal: false, why: 'Banka fonlama maliyeti ve GYO konut kredisi talebi doğrudan TCMB politika patikasına bağlıdır.' }
+        ],
+        consequence100k: 'Karar saniyesinde serbest emirle atlayan yatırımcı kademe kaymasından (slippage) 4.800 ₺ kaybetti; metni okuyup 14:25’te limit emirle giren ise temiz trendi yakaladı.',
+        proRule: 'Uzman Kuralı: Yüksek volatilite pencerelerinde (Perşembe 14:00 TCMB, Ayın 3’ü 10:00 TÜİK, 09:55 Açılış) asla korumasız serbest emirle robotların önüne atlama!',
+        linkedKeys: ['bist-akbnk', 'bist-garan', 'bist-banka', 'dibs-tahvil']
       }
     ];
   }
 
   // --------------------------------------------------------------------------
-  // 14. 10 BÖLÜMLÜK YAŞAYAN UZMANLIK REHBERİ & 26 TERİMLİK SOKAK SÖZLÜĞÜ
+  // 14. 12 MODÜLLÜK 6-KADEME USTALIK AKADEMİSİ & 38 TERİMLİK SOKAK SÖZLÜĞÜ
   // --------------------------------------------------------------------------
   function getExpertCurriculum() {
     const K = global.AetherKernelV10;
@@ -4139,92 +4392,122 @@
       {
         id: 'mod_01_bakery_cash',
         step: '01',
+        rankStage: '1. Kademe · Kasa Gözü',
         title: 'Bilanço Röntgeni: Kağıt Kâr Yalan Söyler, Kasa Nakdi Doğruyu Söyler',
         streetSummary: 'Mahalledeki fırının defterinde "Bu ay 500 bin lira kâr ettik" yazıyor ama kasayı açıyorsun içinde para yok; hepsi veresiye defterinde ve stokta! Borsada da Net Kâr muhasebe görüşüdür, Esas Faaliyet Nakit Akışı (OCF) ise kasaya giren gerçek sıcak paradır.',
         proFormula: 'Altın Formül: Serbest Nakit Akışı (FCF) = Esas Faaliyet Nakdi (OCF) − Yatırım Harcaması (CAPEX). Nakit Dönüşüm Oranı = OCF / Net Kâr (> 1,0x olmalı). Sloan Tahakkuk Oranı = (Net Kâr − OCF) / Toplam Varlıklar (Negatifse kasa çok kalitelidir; +%15 üstüyse makyajlı kâr tehlikesidir!).',
-        liveCheck: 'Herhangi bir BIST hissesine dokunup "Kasa & Röntgen" sekmesini açtığında bu 5 sütunun canlı hesabını saniyesinde görürsün.',
-        sampleKeys: ['bist-tcell', 'reel-perakende-bimas', 'bist-enkai', 'bist-tuprs']
+        liveCheck: 'Herhangi bir BIST hissesine dokunup "Kasa Röntgeni" sekmesini veya Ustalık -> "⚔️ Dedektif" meydanını açarak gerçek bilançolarda test et.',
+        sampleKeys: ['bist-tcell', 'bist-bimas', 'bist-enkai', 'bist-tuprs']
       },
       {
         id: 'mod_02_tms29_vuk',
         step: '02',
+        rankStage: '1. Kademe · Kasa Gözü',
         title: 'TMS-29 Enflasyon Muhasebesi vs VUK Vergi Dairesi Gerçeği',
         streetSummary: 'Türkiye’de enflasyon muhasebesi (TMS-29) yüzünden borçlu şirket "borcum enflasyonla eridi" diye kağıt üstünde parasal kazanç yazabilirken, özkaynağı ve fabrikası güçlü şirket yüksek amortisman yüzünden kağıt üstünde düşük kâr gösterebilir!',
         proFormula: 'Uzman Sırrı: KAP’a düşen "Vergi Dairesine Sunulan (VUK) Geçici Vergi Beyannamesi" enflasyon muhasebesi makyajı içermez; saf kesilen fatura ve tahsilat gücünü gösterir. OCF ve FAVÖK güçlü olduğu halde TMS-29 yüzünden F/K yüksek görünen şirketler en büyük gizli hazinelerdir!',
-        liveCheck: 'Pusula -> Mutfak -> "TMS-29 & VUK Kasa" masasından 377 şirketin canlı denetimini incele.',
+        liveCheck: 'Pusula -> Mutfak -> "TMS-29 & VUK Kasa" masasından yüzlerce şirketin canlı denetimini incele.',
         sampleKeys: ['bist-tcell', 'bist-thyao', 'bist-petkm']
       },
       {
         id: 'mod_03_sector_scales',
         step: '03',
+        rankStage: '2. Kademe · Terazi Ustası',
         title: 'Her Dükkân Aynı Teraziyle Tartılmaz: Sanayi, Banka, Sigorta, GYO ve Holding',
         streetSummary: 'Kuyumcu terazisiyle kamyon tartılmaz! Sanayi şirketinde F/K ve FD/FAVÖK bakılır ama bir Banka veya GYO’ya sanayi terazisiyle bakarsan büyük hata yaparsın.',
         proFormula: '5 Sektörün 5 Gerçek Terazisi: 1) Sanayi/Perakende -> FD/FAVÖK (<7x), ROIC (>TÜFE) ve FCF. 2) Banka -> PD/DD ve ROE (ROE > %' + inf.toFixed(0) + ' enflasyon olmalı). 3) Sigorta -> Teknik Karşılık Havuzu (Float) × Faiz + TSB Aylık Prim. 4) GYO -> F/K bakılmaz! Yalnızca PD/DD (NAD İskontosu < 0,65x) ve Kira/Borç bakılır. 5) Holding -> Solo Net Nakit + İştirak NAD İskontosu (%30+).',
-        liveCheck: 'Farklı sektörlerdeki varlık çekmecelerinde sistem otomatik olarak o sektöre özel doğru teraziyi kurar.',
-        sampleKeys: ['bist-garan', 'bist-tursg', 'gayrimenkul-konut-ekgyo', 'bist-kchol']
+        liveCheck: 'Varlık çekmecesindeki "⚔️ Düello" sekmesi iki varlığı yan yana koyup sektöre uygun teraziyle kıyaslar.',
+        sampleKeys: ['bist-garan', 'bist-tursg', 'bist-ekgyo', 'bist-kchol']
       },
       {
-        id: 'mod_04_mkk_smart_money',
+        id: 'mod_04_cyclical_inversion',
         step: '04',
-        title: 'MKK Takas, Patron Lot Dönüşümü ve 4 Adli Tahta Ayak İzi',
-        streetSummary: 'Pazarda tezgah sahibi arka kapıdan kamyonla çürük mal indirirken ön tarafta "Gel vatandaş kapışılıyor!" diye bağırıyorsa oradan kaçılır. Borsanın arka kapısı Merkezi Kayıt Kuruluşu (MKK) kayıtlarıdır!',
-        proFormula: 'Uzman Takibi: 1) KAP’ta "Borsada İşlem Gören Tipe Dönüşüm" bildirimi ve MKK Fiili Dolaşım Lot Artışı -> Patron/ortak satış hazırlığı! 2) CMF-20 (Chaikin Para Akışı) > +0,12 ve 52H dipte yatay fiyat -> Sessiz Kurumsal Toplama. 3) Tavana yakın fiyatta CMF < -0,15 -> Yeşil mumda küçük yatırımcıya mal yıkımı!',
-        liveCheck: 'Pusula -> Mutfak -> "MKK & Balina" ve "4 Tahta İzi" masalarında canlı yakalanan tahtaları gör.',
-        sampleKeys: ['reel-yazilim-miatk', 'bist-garan', 'bist-selec']
+        rankStage: '2. Kademe · Terazi Ustası',
+        title: 'Döngüsel Şirketlerde "Düşük F/K Tuzağı" ve Kapasite Değerlemesi',
+        streetSummary: 'Demir-çelik, rafineri, petrokimya ve otomotiv gibi sektörler mevsim gibi dalgalanır. İşlerin en parlak olduğu zirve yılında kâr rekor kırdığı için F/K 2,5x–3,5x gibi çok ucuz görünür; oysa tam o an döngünün tepesidir!',
+        proFormula: 'Peter Lynch Kuralı: Döngüsel sanayide F/K en düşükken satım/temkin, marjlar dipteyken (PD/DD < 0,8x ve kasa borçsuzsa) toplama bölgesidir! Takip edilecek veri F/K değil, ürün makasıdır (TÜPRAŞ için Dizel/Jet Crack Spread, EREGL için HRC-Cevher makası, PETKM için Etilen-Nafta makası).',
+        liveCheck: 'Varlık çekmecesinin üstündeki 5 Yıllık grafikte "🥖 REEL (Alım Gücü)" moduna geçerek döngülerin gerçek boyunu gör!',
+        sampleKeys: ['bist-tuprs', 'bist-eregl', 'bist-petkm', 'bist-froto']
       },
       {
-        id: 'mod_05_tax_friction',
+        id: 'mod_05_mkk_smart_money',
         step: '05',
-        title: 'Türkiye Vergi, Stopaj, Makas ve GVK Mükerrer 80 Matematiği',
-        streetSummary: 'Brüt kazanç övünmek içindir, vergi ve makas düşüldükten sonra cebinde kalan Net Reel Kazanç ise ev geçindirir! Yanlış gişeden ve yanlış vergi kabuğundan işlem yapan, kazancının beşte birini masada bırakır.',
-        proFormula: `Türkiye Gerçek Vergi Haritası: • BIST Hisse & Hisse Yoğun BYF (ZPBDL/APX30/Z30KP/OPTGY): %0 Stopaj. • Kamu Kira Sertifikası (Sukuk) & DİBS: %0 Stopaj. • Fiziki Altın/Döviz (Kapalıçarşı): %0 Stopaj, %0,40 makas (Mobil Bankada gece %3,60 makas + %0,2 BSMV!). • Altın/Gümüş/Döviz BYF (ZGOLD/GLDTR/GMSTR/USDTR) & PPF: %17,5 Stopaj. • Temettü: %15 Stopaj. • ABD Hisse/ETF (SPY/NVDA): Yİ-ÜFE >= %10 maliyet endekslemesi sonrası reel kâra beyan.`,
-        liveCheck: `Şu an ALTIN.S1 makası +%${dInfo.premiumPct}; Pusula -> Mutfak -> "Başabaş Terazisi" ile kuruşu kuruşuna hesapla.`,
-        sampleKeys: ['kira-sertifikasi-sukuk', 'fon-yerli-hisse-zpbdl', 'gram-altin-spot', 'abd-sp500-spy']
+        rankStage: '3. Kademe · Tahta Dedektifi',
+        title: 'MKK Takas, Patron Lot Dönüşümü, İlişkili Taraf ve 4 Tahta Ayak İzi',
+        streetSummary: 'Pazarda tezgah sahibi arka kapıdan kamyonla çürük mal indirirken ön tarafta "Gel vatandaş kapışılıyor!" diye bağırıyorsa oradan kaçılır. Borsanın arka kapısı Merkezi Kayıt Kuruluşu (MKK) ve dipnotlardır!',
+        proFormula: 'Adli Kontrol: 1) KAP "Borsada İşlem Gören Tipe Dönüşüm" + MKK Dolaşım Artışı -> Ortak satış hazırlığı! 2) Bilanço dipnotunda "Ticari Olmayan İlişkili Taraf Alacağı" -> Kasadaki nakdin patronun özel şirketine sızması! 3) CMF-20 > +0,12 ve 52H dipte yatay fiyat -> Sessiz Kurumsal Toplama.',
+        liveCheck: 'Pusula -> Mutfak -> "MKK & Balina" masasında ve Piyasa -> "🧪 Kendi Süzgecin" aracında temiz kasaları süz.',
+        sampleKeys: ['reel-yazilim-miatk', 'bist-mpark', 'bist-selec']
       },
       {
-        id: 'mod_06_breakeven_triangle',
+        id: 'mod_06_tax_friction',
         step: '06',
+        rankStage: '3. Kademe · Tahta Dedektifi',
+        title: 'Türkiye Vergi, Stopaj, Makas ve GVK Mükerrer 80 (%10 Yİ-ÜFE) Matematiği',
+        streetSummary: 'Brüt kazanç övünmek içindir, vergi ve makas düşüldükten sonra cebinde kalan Net Reel Kazanç ise ev geçindirir! Yanlış gişeden ve yanlış vergi kabuğundan işlem yapan, kazancının beşte birini masada bırakır.',
+        proFormula: `Türkiye Gerçek Vergi Haritası: • BIST Hisse & Hisse Yoğun Fonlar (MAC/IIH/TI2/ZPBDL): %0 Stopaj. • Kamu Kira Sertifikası (Sukuk) & DİBS: %0 Stopaj. • Fiziki Altın/Döviz (Kapalıçarşı): %0 Stopaj, %0,40 makas (Mobil Bankada gece %3,60 makas + %0,2 BSMV!). • Yabancı/Altın Fonları (AFT/AFA/ZGOLD/KZL) & PPF: %17,5 Stopaj. • Temettü: %15 Stopaj. • ABD ETF/Hisse (SPY/QQQ): Yİ-ÜFE >= %10,00 maliyet endekslemesi sonrası reel kâra beyan.`,
+        liveCheck: `Şu an ALTIN.S1 makası +%${dInfo.premiumPct}; Pusula -> Mutfak -> "Başabaş Terazisi" ile net cebine kalanı gör.`,
+        sampleKeys: ['kira-sertifikasi-sukuk', 'tefas-mac', 'gram-altin-spot', 'abd-sp500-spy']
+      },
+      {
+        id: 'mod_07_tefas_mastery',
+        step: '07',
+        rankStage: '4. Kademe · Fon & Makro Mimarı',
+        title: 'TEFAS Fon Seçim Sanatı: Hisse Yoğun (%0) vs Yabancı Fon (%17,5) ve Valör Fiziği',
+        streetSummary: 'Fon almak kolaydır ama içindeki kuralları bilmeyen hem valörde hem vergide şaşırır. Yerli Hisse Yoğun fonlarda devlet sıfır stopaj alırken, yabancı hisse fonlarında dolar kur artışından doğan TL farkından bile %17,5 vergi kesilir!',
+        proFormula: 'TEFAS Kuralları: 1) Saat 13:30 altın sınırdır; kaçırırsan emrin +1 iş günü sarkar. 2) Yerli Hisse Yoğun (MAC, IIH, TI2): %0 stopaj, T+1 alım / T+2 satış. 3) Yabancı Hisse Fonları (AFT, AFA): %17,5 stopaj (kur farkı dahil!), T+1 alım / T+3 satış (~%2,9 yönetim ücreti). 4) KAP aylık "Portföy Dağılım Raporu" fonun gerçek mutfağıdır.',
+        liveCheck: 'Piyasa sekmesinde "Fon & BYF" filtresine dokunup MAC, IIH, AFT, AFA, IPB ve KZL’yi canlı karşılaştır.',
+        sampleKeys: ['tefas-mac', 'tefas-iih', 'tefas-aft', 'tefas-ipb']
+      },
+      {
+        id: 'mod_08_breakeven_triangle',
+        step: '08',
+        rankStage: '4. Kademe · Fon & Makro Mimarı',
         title: 'Faiz – Kur – Enflasyon Üçgeni ve Başabaş Kuru Hesabı',
         streetSummary: 'Türkiye’de yatırımın kalbi üçlü bir tahterevallidir: Politika Faizi, Enflasyon (TÜFE) ve Döviz Kuru. Duyguyla "Ben hep dolarcıyım" veya "Ben hep faizciyim" diyen mevsim değiştiğinde ezilir.',
-        proFormula: `Canlı Terazi: Bugün Dolar ${be32.usdNow} ₺, %0 vergili Sukuk yıllık %${be32.sukuk.annualGross}. 32 günlük Dolar Başabaş Kuru = ${be32.breakevenUsdBazaar} ₺! Reel Faiz = Net Faiz − Beklenen Enflasyon. Reel faiz yüksek pozitifken TL sabit getiri dolar bazında bile servet büyütür; reel faiz negatife döndüğünde ise mal, altın ve ihracatçı korur.`,
+        proFormula: `Canlı Terazi: Bugün Dolar ${be32.usdNow} ₺, %0 vergili Sukuk yıllık %${be32.sukuk.annualGross}. 32 günlük Dolar Başabaş Kuru = ${be32.breakevenUsdBazaar} ₺! Reel Faiz = ((1 + Net Faiz) / (1 + Beklenen TÜFE)) − 1 (Fisher Denklemi). Reel faiz yüksek pozitifken TL sabit getiri dolar bazında bile servet büyütür; reel faiz negatife döndüğünde mal, altın ve ihracatçı korur.`,
         liveCheck: 'Pusula -> Mutfak -> "Başabaş Terazisi"nde tutar ve gün seçerek kendi başabaş kurunu test et.',
-        sampleKeys: ['kira-sertifikasi-sukuk', 'doviz-usd', 'mevduat-ust', 'dibs-tahvil']
+        sampleKeys: ['kira-sertifikasi-sukuk', 'doviz-usd', 'mevduat-tl', 'dibs-tahvil']
       },
       {
-        id: 'mod_07_leading_data',
-        step: '07',
-        title: 'Bilançoyu 45 Gün Önceden Okumak: Resmi Saha Öncü Verileri',
+        id: 'mod_09_leading_data',
+        step: '09',
+        rankStage: '5. Kademe · Saha İstihbaratçısı',
+        title: 'Bilançoyu 45 Gün Önceden Okumak: 6 Resmi Saha Öncü Verisi',
         streetSummary: 'Herkes çeyrek bilançonun açıklanacağı geceyi beklerken, usta yatırımcı fabrikanın kapısından geçen kamyonu ve kasadan geçen POS cihazını resmi bültenlerden haftalar önce okur!',
-        proFormula: '6 Resmi Öncü Kaynak: 1) Market/Gıda/Giyim/Havayolu -> TCMB Haftalık Kredi Kartı POS Harcamaları (Her Perşembe 14:30). 2) Bankalar -> BDDK Haftalık Bülteni (Perşembe). 3) Sigorta -> TSB Aylık Prim Tablosu. 4) Elektrik/HES/GES -> EPİAŞ Şeffaflık Platformu Saatlik Üretim. 5) Otomotiv -> ODMD & OSD Aylık Adetler. 6) Sanayi İhracatı -> TÜİK 12 Haneli GTİP USD/kg Gümrük Verisi & TİM!',
+        proFormula: '6 Resmi Öncü Kaynak: 1) Market/Giyim/Havayolu -> TCMB Haftalık Kredi Kartı POS Harcamaları (Perşembe 14:30). 2) Bankalar -> BDDK Haftalık Bülteni. 3) Sigorta -> TSB Aylık Prim Üretimi. 4) Elektrik -> EPİAŞ Şeffaflık Saatlik Üretim & PTF. 5) Otomotiv -> ODMD & OSD Aylık Adetler. 6) Sanayi İhracatı -> TÜİK 12 Haneli GTİP USD/kg Gümrük Verisi!',
         liveCheck: 'Pusula -> Mutfak -> "Gümrük & BDDK" masasından canlı GTİP ve TİM ihracat havzalarını incele.',
-        sampleKeys: ['halka-arz-tabgd', 'bist-tursg', 'bist-froto', 'reel-enerji-astor']
+        sampleKeys: ['bist-tabgd', 'bist-tursg', 'bist-froto', 'bist-astor']
       },
       {
-        id: 'mod_08_microstructure',
-        step: '08',
-        title: 'Borsa İstanbul Saat Fiziği: Eşleşme, Devre Kesici, T+2, Valör ve VBTS',
-        streetSummary: 'Oyunun kurallarını bilmeden sahaya çıkan daha ilk dakikada ofsayta düşer. Borsa İstanbul’un açılış-kapanış tek fiyat eşleşmeleri, 13:30 TEFAS valörü ve T+2 takası gerçek hayatta saniyesi saniyesine işler.',
-        proFormula: 'Kritik Saatler: • 09:40–09:55 Emir Toplama (09:50 sonrası iptal kilitlenir!) -> 09:55 Açılış Eşleşmesi -> 10:00 Sürekli Müzayede. • 13:30 TEFAS Fon Valör Sınırı. • 14:00 Perşembe TCMB Faiz Kararı. • 15:00 VİOP/Kredi Margin Call. • 18:00–18:05 Kapanış Eşleşmesi -> 18:10 Kapanış. • 19:00–23:00 VİOP Akşam Seansı. • Arife yarım gün kapanışı: 12:40.',
+        id: 'mod_10_microstructure',
+        step: '10',
+        rankStage: '5. Kademe · Saha İstihbaratçısı',
+        title: 'Borsa İstanbul Saat Fiziği: Eşleşme, Devre Kesici, T+2, Rüçhan ve VİOP',
+        streetSummary: 'Oyunun kurallarını bilmeden sahaya çıkan daha ilk dakikada ofsayta düşer. Borsa İstanbul’un 09:50 emir iptal kilidi, T+2 takası ve VİOP akşam seansı gerçek hayatta saniyesi saniyesine işler.',
+        proFormula: 'Kritik Saatler: • 09:40–09:55 Emir Toplama (09:50 sonrası iptal kilitlenir!) -> 09:55 Açılış Eşleşmesi -> 10:00 Sürekli Müzayede. • 13:30 TEFAS Valör Sınırı. • 14:00 Perşembe TCMB Kararı. • 15:00 Margin Call. • 18:00–18:05 Kapanış Eşleşmesi -> 18:10 Kapanış. • 19:00–23:00 VİOP Akşam Seansı (Teorik TLREF makasına dikkat!).',
         liveCheck: 'Pusula -> Takvim sekmesinden tüm seansların şu anki canlı durumunu ve kum saatini takip et.',
         sampleKeys: ['viop-bist30-kontrat', 'para-piyasasi-fonu', 'bist-30']
       },
       {
-        id: 'mod_09_contrarian_value',
-        step: '09',
+        id: 'mod_11_contrarian_value',
+        step: '11',
+        rankStage: '6. Kademe · Baş Stratejist',
         title: 'Yangın Yeri Cesaretini Kurmak ve Değer Tuzağından Kaçmak',
         streetSummary: 'Kalabalık güllük gülistanlık günde pahalıya almak için sıraya girer, fırtına çıktığında ise altın değerindeki fabrikaları zararına sokağa atar. Servet, fırtına gününde cebinde nakit ve yüreğinde terazi bulunduranların el değiştirme ödülüdür.',
-        proFormula: 'Yangın Yeri Kontrol Listesi: 1) Şirket 52 haftalık zirvesinden en az %25–%40 iskontolu mu? 2) Kriz geçici mi yoksa iş modeli mi öldü? 3) Kasası pozitif OCF/FCF üretiyor ve borcu çevrilebilir mi? 4) Tek seferde tüm kurşunu sıkmak yerine 3–4 parçalı kademeyle mi giriyorsun?',
-        liveCheck: 'Piyasa sekmesindeki "🔥 Yangın Yeri" ve "🏭 Hasat & Değer" mercekleriyle canlı adayları tara.',
+        proFormula: 'Yangın Yeri 4’lü Filtresi: 1) 52 haftalık zirveden -%30+ iskonto var mı? 2) Sorun geçici makro fırtına mı yoksa kalıcı yıkım mı? 3) OCF > 0 ve Net Borç/FAVÖK < 2,2x mi? 4) Tek kurşun yerine 3 parçalı kademeyle mi giriyorsun?',
+        liveCheck: 'Piyasa sekmesindeki "🧪 Kendi Süzgecin" aracında "🔥 Yangın Yeri" + "🥖 Gerçek Kasa Nakdi" filtrelerini birlikte yak!',
         sampleKeys: ['bist-eregl', 'bist-froto', 'bist-sise', 'bist-enkai']
       },
       {
-        id: 'mod_10_personal_wheel',
-        step: '10',
-        title: 'Kendi Nakit Çarkını ve Karakterine Uygun Stratejiyi İnşa Etmek',
-        streetSummary: 'Başkasının gömleği sana dar gelir. Kimi insan -%10 düşüşte uykusunu kaybeder, kimi insan 3 yıl sabırla temettü ve fabrika büyütür. En iyi portföy, en yüksek hayali getiriyi vaat eden değil, fırtınada panik yapmadan taşıyabildiğin portföydür!',
-        proFormula: 'Çekirdek + Uydu Mimarisi: • %35–50 Enflasyon & Nakit Zırhı (Sukuk, PPF, Fiziki Altın) -> Uykunu korur ve krizde cephane sağlar. • %35–50 Nakit Basan Kaliteli Şirketler & Küresel Endeks (TUPRS, BIMAS, FROTO, THYAO, SPY vb.) -> Reel servet büyütür. • %0–10 Asimetrik Fırsatlar -> Kaldıraçsız, tek sepete %25’ten fazla yüklenmeden.',
-        liveCheck: 'Cüzdan sekmesindeki "Kendi Nakit Çarkın (Özgürlük %)" ve Ustalık sekmesindeki "Kasa Doktoru" ile çarkını ölç.',
-        sampleKeys: ['kira-sertifikasi-sukuk', 'gram-altin-spot', 'bist-tuprs', 'abd-sp500-spy']
+        id: 'mod_12_personal_wheel',
+        step: '12',
+        rankStage: '6. Kademe · Baş Stratejist',
+        title: 'Kendi Nakit Çarkını, Özgürlük Nehrini ve Strateji Anayasanı Kurmak',
+        streetSummary: 'Başkasının gömleği sana dar gelir. En iyi portföy, en yüksek hayali getiriyi vaat eden değil, gece yastığa başını koyduğunda uykunu kaçırmayan ve düzenli damlalarla seni özgürleştiren portföydür!',
+        proFormula: 'Halter (Barbell) & Özgürlük Çarkı: • %40–55 Enflasyon & Nakit Zırhı (Sukuk, Fiziki Altın, PPF) -> Uykunu korur ve fırtınada cephane verir. • %45–60 Nakit Basan Kaliteli Şirketler & Küresel Endeks (TUPRS, BIMAS, FROTO, MAC, SPY) -> Reel servet ve temettü büyütür. • Kaldıraç = 0, Tek hisse tavanı <= %25.',
+        liveCheck: 'Hemen aşağıdaki "Küçük Damlalardan Koca Nehre: Özgürlük Çarkı Hesaplayıcısı" ile kendi özgürlük tarihini hesapla!',
+        sampleKeys: ['kira-sertifikasi-sukuk', 'gram-altin-spot', 'tefas-mac', 'bist-tuprs']
       }
     ];
   }
@@ -4239,19 +4522,24 @@
       { term: 'VUK Geçici Vergi Beyannamesi', cat: 'Adli Denetim', street: 'Şirketin Maliye vergi dairesine sunduğu, enflasyon muhasebesi makyajı olmayan saf fatura kâr/zarar tablosu.', pro: 'Bilançodan önce KAP’a düşer; gerçek operasyonel ivmeyi en çıplak haliyle gösterir.' },
       { term: 'FAVÖK (EBITDA)', cat: 'Değerleme', street: 'Vergi, kredi faizi ve makine eskimesi (amortisman) düşülmeden önceki saf dükkân işletme kârı.', pro: 'Farklı borç yapısındaki iki fabrikayı yan yana kıyaslamak için kullanılır.' },
       { term: 'FD / FAVÖK (EV/EBITDA)', cat: 'Değerleme', street: 'Bir dükkânı devralırken ödediğin paraya kasadaki borcu da ekleyip "Bu dükkân tüm maliyetini kaç yıllık işletme kârıyla çıkarır?" diye sormak.', pro: 'F/K’dan çok daha dürüsttür çünkü borcu gizlemez! Sanayide 4x–7x arası cazip, 15x+ pahalı bölgedir.' },
-      { term: 'F/K (Fiyat / Kazanç)', cat: 'Değerleme', street: 'Şirketin bugünkü fiyatının son 1 yıllık net kârının kaç katı olduğu.', pro: 'Tek başına bakılmaz! Döngüsel şirketlerde (çelik/rafineri) en tepede F/K düşük, en dipte yüksek görünür; GYO’larda ise ekspertiz kârı yüzünden anlamsızdır.' },
+      { term: 'F/K & Döngüsel Terslik', cat: 'Değerleme', street: 'Şirketin bugünkü fiyatının son 1 yıllık net kârının kaç katı olduğu; ama döngüsel işlerde en tepede en ucuz görünerek tuzak kurar!', pro: 'Çelik, rafineri ve petrokimyada marj zirvesinde F/K 3x görünür (pahalıdır), marj dibinde yüksek görünür; PD/DD ve ürün marjıyla birlikte okunur.' },
       { term: 'PD / DD (Piyasa / Defter Değeri)', cat: 'Değerleme', street: 'Şirketin bütün malını mülkünü satıp borçlarını kapatsan elde kalacak özsermayenin kaç katına borsada satıldığı.', pro: 'Bankalarda (ROE ile birlikte), GYO’larda ve Holdinglerde birincil değerleme terazisidir (<1,0x özkaynağından ucuz demektir).' },
       { term: 'ROIC (Yatırılan Sermaye Getirisi)', cat: 'Değerleme', street: 'Şirketin işe bağladığı her 100 liradan yılda kaç lira gerçek faaliyet kârı ürettiği.', pro: 'ROIC sermaye maliyetinden (WACC / Enflasyon) yüksekse şirket büyüdükçe servet yaratır, düşükse büyüdükçe değer yıkar.' },
       { term: 'Net Borç / FAVÖK', cat: 'Risk', street: 'Şirketin kasadaki hazır parasını düştükten sonra kalan banka borcunu kaç yıllık işletme kârıyla sıfırlayabileceği.', pro: '0’ın altı "Net Nakit Kalesi"dir; 0–2x sağlıklı, 4x üzeri yüksek faiz ortamında tehlike çanıdır!' },
       { term: 'Cari Oran', cat: 'Risk', street: 'Önümüzdeki 1 yıl içinde vadesi gelecek faturaları ve kredileri ödemek için kasada/stokta kaç kat dönen varlık olduğu.', pro: 'Sanayide 1,2x üstü güvenli nefes alanıdır; 0,8x altı kısa vadeli nakit sıkışıklığı (bedelli/yüksek faizli kredi) riskidir.' },
       { term: 'MKK Tipe Dönüşüm & Fiili Dolaşım', cat: 'Takas', street: 'Patronun kasada kilitli duran paylarını borsada küçük yatırımcıya satabilmek için Merkezi Kayıt Kuruluşu’nda "açık paya" çevirmesi.', pro: 'KAP’ta tipe dönüşüm ve MKK lot artışı görülürse tahtada arz baskısı beklenir; pay geri alımı ise tam tersi destektir.' },
       { term: 'CMF-20 (Chaikin Para Akışı)', cat: 'Tahta İzi', street: 'Son 20 günde tahtadaki işlemlerin günün tepesinden mi (iştahlı kurumsal toplama) yoksa dibinden mi (gizli mal yedirme) kapandığının ölçüsü.', pro: '+0,10 ve üzeri kurumsal para girişini, -0,10 ve altı kurumsal mal çıkışını işaret eder.' },
-      { term: 'Net Aktif Değer (NAD) İskontosu', cat: 'Değerleme', street: 'İçinde 10 milyon liralık ev ve araba bulunan bir şirketin tamamının borsada 6 milyon liraya (%40 indirimli) satılması.', pro: 'Holding (KCHOL/SAHOL) ve GYO analizinin temelidir.' },
+      { term: 'Net Aktif Değer (NAD) İskontosu', cat: 'Değerleme', street: 'İçinde 10 milyon liralık ev ve fabrika bulunan bir holdingin borsada 6 milyon liraya (%40 indirimli) satılması.', pro: 'Holding (KCHOL/SAHOL/DOHOL) ve GYO analizinin temelidir.' },
+      { term: 'Hisse Senedi Yoğun Fon (%0 Stopaj)', cat: 'TEFAS', street: 'Portföyünün en az %80’ini devamlı yerli BIST hisselerinde tuttuğu için devletin kârından 0 TL vergi kestiği yatırım fonu (örn. MAC, IIH, TI2).', pro: 'Yabancı hisse fonları (AFT/AFA) bu kapsamda değildir; onlarda kur farkı dahil %17,5 stopaj kesilir!' },
+      { term: 'Rüçhan Hakkı Kuponu (.R)', cat: 'Sermaye', street: 'Bedelli sermaye artırımında mevcut ortağa verilen "yeni payı indirimli alma veya kuponu pazarda satma" hakkı.', pro: 'Süresi içinde kullanılmaz ve rüçhan pazarında satılmazsa sıfırlanarak doğrudan servet kaybı yaratır!' },
+      { term: 'Lock-Up (Ortak Satmama Taahhüdü)', cat: 'Halka Arz', street: 'Yeni halka arz olan şirkette patronun "180 gün boyunca borsada tek lot hisse satmayacağım" sözü.', pro: '180. gün dolduğunda dolaşıma girebilecek ortak payları izlenmelidir.' },
+      { term: 'Net Faiz Marjı (NIM) & ROE', cat: 'Bankacılık', street: 'Bankanın topladığı mevduata verdiği faiz ile dağıttığı krediden aldığı faiz arasındaki net kazanç makası ve özkaynak kârlılığı.', pro: 'Bankalarda ROE > TÜFE Enflasyonu olduğu dönemlerde defter değeri reel olarak büyür.' },
+      { term: 'Teknik Karşılık (Sigorta Float’u)', cat: 'Sigorta', street: 'Sigorta şirketinin poliçe kesip peşin topladığı parayı hasar ödeyene kadar yüksek faizde çalıştırdığı dev nakit havuzu.', pro: 'Yüksek faiz ortamında TURSG ve AGESA gibi şirketlerin finansal gelir motorudur.' },
       { term: 'T+2 Takas Kuralı', cat: 'Piyasa Fiziği', street: 'Borsada hisse sattığında paranın çekilebilir nakde dönmesi için 2 iş günü bekleme zorunluluğu.', pro: 'T+2’deki parayla (Brüt Takas yoksa) aynı gün başka hisse alınabilir ama nakit çekilemez, altın/mevduat alınamaz.' },
-      { term: 'TEFAS 13:30 Valörü', cat: 'Piyasa Fiziği', street: 'Yatırım fonu alırken veya bozarken saat 13:30 gişe sınırını kaçırırsan işlemin 1–2 iş günü sonraya sarkması.', pro: 'PPF 13:30 öncesi T+0 aynı gün nakittir; Sukuk ve hisse/döviz fonları T+1 / T+2 valörlüdür.' },
-      { term: 'VBTS Brüt Takas', cat: 'Piyasa Fiziği', street: 'Aşırı dalgalanan tahtalarda Borsa İstanbul’un koyduğu "Peşin parayla al, aldığını bugün satamazsın, sattığının parasıyla takas dolmadan hisse alamazsın" freni.', pro: 'Kredili işlem ve açığa satış da eşzamanlı kapatılır; spekülatif hacmi soğutur.' },
-      { term: 'Stopaj Vergisi', cat: 'Vergi', street: 'Kazandığın faiz, fon kârı veya temettü daha hesabına yatarken kaynağında otomatik kesilen vergi.', pro: 'Kamu Sukuk, DİBS, BIST Hisse ve Hisse Yoğun BYF’de %0; PPF ve Altın/Döviz BYF’de %17,5; Temettüde %15’tir.' },
-      { term: 'GVK Mükerrer 80 & Yİ-ÜFE %10', cat: 'Vergi', street: 'ABD hissesi veya Eurobond sattığında devletin "Enflasyon %10’u geçtiyse TL maliyetini üretici enflasyonuyla büyüt, sadece gerçek reel kazancının vergisini öde" dediği kalkan.', pro: 'Alış-satış arası Yİ-ÜFE %10,00 sınırını aşmadan satmamak vergi yükünü dramatik biçimde azaltır.' },
+      { term: 'TEFAS 13:30 Valörü', cat: 'Piyasa Fiziği', street: 'Yatırım fonu alırken veya bozarken saat 13:30 gişe sınırını kaçırırsan işlemin 1–2 iş günü sonraya sarkması.', pro: 'PPF 13:30 öncesi T+0 aynı gün nakittir; Sukuk T+1, yerli hisse fonu T+2, yabancı fon satışta T+3 valörlüdür.' },
+      { term: 'VBTS Brüt Takas', cat: 'Piyasa Fiziği', street: 'Aşırı dalgalanan tahtalarda Borsa İstanbul’un koyduğu "Peşin parayla al, aldığını bugün satamazsın, sattığının parasıyla takas dolmadan hisse alamazsın" freni.', pro: 'Kredili işlem ve açığa satış da eşzamanlı kapatılır; kredi teminat katsayısı %0 olur.' },
+      { term: 'Stopaj Vergisi', cat: 'Vergi', street: 'Kazandığın faiz, fon kârı veya temettü daha hesabına yatarken kaynağında otomatik kesilen vergi.', pro: 'Kamu Sukuk, DİBS, BIST Hisse ve Hisse Yoğun Fonlarda %0; PPF ve Altın/Yabancı Fonlarda %17,5; Temettüde %15’tir.' },
+      { term: 'GVK Mükerrer 80 & Yİ-ÜFE %10', cat: 'Vergi', street: 'ABD hissesi veya Eurobond sattığında devletin "Üretici enflasyonu %10’u geçtiyse TL maliyetini enflasyonla büyüt, sadece gerçek reel kazancının vergisini öde" dediği kalkan.', pro: 'Alış-satış arası Yİ-ÜFE %10,00 sınırını aşmadan satmamak vergi yükünü dramatik biçimde azaltır.' },
       { term: 'VİOP Basis (Vadeli-Spot Makası)', cat: 'VİOP', street: 'VİOP vadeli endeks kontratının spot endeksten vade sonuna kadarki faiz (TLREF) kadar yukarıda işlem görmesi.', pro: 'Makas teorik TLREF faizinin çok üstüne çıkarsa Spot Al / VİOP Sat arbitrajı doğar; 19:00 akşam seansı sabahın öncüsüdür.' },
       { term: 'Margin Call (Teminat Tamamlama)', cat: 'Risk', street: 'Borçlu/kaldıraçlı işlemde ters hareket olunca aracı kurumun saat 15:00’e kadar "Ya nakit getir ya da pozisyonunu zorla kapatırım!" uyarısı.', pro: 'Özsermaye oranı %35 altına inerse zorunlu tasfiye (likidasyon) gerçekleşir.' },
       { term: 'Crack Spread (Rafineri Marjı)', cat: 'Sektör', street: 'Kasabın canlı hayvanı alıp pirzola olarak sattığında aradaki işleme farkından kazandığı para gibi, TÜPRAŞ’ın 1 varil ham petrolden mazot/jet yakıtı üreterek kazandığı dolar farkı.', pro: 'Rafineri kârını petrolün seviyesi değil, bu marj belirler.' },
@@ -4262,8 +4550,436 @@
       { term: 'İlişkili Taraf Alacağı', cat: 'Adli Denetim', street: 'Halka açık şirketin kasasındaki parayı faizsiz/ucuza patronun dışarıdaki özel şirketine borç vermesi.', pro: 'Bu kalem özsermayeye oranla şişiyorsa kasadaki nakit ortaklar yerine grup dışına sızıyor demektir — kırmızı bayraktır!' },
       { term: 'CVaR-95 (Kuyruk Riski)', cat: 'Kantitatif Risk', street: '"En kötü %5’lik fırtına aylarında bu varlık ortalama yüzde kaç kaybettirmiş?" sorusunun gerçek tarihsel cevabı.', pro: 'Standart sapmadan çok daha gerçekçidir; uykunu kaçıracak çöküş şiddetini önceden ölçer.' },
       { term: 'Half-Kelly (Yarım Kelly) Ağırlığı', cat: 'Portföy Matematiği', street: 'Kazanma ihtimali ve kazanç/kayıp oranına göre tek bir yatırıma kasanın en fazla yüzde kaçını koyman gerektiğini söyleyen sigorta formülü.', pro: 'Avantaj (Edge) negatifse Kelly %0 verir; en parlak fırsatta bile aşırı yüklenip batmayı matematiksel olarak engeller.' },
-      { term: 'Hurst Üssü (H)', cat: 'Kantitatif', street: 'Bir varlığın başladığı yönde akmaya devam eden "inatçı nehir" mi (H > 0,55), yoksa lastik gibi ortalamaya geri dönen "yay" mı (H < 0,45) olduğunu ölçer.', pro: 'H > 0,55 trend takip stratejisine; H < 0,45 ise destekten al / dirençten sat stratejisine uygundur.' }
+      { term: 'Hurst Üssü (H)', cat: 'Kantitatif', street: 'Bir varlığın başladığı yönde akmaya devam eden "inatçı nehir" mi (H > 0,55), yoksa lastik gibi ortalamaya geri dönen "yay" mı (H < 0,45) olduğunu ölçer.', pro: 'H > 0,55 trend takip stratejisine; H < 0,45 ise destekten al / dirençten sat stratejisine uygundur.' },
+      { term: 'Fisher Reel Getiri Denklemi', cat: 'Ekonomi', street: 'Paranın rakam olarak ne kadar büyüdüğü değil, enflasyon canavarı payını aldıktan sonra kaç ekmek daha fazla alabildiğin!', pro: 'Reel Getiri = ((1 + Nominal Getiri) / (1 + TÜFE Enflasyonu)) − 1. Grafiğin "🥖 REEL" modunda canlı çizilir!' }
     ];
+  }
+
+  // --------------------------------------------------------------------------
+  // 15. HAM MALZEME TEZGÂHI (KENDİ SÜZGECİN), KAFA KAFAYA DÜELLO & KASA DEDEKTİFİ
+  // --------------------------------------------------------------------------
+  const CUSTOM_SCREENER_DEFS = [
+    { id: 'OCF_REAL_CASH', icon: '🥖', short: 'Gerçek Kasa Nakdi', desc: 'Esas faaliyet nakdi pozitif (OCF > 0 & FCF ≥ 0) veya net sabit getiri üretenler' },
+    { id: 'NET_CASH_VAULT', icon: '🛡️', short: 'Borçsuz / Net Nakit', desc: 'Kasasındaki hazır para toplam banka borcundan büyük olanlar veya sıfır borçlu varlıklar' },
+    { id: 'DEEP_BOOK_DISCOUNT', icon: '🏷️', short: 'PD/DD ≤ 1,15x Ucuz', desc: 'Özsermaye (defter) değerinin altında veya hemen yakınında işlem görenler' },
+    { id: 'HIGH_CAPITAL_RETURN', icon: '⚡', short: 'ROIC/ROE ≥ TÜFE', desc: 'Yatırdığı sermayeden enflasyonun üzerinde getiri üreten yüksek verimli işler' },
+    { id: 'DRAWDOWN_HUNTER', icon: '🔥', short: 'Zirveden -%30+ İskonto', desc: '52 haftalık zirvesinden en az %30 geri çekilmiş yangın yeri adayları' },
+    { id: 'SMART_MONEY_CMF', icon: '🐋', short: 'Kurumsal Giriş (CMF+)', desc: 'Son 20 günde Chaikin Para Akışı (CMF ≥ +0,08) ile kurumsal toplama izi olanlar' },
+    { id: 'DIVIDEND_RIVER', icon: '💸', short: 'Temettü / Nakit Çarkı', desc: 'Yıllık ≥ %2,5 nakit temettü veya düzenli faiz/sukuk akışı sağlayanlar' },
+    { id: 'ZERO_TAX_SHIELD', icon: '🏛️', short: '%0 Stopaj Kalkanı', desc: 'Kazanç üzerinden kaynakta %0 stopaj kesilen vergi avantajlı araçlar' },
+    { id: 'CLEAN_GOVERNANCE', icon: '🔍', short: 'Sıfır Tuzak & Temiz MKK', desc: 'Patron lot satışı, hacim anomalisi ve TMS-29 kağıt kâr yanılsaması OLMAYANLAR' },
+    { id: 'FX_EXPORT_ARMOR', icon: '🌍', short: 'Döviz / Altın / İhracat', desc: 'Doğrudan döviz/altın tabanlı veya güçlü ihracat/döviz gelir kalkanlı olanlar' }
+  ];
+
+  const EXPORT_HEAVY_SECTORS = new Set([
+    'Havacılık & Lojistik', 'Otomotiv & Yan Sanayi', 'Savunma & Havacılık Sanayi',
+    'Demir-Çelik & Metal', 'Beyaz Eşya & Mobilya', 'Madencilik & Altın', 'Tekstil, Giyim & Deri'
+  ]);
+
+  function matchesSingleScreenerRule(asset, ruleId, infPct) {
+    if (!asset || asset.venue === 'BENCHMARK_ONLY') return false;
+    const r = asset.bistRow || {};
+    const inst = asset.rawInst || {};
+    const ocf = r.ocfMillionTL ?? (inst.ocf != null ? inst.ocf / 1e6 : null);
+    const fcf = r.fcfMillionTL ?? (inst.fcf != null ? inst.fcf / 1e6 : null);
+    const roic = r.roic ?? inst.roic ?? null;
+    const roe = r.roe ?? inst.roe ?? null;
+    const pb = asset.pb ?? r.pb ?? inst.pb ?? null;
+    const cmf = asset.cmf20 ?? r.cmf20 ?? inst.cmf20 ?? null;
+    const dd52 = asset.drawdown52WPct ?? r.drawdown52WPct ?? null;
+
+    switch (ruleId) {
+      case 'OCF_REAL_CASH':
+        if (asset.isRateInstrument) return (asset.annualGrossRatePct * (1 - (asset.stopajPct || 0) / 100)) >= infPct * 0.85;
+        if (isFinancialEntityRow(r)) return roe != null && roe >= infPct * 0.85;
+        return ocf != null && ocf > 0 && (fcf == null || fcf >= 0);
+      case 'NET_CASH_VAULT':
+        if (asset.isRateInstrument || isPreciousMetalAsset(asset) || asset.venue === 'TEFAS' || asset.subVenue === 'BIST_ETF') return true;
+        return Boolean(asset.isNetCash || r.isNetCash || (r.netDebtMillionTL != null && Number(r.netDebtMillionTL) <= 0));
+      case 'DEEP_BOOK_DISCOUNT':
+        return pb != null && Number(pb) > 0.05 && Number(pb) <= 1.15;
+      case 'HIGH_CAPITAL_RETURN':
+        if (asset.isRateInstrument) return (asset.annualGrossRatePct * (1 - (asset.stopajPct || 0) / 100)) >= infPct;
+        return (roic != null && Number(roic) >= infPct * 0.80) || (roe != null && Number(roe) >= infPct);
+      case 'DRAWDOWN_HUNTER':
+        return dd52 != null && Number(dd52) <= -30;
+      case 'SMART_MONEY_CMF':
+        return cmf != null && Number(cmf) >= 0.08;
+      case 'DIVIDEND_RIVER':
+        return Boolean(asset.isRateInstrument || (Number(asset.divYieldPct) || 0) >= 2.5 || (Number(r.dpsTL) > 0 && asset.priceTL > 0 && (r.dpsTL / asset.priceTL) * 100 >= 2.5));
+      case 'ZERO_TAX_SHIELD':
+        return (Number(asset.stopajPct) || 0) === 0 && !asset.isForeignUsd;
+      case 'CLEAN_GOVERNANCE':
+        return !asset.isPatronSelling && !asset.isPumpAnomaly && !asset.isTms29Illusion && getQuickForensicScore(asset) >= 62;
+      case 'FX_EXPORT_ARMOR':
+        return isFxLinkedShieldAsset(asset) || EXPORT_HEAVY_SECTORS.has(String(asset.sector || '')) || String(asset.key) === 'bist-tuprs' || String(asset.key) === 'bist-enkai' || String(asset.key) === 'bist-doco';
+      default:
+        return true;
+    }
+  }
+
+  function runCustomScreener(activeFilterIds = [], searchText = '') {
+    const K = global.AetherKernelV10;
+    if (!K) return { activeFilterIds: [], totalUniverse: 0, matchedCount: 0, items: [] };
+    const infPct = K.getAnnualInflationPct ? K.getAnnualInflationPct() : 29.77;
+    const validIds = Array.isArray(activeFilterIds)
+      ? activeFilterIds.filter((id) => CUSTOM_SCREENER_DEFS.some((d) => d.id === id))
+      : [];
+    const q = String(searchText || '').trim().toLocaleLowerCase('tr-TR');
+    const all = K.getAllAssets().filter((a) => a.venue !== 'BENCHMARK_ONLY');
+
+    const matched = [];
+    for (const a of all) {
+      if (q) {
+        const hay = `${a.ticker} ${a.name} ${a.sector || ''} ${a.categoryName || ''}`.toLocaleLowerCase('tr-TR');
+        if (!hay.includes(q)) continue;
+      }
+      let ok = true;
+      for (const fid of validIds) {
+        if (!matchesSingleScreenerRule(a, fid, infPct)) {
+          ok = false;
+          break;
+        }
+      }
+      if (!ok) continue;
+      const fScore = getQuickForensicScore(a);
+      const tags = [];
+      if (a.isNetCash) tags.push('Net Nakit');
+      if (a.pb != null && a.pb > 0) tags.push(`PD/DD ${Number(a.pb).toFixed(2)}x`);
+      if (a.drawdown52WPct != null && a.drawdown52WPct <= -15) tags.push(`52H ${Number(a.drawdown52WPct).toFixed(0)}%`);
+      if (a.cmf20 != null && a.cmf20 >= 0.08) tags.push(`CMF +${Number(a.cmf20).toFixed(2)}`);
+      if ((a.stopajPct || 0) === 0 && !a.isForeignUsd) tags.push('%0 Stopaj');
+      matched.push({ asset: a, forensicScore: fScore, tags: tags.slice(0, 3) });
+    }
+
+    matched.sort((x, y) => {
+      const tx = Number(x.asset.turnoverMillionTL ?? x.asset.bistRow?.turnoverMillionTL) || 0;
+      const ty = Number(y.asset.turnoverMillionTL ?? y.asset.bistRow?.turnoverMillionTL) || 0;
+      const sx = (x.forensicScore || 55) + (x.asset.isCore ? 8 : 0) + Math.min(12, tx / 350);
+      const sy = (y.forensicScore || 55) + (y.asset.isCore ? 8 : 0) + Math.min(12, ty / 350);
+      return sy - sx;
+    });
+
+    return {
+      defs: CUSTOM_SCREENER_DEFS,
+      activeFilterIds: validIds,
+      totalUniverse: all.length,
+      matchedCount: matched.length,
+      items: matched
+    };
+  }
+
+  function compareAssetsHeadToHead(keyA, keyB, capitalTL = 100000) {
+    const K = global.AetherKernelV10;
+    if (!K) return null;
+    const a = K.getAsset(keyA);
+    const b = K.getAsset(keyB);
+    if (!a || !b) return null;
+    const infPct = K.getAnnualInflationPct ? K.getAnnualInflationPct() : 29.77;
+    const cap = Math.max(10000, Number(capitalTL) || 100000);
+
+    const calcReal1Y = (x) => {
+      const nom = x.isRateInstrument
+        ? (Number(x.annualGrossRatePct || 0) * (1 - (Number(x.stopajPct) || 0) / 100))
+        : (Number(x.perf1Y) || 0);
+      return +((((1 + nom / 100) / (1 + infPct / 100)) - 1) * 100).toFixed(1);
+    };
+
+    const calcAnnualCash100k = (x) => {
+      if (x.isRateInstrument) {
+        const netRate = Number(x.annualGrossRatePct || 0) * (1 - (Number(x.stopajPct) || 0) / 100);
+        return { val: Math.round(cap * (netRate / 100)), label: `+${Math.round(cap * (netRate / 100)).toLocaleString('tr-TR')} ₺ Net Getiri` };
+      }
+      const bScale = computeBakery100kScale(x, cap);
+      if (bScale && bScale.annualOcfTL != null) {
+        const v = Math.round(bScale.annualOcfTL);
+        return { val: v, label: `${v >= 0 ? '+' : ''}${v.toLocaleString('tr-TR')} ₺ Kasa OCF` };
+      }
+      const fScale = computeFinancial100kScale(x, cap);
+      if (fScale && fScale.annualNetProfitShareTL != null) {
+        const v = Math.round(fScale.annualNetProfitShareTL);
+        return { val: v, label: `${v >= 0 ? '+' : ''}${v.toLocaleString('tr-TR')} ₺ Özkaynak Kârı` };
+      }
+      const divPct = Number(x.divYieldPct) || 0;
+      if (divPct > 0) {
+        const v = Math.round(cap * (divPct / 100) * 0.85);
+        return { val: v, label: `+${v.toLocaleString('tr-TR')} ₺ Net Temettü` };
+      }
+      return { val: 0, label: 'Saf Değer Artışı (0 ₺ Akış)' };
+    };
+
+    const calcFrictionPct = (x) => {
+      const stopaj = Number(x.stopajPct) || 0;
+      const mgmt = Number(x.mgmtFeePct) || 0;
+      if (x.venue === 'TWO_DOOR') return { score: 92, text: '%0,40 Çarşı Makası · %0 Stopaj' };
+      if (x.isForeignUsd) return { score: 78, text: 'Yİ-ÜFE ≥%10 Beyan Kalkanı' };
+      if (stopaj === 0) return { score: mgmt > 1 ? 90 : 97, text: `%0 Stopaj${mgmt > 0 ? ` · %${mgmt} Yön.Ücr.` : ''}` };
+      return { score: Math.max(45, Math.round(92 - stopaj * 2.1 - mgmt * 3)), text: `%${stopaj} Stopaj${mgmt > 0 ? ` · %${mgmt} Ücret` : ''}` };
+    };
+
+    const calcLiquidity = (x) => {
+      if (x.venue === 'CRYPTO') return { score: 96, text: '7/24 Anında Nakit (T+0)' };
+      if (x.subVenue === 'TEFAS_PPF') return { score: 94, text: '13:30 Öncesi T+0 Nakit' };
+      if (x.venue === 'TWO_DOOR') return { score: 90, text: 'Gündüz Çarşı Anında Nakit' };
+      if (x.venue === 'BIST') return { score: x.isBrutTakas ? 58 : 84, text: x.isBrutTakas ? 'VBTS Brüt Takas (T+2 Kilitli)' : 'Anında Eşleşme · T+2 Çekim' };
+      if (x.venue === 'TEFAS') return { score: 74 - ((x.sellValorDays || 1) - 1) * 6, text: `13:30 Valör · T+${x.sellValorDays || 1} Bozum` };
+      if (x.subVenue === 'TERM_DEPOSIT') return { score: 48, text: 'Vadeli Kilit (Erken Bozumda Faiz Yanar)' };
+      return { score: 80, text: 'Borsa Seansında Likit' };
+    };
+
+    const r1A = calcReal1Y(a);
+    const r1B = calcReal1Y(b);
+    const cA = calcAnnualCash100k(a);
+    const cB = calcAnnualCash100k(b);
+    const fA = getQuickForensicScore(a) || (a.isRateInstrument ? 86 : (isPreciousMetalAsset(a) ? 88 : 74));
+    const fB = getQuickForensicScore(b) || (b.isRateInstrument ? 86 : (isPreciousMetalAsset(b) ? 88 : 74));
+    const frA = calcFrictionPct(a);
+    const frB = calcFrictionPct(b);
+    const lqA = calcLiquidity(a);
+    const lqB = calcLiquidity(b);
+    const qA = extractQuantitativePassport(a);
+    const qB = extractQuantitativePassport(b);
+    const ddA = Math.abs(Number(a.drawdown52WPct ?? qA?.maxDrawdownPct ?? -12));
+    const ddB = Math.abs(Number(b.drawdown52WPct ?? qB?.maxDrawdownPct ?? -12));
+
+    const valA = a.pb != null ? `PD/DD ${Number(a.pb).toFixed(2)}x` : (a.isRateInstrument ? `Brüt %${a.annualGrossRatePct}` : (a.pe != null ? `F/K ${Number(a.pe).toFixed(1)}x` : 'Spot Değer'));
+    const valB = b.pb != null ? `PD/DD ${Number(b.pb).toFixed(2)}x` : (b.isRateInstrument ? `Brüt %${b.annualGrossRatePct}` : (b.pe != null ? `F/K ${Number(b.pe).toFixed(1)}x` : 'Spot Değer'));
+    const valScoreA = a.pb != null && a.pb > 0 ? Math.max(25, Math.min(96, Math.round(105 - a.pb * 18))) : 74;
+    const valScoreB = b.pb != null && b.pb > 0 ? Math.max(25, Math.min(96, Math.round(105 - b.pb * 18))) : 74;
+
+    const rounds = [
+      {
+        title: '1Y Reel Alım Gücü (TÜFE Sonrası)',
+        valA: `${r1A >= 0 ? '+' : ''}%${r1A}`,
+        valB: `${r1B >= 0 ? '+' : ''}%${r1B}`,
+        winner: Math.abs(r1A - r1B) < 0.8 ? 'TIE' : (r1A > r1B ? 'A' : 'B')
+      },
+      {
+        title: '100B ₺ Ortaklıkta Yıllık Kasa Üretimi',
+        valA: cA.label,
+        valB: cB.label,
+        winner: Math.abs(cA.val - cB.val) < 400 ? 'TIE' : (cA.val > cB.val ? 'A' : 'B')
+      },
+      {
+        title: 'Bilanço & Kasa Sağlamlığı',
+        valA: `${fA} / 100`,
+        valB: `${fB} / 100`,
+        winner: Math.abs(fA - fB) <= 2 ? 'TIE' : (fA > fB ? 'A' : 'B')
+      },
+      {
+        title: 'Çarpan & Fiyat Konumu',
+        valA: valA,
+        valB: valB,
+        winner: Math.abs(valScoreA - valScoreB) <= 4 ? 'TIE' : (valScoreA > valScoreB ? 'A' : 'B')
+      },
+      {
+        title: 'Vergi & Makas Verimliliği',
+        valA: frA.text,
+        valB: frB.text,
+        winner: Math.abs(frA.score - frB.score) <= 3 ? 'TIE' : (frA.score > frB.score ? 'A' : 'B')
+      },
+      {
+        title: 'Likidite & Valör Hızı',
+        valA: lqA.text,
+        valB: lqB.text,
+        winner: Math.abs(lqA.score - lqB.score) <= 4 ? 'TIE' : (lqA.score > lqB.score ? 'A' : 'B')
+      },
+      {
+        title: 'Fırtına Dayanıklılığı (52H Düşüş)',
+        valA: ddA <= 1 ? 'Anapara Sabit' : `-%${ddA.toFixed(1)}`,
+        valB: ddB <= 1 ? 'Anapara Sabit' : `-%${ddB.toFixed(1)}`,
+        winner: Math.abs(ddA - ddB) <= 2.5 ? 'TIE' : (ddA < ddB ? 'A' : 'B')
+      }
+    ];
+
+    let winsA = 0, winsB = 0, ties = 0;
+    for (const rd of rounds) {
+      if (rd.winner === 'A') winsA++;
+      else if (rd.winner === 'B') winsB++;
+      else ties++;
+    }
+
+    const overallWinner = winsA > winsB ? 'A' : (winsB > winsA ? 'B' : 'TIE');
+    let verdict = '';
+    if (a.isRateInstrument !== b.isRateInstrument) {
+      const rateSide = a.isRateInstrument ? a : b;
+      const growthSide = a.isRateInstrument ? b : a;
+      verdict = `Bu iki araç birbirinin rakibi değil, Halter (Barbell) portföyünün iki tamamlayıcı ucudur: Sıkı faiz ve belirsizlikte ${rateSide.ticker} düzenli nakit zırhı sağlar; faiz indirimi, büyüme veya kur döngüsünde ise ${growthSide.ticker} reel çarpan taşır.`;
+    } else if (overallWinner === 'A') {
+      verdict = `7 turun ${winsA}’sinde ${a.ticker} üstünlük kurdu. Özellikle kasa kalitesi (${fA}p) ve vergi/nakit terazisinde ${b.ticker} karşısında daha yüksek güvenlik marjı sunuyor.`;
+    } else if (overallWinner === 'B') {
+      verdict = `7 turun ${winsB}’sinde ${b.ticker} öne çıktı. Mevcut fiyatlama, kasa sağlamlığı (${fB}p) ve sürtünme maliyetinde ${a.ticker} karşısında daha avantajlı duruyor.`;
+    } else {
+      verdict = `${a.ticker} ve ${b.ticker} terazide başa baş (${winsA}–${winsB}) çıktı! Tek birine yüklenmek yerine sermayeyi ikisi arasında bölmek sektörel tekil riski azaltır.`;
+    }
+
+    return {
+      assetA: a,
+      assetB: b,
+      winsA,
+      winsB,
+      ties,
+      overallWinner,
+      rounds,
+      verdict
+    };
+  }
+
+  function generateLiveKasaDuelRound(seedInput) {
+    const K = global.AetherKernelV10;
+    if (!K) return null;
+    const allBist = K.getAllAssets().filter((a) => a.subVenue === 'BIST_STOCK' && a.bistRow && !isFinancialEntityRow(a.bistRow));
+
+    const fortresses = [];
+    const traps = [];
+    for (const a of allBist) {
+      const r = a.bistRow;
+      const mcB = Number(r.marketCapBillionTL || a.marketCapBillionTL) || 0;
+      if (r.ocfMillionTL == null || r.netIncomeMillionTL == null || !(mcB > 1.2)) continue;
+      const fs = getQuickForensicScore(a);
+      const fcf = r.fcfMillionTL != null ? r.fcfMillionTL : (r.ocfMillionTL - Math.abs(r.capexMillionTL || 0));
+      if (
+        fs >= 78 &&
+        r.ocfMillionTL > 250 &&
+        fcf > 0 &&
+        r.ocfMillionTL >= r.netIncomeMillionTL * 0.85 &&
+        !a.isPatronSelling &&
+        !a.isTms29Illusion &&
+        (r.isNetCash || (r.netDebtToEbitda != null && r.netDebtToEbitda <= 2.0))
+      ) {
+        fortresses.push(a);
+      } else if (
+        fs > 0 &&
+        fs <= 46 &&
+        ((r.netIncomeMillionTL > 50 && r.ocfMillionTL < -50) ||
+          a.isTms29Illusion ||
+          (r.ocfMillionTL < -150 && (r.netDebtToEbitda >= 3.8 || (r.currentRatio != null && r.currentRatio < 0.95))))
+      ) {
+        traps.push(a);
+      }
+    }
+
+    if (fortresses.length === 0 || traps.length === 0) return null;
+
+    let s = Math.abs(Math.floor(Number(seedInput) || Date.now())) || 1337;
+    const nextRand = () => {
+      s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+      return s / 4294967296;
+    };
+
+    const fort = fortresses[Math.floor(nextRand() * fortresses.length)];
+    const trap = traps[Math.floor(nextRand() * traps.length)];
+    const fortressOnLeft = nextRand() < 0.5;
+
+    const buildAnonCard = (asset, codeLabel) => {
+      const r = asset.bistRow;
+      const mcM = Math.max(100, (Number(r.marketCapBillionTL || asset.marketCapBillionTL) || 1) * 1000);
+      const scale100k = 100000 / (mcM * 1e6);
+      const ocf100k = Math.round((Number(r.ocfMillionTL) || 0) * 1e6 * scale100k);
+      const net100k = Math.round((Number(r.netIncomeMillionTL) || 0) * 1e6 * scale100k);
+      const fcfM = r.fcfMillionTL != null ? Number(r.fcfMillionTL) : ((Number(r.ocfMillionTL) || 0) - Math.abs(Number(r.capexMillionTL) || 0));
+      const fcf100k = Math.round(fcfM * 1e6 * scale100k);
+      const debtText = r.isNetCash
+        ? `Net Nakit Kalesi (${Math.abs(Math.round(r.netDebtMillionTL || 0)).toLocaleString('tr-TR')} Mn ₺ Fazla)`
+        : (r.netDebtToEbitda != null ? `Net Borç / FAVÖK: ${Number(r.netDebtToEbitda).toFixed(1)}x` : `Net Borç: ${Math.round(r.netDebtMillionTL || 0).toLocaleString('tr-TR')} Mn ₺`);
+      const boardClue = asset.isPatronSelling
+        ? '⚠️ MKK’da Ortak Lot Artışı / Negatif CMF'
+        : ((Number(r.cmf20) || 0) >= 0.05 ? `Kurumsal Toplama (CMF +${Number(r.cmf20).toFixed(2)})` : `Dengeli / Nötr Akış (CMF ${Number(r.cmf20 || 0).toFixed(2)})`);
+
+      return {
+        codeLabel,
+        clues: [
+          { k: '100B ₺ Ortaklıkta Manşet Net Kâr', v: `${net100k >= 0 ? '+' : ''}${net100k.toLocaleString('tr-TR')} ₺ / yıl` },
+          { k: '100B ₺ Ortaklıkta Gerçek Kasa Nakdi (OCF)', v: `${ocf100k >= 0 ? '+' : ''}${ocf100k.toLocaleString('tr-TR')} ₺ / yıl` },
+          { k: 'Yatırım Sonrası Serbest Nakit (FCF)', v: `${fcf100k >= 0 ? '+' : ''}${fcf100k.toLocaleString('tr-TR')} ₺ / yıl` },
+          { k: 'Borç & Kasa Zırhı', v: debtText },
+          { k: 'PD/DD & Cari Oran', v: `PD/DD ${r.pb != null ? Number(r.pb).toFixed(2) + 'x' : '—'} · Cari ${r.currentRatio != null ? Number(r.currentRatio).toFixed(2) + 'x' : '—'}` },
+          { k: 'Tahta Ayak İzi', v: boardClue }
+        ],
+        reveal: {
+          key: asset.key,
+          ticker: asset.ticker,
+          name: asset.name,
+          sector: asset.sector,
+          priceTL: asset.priceTL,
+          perf1Y: asset.perf1Y,
+          forensicScore: getQuickForensicScore(asset)
+        }
+      };
+    };
+
+    const leftCard = buildAnonCard(fortressOnLeft ? fort : trap, 'Şirket ALFA');
+    const rightCard = buildAnonCard(fortressOnLeft ? trap : fort, 'Şirket BETA');
+    const fr = fort.bistRow;
+    const tr = trap.bistRow;
+
+    return {
+      roundId: 'duel_' + s.toString(36),
+      left: leftCard,
+      right: rightCard,
+      optimalSide: fortressOnLeft ? 'LEFT' : 'RIGHT',
+      whyWinner: `${fort.ticker} (${fort.name}) son 12 ayda kasasına +${Math.round(fr.ocfMillionTL).toLocaleString('tr-TR')} Milyon ₺ gerçek faaliyet nakdi koydu ve ${fr.isNetCash ? 'sıfır net borçla (Net Nakit)' : `sağlıklı borç çarpanıyla`} çalışıyor (Adli Röntgen: ${getQuickForensicScore(fort)}/100).`,
+      whyLoser: `${trap.ticker} (${trap.name}) ise ${tr.netIncomeMillionTL > 0 && tr.ocfMillionTL < 0 ? `manşette +${Math.round(tr.netIncomeMillionTL).toLocaleString('tr-TR')} Mn ₺ kağıt kâr gösterirken kasasından ${Math.round(tr.ocfMillionTL).toLocaleString('tr-TR')} Mn ₺ nakit yaktı!` : `esas faaliyetinden nakit üretemezken (${Math.round(tr.ocfMillionTL).toLocaleString('tr-TR')} Mn ₺ OCF) ağır borç/likidite baskısı taşıyor`} (Adli Röntgen: ${getQuickForensicScore(trap)}/100).`
+    };
+  }
+
+  function computeFreedomWheelProjection(params = {}) {
+    const startCapitalTL = Math.max(0, Number(params.startCapitalTL ?? 1000000));
+    const monthlyAddTL = Math.max(0, Number(params.monthlyAddTL ?? 15000));
+    const realAnnualReturnPct = Math.max(0, Math.min(30, Number(params.realAnnualReturnPct ?? 9)));
+    const monthlyExpenseTL = Math.max(5000, Number(params.monthlyExpenseTL ?? 45000));
+    const years = Math.max(1, Math.min(25, Math.round(Number(params.years ?? 10))));
+
+    const rMonthly = Math.pow(1 + realAnnualReturnPct / 100, 1 / 12) - 1;
+    // Güvenli reel çekim / pasif nakit akışı oranı (yıllık reel getiri oranının %75'i veya min %6 reel nakit verimi)
+    const passiveRealYieldAnnual = Math.max(0.04, Math.min(0.14, (realAnnualReturnPct / 100) * 0.85));
+
+    let realVault = startCapitalTL;
+    let totalContributed = startCapitalTL;
+    let freedomMonth = null;
+    const milestones = [];
+
+    for (let m = 1; m <= years * 12; m++) {
+      realVault = realVault * (1 + rMonthly) + monthlyAddTL;
+      totalContributed += monthlyAddTL;
+      const monthlyPassiveRealTL = (realVault * passiveRealYieldAnnual) / 12;
+      if (freedomMonth === null && monthlyPassiveRealTL >= monthlyExpenseTL) {
+        freedomMonth = m;
+      }
+      if (m % 12 === 0) {
+        const yr = m / 12;
+        milestones.push({
+          year: yr,
+          realVaultTL: Math.round(realVault),
+          contributedRealTL: Math.round(totalContributed),
+          compoundedGainRealTL: Math.round(realVault - totalContributed),
+          monthlyPassiveRealTL: Math.round(monthlyPassiveRealTL),
+          expenseCoveragePct: Math.min(999, Math.round((monthlyPassiveRealTL / monthlyExpenseTL) * 100))
+        });
+      }
+    }
+
+    const last = milestones[milestones.length - 1] || {
+      year: years,
+      realVaultTL: Math.round(realVault),
+      contributedRealTL: Math.round(totalContributed),
+      compoundedGainRealTL: 0,
+      monthlyPassiveRealTL: 0,
+      expenseCoveragePct: 0
+    };
+
+    return {
+      startCapitalTL,
+      monthlyAddTL,
+      realAnnualReturnPct,
+      monthlyExpenseTL,
+      years,
+      freedomYears: freedomMonth != null ? +(freedomMonth / 12).toFixed(1) : null,
+      finalRealVaultTL: last.realVaultTL,
+      finalMonthlyPassiveRealTL: last.monthlyPassiveRealTL,
+      finalCoveragePct: last.expenseCoveragePct,
+      milestones
+    };
   }
 
   global.RealInvestmentGuide = {
@@ -4287,6 +5003,11 @@
     getFieldCaseCatalog,
     getExpertCurriculum,
     getStreetLexicon,
+    CUSTOM_SCREENER_DEFS,
+    runCustomScreener,
+    compareAssetsHeadToHead,
+    generateLiveKasaDuelRound,
+    computeFreedomWheelProjection,
     CRISIS_SCENARIOS,
     simulatePortfolioCrisis
   };

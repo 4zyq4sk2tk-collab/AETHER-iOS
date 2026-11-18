@@ -79,8 +79,8 @@ jobs:
       - name: Publish IPA to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v15.1.0-ios
-          name: "AETHER v15.1.0 — 621/621 Adli Kasa Röntgeni, 7 Mutfak İstihbarat Masası, 15 Saha Vakası & Yaşayan Uzmanlık Meydanı (ARM64 iOS IPA)"
+          tag_name: v16.0.0-ios
+          name: "AETHER v16.0.0 — Çoklu Gerçeklik Dokunmatik Grafik (TL/Reel TÜFE/$), Kafa Kafaya Düello, Ham Malzeme Süzgeci, Canlı Kasa Dedektifi & 24 Saha Vakası (ARM64 iOS IPA)"
           files: AETHER-iOS.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

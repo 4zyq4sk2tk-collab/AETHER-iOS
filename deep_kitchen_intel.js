@@ -541,7 +541,9 @@ async function scanOpenHorizonBistAndGlobal(force = false, spotGramGoldTL = 6687
           'current_ratio_fq', 'operating_margin_ttm',
           'capital_expenditures_ttm', 'cash_f_operating_activities_ttm', 'cash_f_financing_activities_ttm',
           'net_income_ttm', 'total_assets_fq', 'ebitda_ttm',
-          'industry', 'Perf.6M', 'Perf.Y', 'price_book_ratio', 'dividends_yield_current'
+          'industry', 'Perf.6M', 'Perf.Y', 'price_book_ratio', 'dividends_yield_current',
+          'Perf.3Y', 'Perf.5Y', 'SMA200', 'dividend_ex_date_upcoming', 'dividend_ex_date_recent',
+          'dps_common_stock_prim_issue_fy', 'gross_margin_ttm', 'total_revenue_yoy_growth_ttm'
         ],
         sort: { sortBy: 'ChaikinMoneyFlow', sortOrder: 'desc' },
         range: [0, 700]
@@ -577,6 +579,14 @@ async function scanOpenHorizonBistAndGlobal(force = false, spotGramGoldTL = 6687
       const perf1YRaw = c[38];
       const pbRatioFallback = c[39];
       const divYieldRaw = c[40];
+      const perf3YRaw = c[41];
+      const perf5YRaw = c[42];
+      const sma200Raw = c[43];
+      const divUpcomingEpochSec = c[44];
+      const divRecentEpochSec = c[45];
+      const dpsFyRaw = c[46];
+      const grossMarginRaw = c[47];
+      const revGrowthRaw = c[48];
 
       const { entityKind, sectorTr } = classifyBistStockServer(sym, rawDesc, c[2], rawIndustry);
       const isFinancialBalanceSheet = entityKind === 'bank' || entityKind === 'insurance' || entityKind === 'fin_other';
@@ -609,6 +619,9 @@ async function scanOpenHorizonBistAndGlobal(force = false, spotGramGoldTL = 6687
         perf3M: +(c[7] || 0).toFixed(2),
         perf6M: perf6MRaw != null ? +perf6MRaw.toFixed(2) : null,
         perf1Y: perf1YRaw != null ? +perf1YRaw.toFixed(2) : null,
+        perf3Y: perf3YRaw != null ? +perf3YRaw.toFixed(2) : null,
+        perf5Y: perf5YRaw != null ? +perf5YRaw.toFixed(2) : null,
+        sma200: sma200Raw != null ? +sma200Raw.toFixed(2) : null,
         drawdown52WPct: dd52,
         low52W: +low52.toFixed(2),
         high52W: +high52.toFixed(2),
@@ -622,6 +635,11 @@ async function scanOpenHorizonBistAndGlobal(force = false, spotGramGoldTL = 6687
         pe: c[17] != null ? +c[17].toFixed(1) : null,
         pb: resolvedPb,
         dividendYield: divYieldRaw != null && divYieldRaw > 0 ? +divYieldRaw.toFixed(2) : 0,
+        dividendUpcomingMs: divUpcomingEpochSec != null && divUpcomingEpochSec > 0 ? Math.round(divUpcomingEpochSec * 1000) : null,
+        dividendRecentMs: divRecentEpochSec != null && divRecentEpochSec > 0 ? Math.round(divRecentEpochSec * 1000) : null,
+        dpsTL: dpsFyRaw != null && dpsFyRaw > 0 ? +Number(dpsFyRaw).toFixed(4) : null,
+        grossMarginPct: grossMarginRaw != null ? +Number(grossMarginRaw).toFixed(1) : null,
+        revGrowthPct: revGrowthRaw != null ? +Number(revGrowthRaw).toFixed(1) : null,
         evEbitda: (!isFinancialBalanceSheet && c[19] != null) ? +c[19].toFixed(1) : null,
         roic: (!isFinancialBalanceSheet && c[20] != null) ? +c[20].toFixed(1) : null,
         roe: c[21] != null ? +c[21].toFixed(1) : null,

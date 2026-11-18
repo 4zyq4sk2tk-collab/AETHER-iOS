@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aether-1m-native-v15-1-r4';
+const CACHE_NAME = 'aether-1m-native-v16-0-0';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -38,7 +38,7 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
-  if (url.pathname.endsWith('/api/family-hub')) return;
+  if (url.pathname.endsWith('/api/family-hub') || url.pathname.endsWith('/api/chart')) return;
 
   if (url.pathname.endsWith('/api/market-data')) {
     event.respondWith(
