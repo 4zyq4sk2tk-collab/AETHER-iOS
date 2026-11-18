@@ -1,10 +1,9 @@
-const CACHE_NAME = 'aether-1m-real-sim-v12-r1';
+const CACHE_NAME = 'aether-1m-real-sim-v13-r1';
 const CORE_ASSETS = [
   './',
   './index.html',
   './million-sim.css',
   './aether-data-bundle.js',
-  './aether-history-121m.js',
   './aether-kernel-v10.js',
   './real-investment-guide.js',
   './million-sim-app.js',
@@ -39,6 +38,7 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
+  if (url.pathname.endsWith('/api/family-hub')) return;
 
   if (url.pathname.endsWith('/api/market-data')) {
     event.respondWith(

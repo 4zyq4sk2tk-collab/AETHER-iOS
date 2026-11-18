@@ -2097,6 +2097,7 @@ async function refreshMarketDataset() {
       lastFetchTime = Date.now();
 
       await persistBundleAtomically(jsonStr);
+      publishServerMarketPulse(fresh);
       return fresh;
     } finally {
       inflightRefreshPromise = null;
@@ -2105,8 +2106,234 @@ async function refreshMarketDataset() {
   return inflightRefreshPromise;
 }
 
+// ============================================================================
+// KÜRESEL CANLI LİG BULUT KÖPRÜSÜ (NODE.JS <-> 3x WSS MQTT BROKER + DİSK YEDEK)
+// ============================================================================
+const SERVER_MESH_NS = 'aether/tr1m/f7c92a4b81e3d605';
+const SERVER_MQTT_BROKERS = [
+  'wss://broker.emqx.io:8084/mqtt',
+  'wss://broker.hivemq.com:8884/mqtt',
+  'wss://test.mosquitto.org:8081'
+];
+const HUB_V13_FILE = path.join(__dirname, 'family-hub-v13.json');
+let hubRoomsMemory = { 'ORTAK-LIG': { members: {}, banterFeed: [] } };
+const serverMeshSockets = new Map();
+
+try {
+  if (fs.existsSync(HUB_V13_FILE)) {
+    const parsedHub = JSON.parse(fs.readFileSync(HUB_V13_FILE, 'utf8'));
+    if (parsedHub && typeof parsedHub === 'object') hubRoomsMemory = parsedHub;
+  }
+} catch (_) {}
+
+let hubDiskTimer = null;
+function scheduleHubDiskSave() {
+  clearTimeout(hubDiskTimer);
+  hubDiskTimer = setTimeout(() => {
+    fsp.writeFile(HUB_V13_FILE, JSON.stringify(hubRoomsMemory, null, 2), 'utf8').catch(() => {});
+  }, 400);
+}
+
+function getOrInitRoom(roomCode) {
+  const clean = String(roomCode || 'ORTAK-LIG').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '') || 'ORTAK-LIG';
+  if (!hubRoomsMemory[clean]) hubRoomsMemory[clean] = { members: {}, banterFeed: [] };
+  return { code: clean, room: hubRoomsMemory[clean] };
+}
+
+function mergeMemberIntoRoom(roomObj, pkt) {
+  if (!pkt || !pkt.id || !pkt.name || pkt.profileRegistered === false) return false;
+  const prev = roomObj.members[pkt.id];
+  const incRev = Number(pkt.rev) || 0;
+  const prevRev = Number(prev?.rev) || 0;
+  const incUpd = Number(pkt.updatedAt) || 0;
+  const prevUpd = Number(prev?.updatedAt) || 0;
+  const incSeen = Number(pkt.lastSeenAt) || incUpd;
+  const prevSeen = Number(prev?.lastSeenAt) || prevUpd;
+  if (!prev || incRev > prevRev || (incRev === prevRev && (incUpd >= prevUpd || incSeen > prevSeen))) {
+    roomObj.members[pkt.id] = { ...prev, ...pkt, lastSeenAt: Math.max(incSeen, prevSeen) };
+    return true;
+  }
+  return false;
+}
+
+function mergeBanterIntoRoom(roomObj, items) {
+  if (!Array.isArray(items) || items.length === 0) return false;
+  const seen = new Set((roomObj.banterFeed || []).map((x) => x.id));
+  let added = false;
+  for (const it of items) {
+    if (it && it.id && it.text && !seen.has(it.id)) {
+      roomObj.banterFeed.push(it);
+      seen.add(it.id);
+      added = true;
+    }
+  }
+  if (added) {
+    roomObj.banterFeed.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    if (roomObj.banterFeed.length > 40) roomObj.banterFeed.length = 40;
+  }
+  return added;
+}
+
+function mqttVarLen(len) {
+  const out = [];
+  do {
+    let d = len % 128;
+    len = Math.floor(len / 128);
+    if (len > 0) d |= 0x80;
+    out.push(d);
+  } while (len > 0);
+  return Buffer.from(out);
+}
+
+function mqttStrBuf(s) {
+  const b = Buffer.from(String(s || ''), 'utf8');
+  return Buffer.concat([Buffer.from([(b.length >> 8) & 0xff, b.length & 0xff]), b]);
+}
+
+function mqttConnectBuf(cid) {
+  const vh = Buffer.concat([mqttStrBuf('MQTT'), Buffer.from([0x04, 0x02, 0x00, 0x3c])]);
+  const pl = mqttStrBuf(cid);
+  return Buffer.concat([Buffer.from([0x10]), mqttVarLen(vh.length + pl.length), vh, pl]);
+}
+
+function mqttPublishBuf(topic, jsonStr, retain = false) {
+  const tb = mqttStrBuf(topic);
+  const pb = Buffer.from(String(jsonStr || ''), 'utf8');
+  return Buffer.concat([Buffer.from([0x30 | (retain ? 0x01 : 0x00)]), mqttVarLen(tb.length + pb.length), tb, pb]);
+}
+
+function mqttSubscribeBuf(filter, pktId = 1) {
+  const vh = Buffer.from([(pktId >> 8) & 0xff, pktId & 0xff]);
+  const pl = Buffer.concat([mqttStrBuf(filter), Buffer.from([0x00])]);
+  return Buffer.concat([Buffer.from([0x82]), mqttVarLen(vh.length + pl.length), vh, pl]);
+}
+
+function serverBroadcastMqtt(topic, obj, retain = false) {
+  const pkt = mqttPublishBuf(topic, JSON.stringify(obj), retain);
+  for (const st of serverMeshSockets.values()) {
+    if (st.connected && st.ws && st.ws.readyState === 1) {
+      try { st.ws.send(pkt); } catch (_) {}
+    }
+  }
+}
+
+function publishServerMarketPulse(data) {
+  if (!data || process.argv.includes('--bundle-only')) return;
+  try {
+    const prices = {};
+    for (const inst of (data.instruments || [])) {
+      if (inst.id && inst.currentPrice > 0) {
+        prices[inst.id] = { p: inst.currentPrice, c: inst.change1D || 0 };
+      }
+    }
+    serverBroadcastMqtt(`${SERVER_MESH_NS}/market_pulse`, {
+      ts: Date.now(),
+      macro: data.macro || {},
+      prices,
+      feed: (data.liveRealWorldFeed || []).slice(0, 8)
+    }, true);
+  } catch (_) {}
+}
+
+function startServerCloudBridge() {
+  if (typeof global.WebSocket === 'undefined' || process.argv.includes('--bundle-only')) return;
+  for (const url of SERVER_MQTT_BROKERS) {
+    const connectOne = () => {
+      try {
+        const ws = new global.WebSocket(url, 'mqtt');
+        ws.binaryType = 'arraybuffer';
+        const st = { ws, connected: false, rx: Buffer.alloc(0), ping: null, retry: null };
+        serverMeshSockets.set(url, st);
+
+        ws.onopen = () => {
+          ws.send(mqttConnectBuf('ae13_srv_' + Math.random().toString(36).slice(2, 8)));
+        };
+
+        ws.onmessage = (ev) => {
+          st.rx = Buffer.concat([st.rx, Buffer.from(ev.data)]);
+          let off = 0;
+          while (off + 2 <= st.rx.length) {
+            const hdr = st.rx[off];
+            let idx = off + 1, mult = 1, rem = 0, okLen = false;
+            while (idx < st.rx.length) {
+              const b = st.rx[idx++];
+              rem += (b & 0x7f) * mult;
+              mult *= 128;
+              if ((b & 0x80) === 0) { okLen = true; break; }
+            }
+            if (!okLen || idx + rem > st.rx.length) break;
+            const pType = hdr & 0xf0;
+            const bStart = idx, bEnd = idx + rem;
+            if (pType === 0x20) {
+              st.connected = true;
+              ws.send(mqttSubscribeBuf(`${SERVER_MESH_NS}/+/member/+`, 1));
+              ws.send(mqttSubscribeBuf(`${SERVER_MESH_NS}/+/event`, 2));
+              ws.send(mqttSubscribeBuf(`${SERVER_MESH_NS}/+/banter_snapshot`, 3));
+              ws.send(mqttSubscribeBuf(`${SERVER_MESH_NS}/+/sync_ping`, 4));
+              clearInterval(st.ping);
+              st.ping = setInterval(() => {
+                if (ws.readyState === 1) { try { ws.send(Buffer.from([0xc0, 0x00])); } catch (_) {} }
+              }, 25000);
+              if (st.ping.unref) st.ping.unref();
+            } else if (pType === 0x30 && rem >= 2) {
+              const qos = (hdr >> 1) & 0x03;
+              const tLen = (st.rx[bStart] << 8) | st.rx[bStart + 1];
+              const tStart = bStart + 2, tEnd = tStart + tLen;
+              if (tEnd <= bEnd) {
+                const topic = st.rx.subarray(tStart, tEnd).toString('utf8');
+                const pStart = qos > 0 ? Math.min(bEnd, tEnd + 2) : tEnd;
+                const payload = st.rx.subarray(pStart, bEnd).toString('utf8');
+                try {
+                  const rel = topic.slice(SERVER_MESH_NS.length + 1);
+                  const segs = rel.split('/');
+                  const roomCode = segs[0];
+                  const sub = segs[1];
+                  const { code, room } = getOrInitRoom(roomCode);
+                  if (sub === 'member' && payload) {
+                    if (mergeMemberIntoRoom(room, JSON.parse(payload))) scheduleHubDiskSave();
+                  } else if (sub === 'event' && payload) {
+                    const evObj = JSON.parse(payload);
+                    let chg = false;
+                    if (evObj.memberPacket && mergeMemberIntoRoom(room, evObj.memberPacket)) chg = true;
+                    if (evObj.banterItem && mergeBanterIntoRoom(room, [evObj.banterItem])) chg = true;
+                    if (chg) scheduleHubDiskSave();
+                  } else if (sub === 'banter_snapshot' && payload) {
+                    const snap = JSON.parse(payload);
+                    if (mergeBanterIntoRoom(room, snap.items || [])) scheduleHubDiskSave();
+                  } else if (sub === 'sync_ping') {
+                    for (const mem of Object.values(room.members)) {
+                      ws.send(mqttPublishBuf(`${SERVER_MESH_NS}/${code}/member/${mem.id}`, JSON.stringify(mem), true));
+                    }
+                    if (room.banterFeed.length > 0) {
+                      ws.send(mqttPublishBuf(`${SERVER_MESH_NS}/${code}/banter_snapshot`, JSON.stringify({ ts: Date.now(), items: room.banterFeed.slice(0, 30) }), true));
+                    }
+                  }
+                } catch (_) {}
+              }
+            }
+            off = bEnd;
+          }
+          st.rx = st.rx.subarray(off);
+        };
+
+        const reconnect = () => {
+          st.connected = false;
+          clearInterval(st.ping);
+          clearTimeout(st.retry);
+          st.retry = setTimeout(connectOne, 5000);
+          if (st.retry.unref) st.retry.unref();
+        };
+        ws.onerror = reconnect;
+        ws.onclose = reconnect;
+      } catch (_) {}
+    };
+    connectOne();
+  }
+}
+
 // Sunucu açılışında mevcut gömülü veri paketini anında RAM'e yükle (0ms soğuk başlangıç)
 if (!process.argv.includes('--bundle-only')) {
+  startServerCloudBridge();
   (async function warmCacheFromDisk() {
     try {
       const bp = path.join(__dirname, 'aether-data-bundle.js');
@@ -2212,7 +2439,7 @@ const server = http.createServer(async (req, res) => {
 
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
 
-  // Aile İçi Ortak Portföy, Kâr/Zarar ve Oyun Gelişim Merkezi (/api/family-hub)
+  // Küresel Canlı Yatırımcı Ligi Merkezi (/api/family-hub — Disk + 3x WSS MQTT Köprülü)
   if (url.pathname === '/api/family-hub') {
     if (req.method === 'OPTIONS') {
       res.writeHead(204, {
@@ -2224,21 +2451,16 @@ const server = http.createServer(async (req, res) => {
       res.end();
       return;
     }
-    const hubFile = path.join(__dirname, 'family-hub.json');
-    const readHub = async () => {
-      try {
-        if (fs.existsSync(hubFile)) {
-          const raw = await fsp.readFile(hubFile, 'utf8');
-          const parsed = JSON.parse(raw);
-          if (parsed && typeof parsed === 'object' && Array.isArray(parsed.members)) return parsed;
-        }
-      } catch (_) {}
-      return { updatedAt: Date.now(), members: [] };
-    };
 
     if (req.method === 'GET') {
-      const hub = await readHub();
-      const bodyBuf = Buffer.from(JSON.stringify(hub), 'utf8');
+      const { code, room } = getOrInitRoom(url.searchParams.get('room') || 'ORTAK-LIG');
+      const out = {
+        roomCode: code,
+        updatedAt: Date.now(),
+        members: Object.values(room.members).slice(0, 48),
+        banterFeed: room.banterFeed.slice(0, 35)
+      };
+      const bodyBuf = Buffer.from(JSON.stringify(out), 'utf8');
       res.writeHead(200, {
         'Content-Type': 'application/json; charset=utf-8',
         'Content-Length': bodyBuf.length,
@@ -2259,34 +2481,38 @@ const server = http.createServer(async (req, res) => {
           chunks.push(chunk);
         }
         const incoming = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
-        const current = await readHub();
-        const byId = new Map();
-        for (const m of (current.members || [])) {
-          if (m && m.id) byId.set(String(m.id), m);
-        }
+        const { code, room } = getOrInitRoom(incoming.roomCode || 'ORTAK-LIG');
+
         const incList = Array.isArray(incoming.members)
           ? incoming.members
           : (incoming.member && incoming.member.id ? [incoming.member] : []);
 
+        let changed = false;
         for (const m of incList) {
           if (!m || !m.id) continue;
-          const id = String(m.id).slice(0, 48);
           if (m._deleted) {
-            byId.delete(id);
+            delete room.members[m.id];
+            changed = true;
             continue;
           }
-          const prev = byId.get(id);
-          if (!prev || (Number(m.updatedAt) || 0) >= (Number(prev.updatedAt) || 0)) {
-            byId.set(id, { ...prev, ...m, id, updatedAt: Number(m.updatedAt) || Date.now() });
+          if (mergeMemberIntoRoom(room, m)) {
+            changed = true;
+            serverBroadcastMqtt(`${SERVER_MESH_NS}/${code}/member/${m.id}`, room.members[m.id], true);
           }
         }
+        if (Array.isArray(incoming.banterFeed) && mergeBanterIntoRoom(room, incoming.banterFeed)) {
+          changed = true;
+          serverBroadcastMqtt(`${SERVER_MESH_NS}/${code}/banter_snapshot`, { ts: Date.now(), items: room.banterFeed.slice(0, 30) }, true);
+        }
+        if (changed) scheduleHubDiskSave();
 
-        const merged = {
+        const out = {
+          roomCode: code,
           updatedAt: Date.now(),
-          members: Array.from(byId.values()).slice(0, 24)
+          members: Object.values(room.members).slice(0, 48),
+          banterFeed: room.banterFeed.slice(0, 35)
         };
-        await fsp.writeFile(hubFile, JSON.stringify(merged, null, 2), 'utf8');
-        const outBuf = Buffer.from(JSON.stringify(merged), 'utf8');
+        const outBuf = Buffer.from(JSON.stringify(out), 'utf8');
         res.writeHead(200, {
           'Content-Type': 'application/json; charset=utf-8',
           'Content-Length': outBuf.length,
@@ -2352,7 +2578,6 @@ const server = http.createServer(async (req, res) => {
   const staticMap = {
     '/million-sim.css': { file: 'million-sim.css', mime: 'text/css; charset=utf-8', cc: 'no-cache' },
     '/aether-data-bundle.js': { file: 'aether-data-bundle.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
-    '/aether-history-121m.js': { file: 'aether-history-121m.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
     '/aether-kernel-v10.js': { file: 'aether-kernel-v10.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
     '/real-investment-guide.js': { file: 'real-investment-guide.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
     '/million-sim-app.js': { file: 'million-sim-app.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
@@ -2445,7 +2670,6 @@ const server = http.createServer(async (req, res) => {
     try {
       const htmlRaw = await fsp.readFile(path.join(__dirname, 'index.html'), 'utf8');
       const bp = path.join(__dirname, 'aether-data-bundle.js');
-      const histPath = path.join(__dirname, 'aether-history-121m.js');
       const kernelPath = path.join(__dirname, 'aether-kernel-v10.js');
       const guidePath = path.join(__dirname, 'real-investment-guide.js');
       const appPath = path.join(__dirname, 'million-sim-app.js');
@@ -2453,7 +2677,6 @@ const server = http.createServer(async (req, res) => {
       const bundleRaw = fs.existsSync(bp)
         ? await fsp.readFile(bp, 'utf8')
         : (cachedJsonBuf ? 'window.__AETHER_EMBEDDED_DATA__ = ' + cachedJsonBuf.toString('utf8') + ';' : '');
-      const histRaw = fs.existsSync(histPath) ? await fsp.readFile(histPath, 'utf8') : '';
       const kernelRaw = fs.existsSync(kernelPath) ? await fsp.readFile(kernelPath, 'utf8') : '';
       const guideRaw = fs.existsSync(guidePath) ? await fsp.readFile(guidePath, 'utf8') : '';
       const appRaw = fs.existsSync(appPath) ? await fsp.readFile(appPath, 'utf8') : '';
@@ -2461,7 +2684,6 @@ const server = http.createServer(async (req, res) => {
       const standaloneHtml = htmlRaw
         .replace(/<link rel="stylesheet" href="million-sim\.css[^"]*" \/>/, () => `<style>${cssRaw}</style>`)
         .replace(/<script src="aether-data-bundle\.js[^"]*"><\/script>/, () => `<script>${bundleRaw}</script>`)
-        .replace(/<script src="aether-history-121m\.js[^"]*"><\/script>/, () => `<script>${histRaw}</script>`)
         .replace(/<script src="aether-kernel-v10\.js[^"]*"><\/script>/, () => `<script>${kernelRaw}</script>`)
         .replace(/<script src="real-investment-guide\.js[^"]*"><\/script>/, () => `<script>${guideRaw}</script>`)
         .replace(/<script src="million-sim-app\.js[^"]*"><\/script>/, () => `<script>${appRaw}</script>`);

@@ -1,68 +1,59 @@
 // ============================================================================
-// 1.000.000 ₺ GERÇEK YATIRIM SİMÜLASYONU — ANA UYGULAMA MOTORU (million-sim-app.js)
-// Sıfır Masalsı Metafor · Sıfır Karmaşa · %100 Gerçek Türkiye ve Dünya Yatırımları
+// AETHER v13.0 — 1.000.000 ₺ GERÇEK YATIRIM MEYDANI, SOKAK ZEKÂSI KEŞFİ,
+// USTALIK AYNASI & KÜRESEL CANLI YATIRIMCI LİGİ UYGULAMASI (million-sim-app.js)
 // ============================================================================
 (function (global) {
   'use strict';
 
-  const CURATED_STARTER_KEYS = [
+  const CURATED_VITRIN_KEYS = [
     'gram-altin-spot',
     'kira-sertifikasi-sukuk',
     'para-piyasasi-fonu',
     'mevduat-ust',
     'doviz-usd',
     'doviz-eur',
+    'bist-tuprs',
     'bist-thyao',
     'bist-froto',
-    'bist-tuprs',
     'reel-perakende-bimas',
     'bist-asels',
     'bist-eregl',
     'reel-enerji-astor',
+    'gayrimenkul-konut-ekgyo',
     'altin-sertifikasi',
     'gram-gumus-spot',
+    'eurobond-usdtr',
     'abd-sp500-spy',
     'kuresel-hisse-nvda',
     'kripto-btc'
   ];
 
-  const HIST_ASSETS = [
-    { id: 'gramGold', field: 'gramGoldTL', name: 'Gram Altın (Fiziki)', cat: 'Emtia', kind: 'spot', spreadPct: 0.40 },
-    { id: 'gramSilver', field: 'gramSilverTL', name: 'Gram Gümüş', cat: 'Emtia', kind: 'spot', spreadPct: 0.65 },
-    { id: 'sukuk', field: null, name: 'Hazine Kira Sertifikası (%0 Stopaj)', cat: 'Sabit Getiri', kind: 'sukuk', spreadPct: 0 },
-    { id: 'deposit', field: null, name: 'Vadeli TL Mevduat (Stopajlı)', cat: 'Sabit Getiri', kind: 'deposit', spreadPct: 0 },
-    { id: 'usd', field: 'usd', name: 'Amerikan Doları (USD)', cat: 'Döviz', kind: 'spot', spreadPct: 0.60 },
-    { id: 'thyao', field: 'thyao', name: 'Türk Hava Yolları (THYAO)', cat: 'BIST Şirketi', kind: 'bist', spreadPct: 0.10 },
-    { id: 'froto', field: 'froto', name: 'Ford Otosan (FROTO)', cat: 'BIST Şirketi', kind: 'bist', spreadPct: 0.10 },
-    { id: 'tuprs', field: 'tuprs', name: 'TÜPRAŞ (TUPRS)', cat: 'BIST Şirketi', kind: 'bist', spreadPct: 0.10 },
-    { id: 'bimas', field: 'bimas', name: 'BİM Mağazalar (BIMAS)', cat: 'BIST Şirketi', kind: 'bist', spreadPct: 0.10 },
-    { id: 'asels', field: 'asels', name: 'ASELSAN (ASELS)', cat: 'BIST Şirketi', kind: 'bist', spreadPct: 0.10 },
-    { id: 'eregl', field: 'eregl', name: 'Ereğli Demir Çelik (EREGL)', cat: 'BIST Şirketi', kind: 'bist', spreadPct: 0.10 },
-    { id: 'garan', field: 'garan', name: 'Garanti BBVA (GARAN)', cat: 'BIST Şirketi', kind: 'bist', spreadPct: 0.10 },
-    { id: 'ekgyo', field: 'ekgyo', name: 'Emlak Konut GYO (EKGYO)', cat: 'BIST Şirketi', kind: 'bist', spreadPct: 0.12 },
-    { id: 'sasa', field: 'sasa', name: 'SASA Polyester (SASA)', cat: 'BIST Şirketi', kind: 'bist', spreadPct: 0.15 },
-    { id: 'spy', field: 'spyUsd', name: 'ABD S&P 500 Endeksi (SPY)', cat: 'ABD Borsası', kind: 'usd_etf', spreadPct: 0.18 },
-    { id: 'btc', field: 'btcUsd', name: 'Bitcoin (BTC)', cat: 'Kripto', kind: 'usd_etf', spreadPct: 0.25 }
-  ];
-
   let activeTab = 'market';
-  let activeCategory = 'STARTER';
-  let bistSubFilter = 'ALL';
+  let activeLens = 'VITRIN'; // VITRIN | FIRE_SALE | BAKERY_CASH | PASSIVE_RIVER | ROTTEN_TRAPS | IPO_DIVIDEND
+  let activeCategory = 'ALL'; // ALL | GOLD_COMMODITY | RATE_SUKUK | FX | BIST_ALL | FUNDS | GLOBAL_CRYPTO
   let searchQuery = '';
   let selectedChainId = null;
-  let scenarioShock = { type: 'OIL', pct: 0 };
+  let selectedNewsId = null;
+  let selectedCrisisId = 'NONE';
+  let showNewsPanel = false;
+  let leagueSortBy = 'NET_WORTH'; // NET_WORTH | PNL_PCT | MASTERY
 
+  // Çekmece (Modal) Durumu: 'ASSET' | 'WELCOME' | 'PROFILE' | 'PEER_XRAY' | null
+  let modalMode = null;
   let drawerAssetKey = null;
+  let drawerOpenedAtMs = 0;
+  let inspectedPeerId = null;
   let selectedDoor = 'BAZAAR';
   let selectedMaturity = 32;
+  let selectedUseMargin = false;
+  let selectedThesisTag = 'RESEARCH_FUNDAMENTAL';
+  let draftThesisNote = '';
+  let draftOrderAmount = 100000;
   let lastDrawerFeedback = null;
-
-  // 10 Yıl 1.000.000 ₺ Simülasyon Durumu
-  let sim10Y = null;
-  let simTimer = null;
+  let lastIpoFeedback = null;
 
   function esc(s) {
-    return String(s || '')
+    return String(s == null ? '' : s)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
@@ -80,66 +71,138 @@
     return v.toLocaleString('tr-TR', { minimumFractionDigits: 3, maximumFractionDigits: 4 }) + ' ₺';
   }
 
+  function fmtAgo(ts) {
+    if (!ts) return 'Az önce';
+    const diffSec = Math.max(0, Math.floor((Date.now() - Number(ts)) / 1000));
+    if (diffSec < 65) return 'Şimdi Açık';
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)} dk önce`;
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} sa önce`;
+    return `${Math.floor(diffSec / 86400)} gün önce`;
+  }
+
+  function initials(name) {
+    const parts = String(name || 'Y').trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toLocaleUpperCase('tr-TR');
+    return String(parts[0] || 'Y').slice(0, 2).toLocaleUpperCase('tr-TR');
+  }
+
+  function renderAllocRibbonHtml(ab) {
+    if (!ab) return '';
+    return `
+      <div class="ms-alloc-ribbon" title="Portföy Varlık Dağılımı">
+        <div class="ms-alloc-seg eq" style="width:${ab.equityPct}%"></div>
+        <div class="ms-alloc-seg mt" style="width:${ab.metalPct}%"></div>
+        <div class="ms-alloc-seg fi" style="width:${ab.fixedPct}%"></div>
+        <div class="ms-alloc-seg fx" style="width:${ab.globalFxCryptoPct}%"></div>
+        <div class="ms-alloc-seg ca" style="width:${ab.cashPct}%"></div>
+      </div>
+      <div class="ms-alloc-legend">
+        ${ab.equityPct > 0.4 ? `<span><i style="background:#2563eb"></i>Hisse %${ab.equityPct}</span>` : ''}
+        ${ab.metalPct > 0.4 ? `<span><i style="background:#eab308"></i>Altın/Emtia %${ab.metalPct}</span>` : ''}
+        ${ab.fixedPct > 0.4 ? `<span><i style="background:#059669"></i>Sabit Getiri %${ab.fixedPct}</span>` : ''}
+        ${ab.globalFxCryptoPct > 0.4 ? `<span><i style="background:#7c3aed"></i>Döviz/Küresel/Kripto %${ab.globalFxCryptoPct}</span>` : ''}
+        ${ab.cashPct > 0.4 ? `<span><i style="background:#94a3b8"></i>Nakit/Takas %${ab.cashPct}</span>` : ''}
+      </div>
+    `;
+  }
+
   // --------------------------------------------------------------------------
-  // ÜST ÖZET ÇUBUĞU (AKTİF YATIRIMCI + PİYASA DURUMU + 1.000.000 ₺ ÖZETİ)
+  // ÜST KOKPİT ÇUBUĞU (KİŞİSEL KASA + CANLI PİYASA SAATLERİ + CANLI KUR ŞERİDİ)
   // --------------------------------------------------------------------------
   function renderHeader() {
     const K = global.AetherKernelV10;
     if (!K) return;
-    const st = K.getState();
+    const me = K.getActiveMember();
     const clock = K.getTurkishClock();
-    const snap = K.evaluateMemberPortfolio();
+    const snap = K.evaluateMemberPortfolio(me);
+    const mastery = K.evaluateInvestorMastery(me, snap);
+    const league = K.getLeagueStatus();
     const headerEl = document.getElementById('msHeaderInner');
     if (!headerEl) return;
 
     const pnlSign = snap.nominalPnlTL >= 0 ? '+' : '';
     const pnlCls = snap.nominalPnlTL > 0 ? 'pos' : (snap.nominalPnlTL < 0 ? 'neg' : '');
+    const usd = K.getUsdTry();
+    const gold = K.getAsset('gram-altin-spot')?.priceTL || 6115;
+    const bist = K.getAsset('bist-100')?.priceTL || 11677;
+    const inf = K.getAnnualInflationPct();
+
+    // Sekme üzerindeki canlı lig sayacını da güncelle
+    const badgeEl = document.getElementById('msLeagueTabBadge');
+    if (badgeEl) {
+      badgeEl.textContent = String(Math.max(1, league.investorCount));
+    }
 
     headerEl.innerHTML = `
-      <div class="ms-user-box">
-        <select id="msActiveMemberSel" class="ms-member-select" aria-label="Aktif Yatırımcı">
-          ${st.members.map((m) => `
-            <option value="${esc(m.id)}" ${m.id === st.activeMemberId ? 'selected' : ''}>
-              ${esc(m.name)} (1 Milyon ₺ Portföy)
-            </option>
-          `).join('')}
-        </select>
-        <div class="ms-market-state">
-          <span class="ms-dot ${clock.bistCanMatchNow ? 'open' : ''}"></span>
-          <span>${esc(clock.shortTimeStr)} · ${clock.bistCanMatchNow ? 'Borsa İstanbul Açık' : (clock.grandBazaarOpen ? 'Kapalıçarşı Açık · Borsa Kapalı' : 'Mesai Dışı (Banka & Kripto Açık)')}</span>
+      <div class="ms-header-top">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <button type="button" class="ms-profile-trigger" id="msOpenProfileBtn" title="Profil ve Maaş Ayarları">
+            <span class="ms-avatar" style="background:${esc(me.avatarColor || '#2563eb')}">${esc(initials(me.profileRegistered ? me.name : 'Ben'))}</span>
+            <span>${esc(me.profileRegistered ? me.name : 'Adını Kaydet')} · <small style="color:#93c5fd;font-weight:700">${esc(mastery.rankTitle)}</small></span>
+          </button>
+          <span class="ms-clock-chip" style="font-size:12px;color:#cbd5e1">
+            <span class="ms-dot ${league.isOnline ? 'open' : ''}"></span>
+            <span>${league.isOnline ? `Canlı Lig Aktif (${league.investorCount} Yatırımcı)` : 'Lig Bağlanıyor...'}</span>
+          </span>
+        </div>
+
+        <div class="ms-balance-strip">
+          <div class="ms-bal-item">
+            <span>Net Portföyüm</span>
+            <strong>${fmtTL(snap.totalNetWorthTL)}</strong>
+          </div>
+          <div class="ms-bal-item">
+            <span>Net Kâr / Zarar</span>
+            <strong class="${pnlCls}">${pnlSign}${fmtTL(snap.nominalPnlTL)} (${pnlSign}%${snap.nominalPnlPct})</strong>
+          </div>
+          <div class="ms-bal-item">
+            <span>Boş Nakit</span>
+            <strong>${fmtTL(snap.cashTL)}</strong>
+          </div>
+          ${snap.marginDebtTL > 0 ? `
+            <div class="ms-bal-item">
+              <span>Kredi Borcu</span>
+              <strong class="neg">-${fmtTL(snap.marginDebtTL)}</strong>
+            </div>
+          ` : ''}
         </div>
       </div>
 
-      <div class="ms-balance-strip">
-        <div class="ms-bal-item">
-          <span>Toplam Portföy</span>
-          <strong>${fmtTL(snap.totalNetWorthTL)}</strong>
-        </div>
-        <div class="ms-bal-item">
-          <span>Net Kâr / Zarar</span>
-          <strong class="${pnlCls}">${pnlSign}${fmtTL(snap.nominalPnlTL)} (${pnlSign}%${snap.nominalPnlPct})</strong>
-        </div>
-        <div class="ms-bal-item">
-          <span>Boş Nakit</span>
-          <strong>${fmtTL(snap.cashTL)}</strong>
-        </div>
+      <div class="ms-clock-ribbon">
+        <span class="ms-clock-chip">
+          <span class="ms-dot ${clock.bistCanMatchNow ? 'open' : 'closed'}"></span>
+          <strong>${esc(clock.timeStr)}</strong> · ${esc(clock.bistLabel)}
+        </span>
+        <span class="ms-clock-chip">
+          <span class="ms-dot ${clock.grandBazaarOpen ? 'open' : ''}"></span>
+          Çarşı Makas %${clock.bazaarSpreadPct.toFixed(2)} · Banka %${clock.bankSpreadPct.toFixed(2)}
+        </span>
+        <span class="ms-clock-chip">
+          ${esc(clock.tefasLabel)}
+        </span>
+        <span style="margin-left:auto;font-weight:700;color:#e2e8f0">
+          Dolar ${usd.toFixed(2)} ₺ · Gr Altın ${Math.round(gold).toLocaleString('tr-TR')} ₺ · BIST ${Math.round(bist).toLocaleString('tr-TR')} · TÜFE %${inf.toFixed(1)}
+        </span>
       </div>
+      ${clock.calendarAlerts.length > 0 ? `
+        <div style="background:rgba(245,158,11,0.18);border:1px solid rgba(251,191,36,0.4);color:#fde68a;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700">
+          Canlı Takvim Uyarısı: ${esc(clock.calendarAlerts.join(' | '))}
+        </div>
+      ` : ''}
     `;
 
-    document.getElementById('msActiveMemberSel')?.addEventListener('change', (e) => {
-      K.switchActiveMember(e.target.value);
-      renderCurrentTab();
-      renderHeader();
+    document.getElementById('msOpenProfileBtn')?.addEventListener('click', () => {
+      openProfileModal();
     });
   }
 
   // --------------------------------------------------------------------------
-  // SEKME 1: PİYASA, DÜNYA BAĞLANTILARI VE 672+ GERÇEK YATIRIM ARACI
+  // SEKME 1: PİYASA & KEŞİF (SOKAK ZEKÂSI, 5 USTA MERCEK, KRİZ TATBİKATI & 672+ VARLIK)
   // --------------------------------------------------------------------------
   function getFilteredMarketAssets() {
     const K = global.AetherKernelV10;
     const G = global.RealInvestmentGuide;
-    const all = K.getAllAssets().filter((a) => a.venue !== 'BENCHMARK_ONLY' && a.priceTL > 0);
+    const all = K.getAllAssets().filter((a) => a.venue !== 'BENCHMARK_ONLY' && (a.priceTL > 0 || a.isRateInstrument));
     const q = searchQuery.trim().toLocaleUpperCase('tr-TR');
 
     if (q.length > 0) {
@@ -149,7 +212,14 @@
           a.ticker.toLocaleUpperCase('tr-TR').includes(q) ||
           (a.categoryName || '').toLocaleUpperCase('tr-TR').includes(q)
         )
-        .slice(0, 48);
+        .slice(0, 60);
+    }
+
+    if (selectedNewsId) {
+      const nw = (G.getEnrichedLiveNewsFeed() || []).find((x) => x.id === selectedNewsId);
+      if (nw && nw.linkedKeys.length > 0) {
+        return nw.linkedKeys.map((k) => K.getAsset(k)).filter(Boolean);
+      }
     }
 
     if (selectedChainId) {
@@ -159,96 +229,204 @@
       }
     }
 
-    if (activeCategory === 'STARTER') {
-      return CURATED_STARTER_KEYS.map((k) => K.getAsset(k)).filter(Boolean);
-    }
-    if (activeCategory === 'GOLD_COMMODITY') {
-      return all.filter((a) => a.categoryId === '2');
-    }
-    if (activeCategory === 'RATE_SUKUK') {
-      return all.filter((a) => a.isRateInstrument || a.id === 'eurobond-usdtr' || a.id === 'eurobond-emb');
-    }
-    if (activeCategory === 'FX') {
-      return all.filter((a) => String(a.id || '').startsWith('doviz-'));
-    }
-    if (activeCategory === 'FUNDS') {
-      return all.filter((a) => a.categoryId === '4' || a.subVenue === 'BIST_TAXABLE_ETF' || a.subVenue === 'BIST_EXEMPT_ETF');
-    }
-    if (activeCategory === 'GLOBAL_CRYPTO') {
-      return all.filter((a) => a.isForeignUsd || a.venue === 'CRYPTO_24_7');
-    }
-    if (activeCategory === 'BIST_ALL') {
-      let stocks = all.filter((a) => a.subVenue === 'BIST_STOCK' || a.id.startsWith('bist-'));
-      if (bistSubFilter === 'STRONG_CASH') {
-        stocks = stocks
-          .filter((a) => a.bistRow && a.bistRow.ocfMillionTL > 0 && !a.isPumpAnomaly)
-          .sort((a, b) => (b.bistRow.ocfMillionTL || 0) - (a.bistRow.ocfMillionTL || 0));
-      } else if (bistSubFilter === 'EXPORT_IND') {
-        stocks = stocks.filter((a) => a.bistRow && ['Otomotiv & Yan Sanayi', 'Makine & Sanayi Üretimi', 'Demir-Çelik & Metal Sanayi', 'Ulaştırma, Havacılık & Lojistik', 'Teknoloji, Yazılım & Savunma'].includes(a.bistRow.sector));
-      } else if (bistSubFilter === 'DIVIDEND') {
-        stocks = stocks
-          .filter((a) => a.bistRow && (a.bistRow.dividendYield || 0) > 1.0)
-          .sort((a, b) => (b.bistRow.dividendYield || 0) - (a.bistRow.dividendYield || 0));
-      } else if (bistSubFilter === 'BANK_HOLDING') {
-        stocks = stocks.filter((a) => a.bistRow && ['Bankacılık & Mevduat', 'Holding & Çoklu Yatırım', 'Sigorta & Emeklilik'].includes(a.bistRow.sector));
-      } else {
-        stocks = stocks.sort((a, b) => (b.bistRow?.turnoverMillionTL || 0) - (a.bistRow?.turnoverMillionTL || 0));
+    // Alt varlık sınıfı filtresi seçilmişse
+    if (activeCategory !== 'ALL') {
+      if (activeCategory === 'GOLD_COMMODITY') return all.filter((a) => a.categoryId === '2' || a.subVenue === 'DARPHANE_S1');
+      if (activeCategory === 'RATE_SUKUK') return all.filter((a) => a.isRateInstrument || a.id === 'eurobond-usdtr' || a.id === 'eurobond-emb');
+      if (activeCategory === 'FX') return all.filter((a) => String(a.id || '').startsWith('doviz-'));
+      if (activeCategory === 'FUNDS') return all.filter((a) => a.categoryId === '4' || a.subVenue === 'BIST_TAXABLE_ETF' || a.subVenue === 'BIST_EXEMPT_ETF');
+      if (activeCategory === 'GLOBAL_CRYPTO') return all.filter((a) => a.isForeignUsd || a.venue === 'CRYPTO_24_7');
+      if (activeCategory === 'BIST_ALL') {
+        return all
+          .filter((a) => a.subVenue === 'BIST_STOCK')
+          .sort((a, b) => (b.bistRow?.turnoverMillionTL || 0) - (a.bistRow?.turnoverMillionTL || 0))
+          .slice(0, 72);
       }
-      return stocks.slice(0, 60);
     }
 
-    return CURATED_STARTER_KEYS.map((k) => K.getAsset(k)).filter(Boolean);
+    // 5 Usta Keşif Merceği
+    if (activeLens === 'FIRE_SALE') {
+      const gems = all.filter((a) =>
+        a.accumulationGem ||
+        (a.bistRow && (a.bistRow.drawdown52WPct || 0) <= -25 && (a.bistRow.ocfMillionTL || 0) > 0 && !a.isPumpAnomaly)
+      );
+      return gems
+        .sort((a, b) => ((b.bistRow?.cmf20 || 0) - (a.bistRow?.cmf20 || 0)))
+        .slice(0, 36);
+    }
+
+    if (activeLens === 'BAKERY_CASH') {
+      return all
+        .filter((a) => a.bistRow && a.bistRow.entityKind !== 'bank' && (a.bistRow.ocfMillionTL || 0) > 250 && !a.isPumpAnomaly && !a.isTms29Illusion)
+        .sort((a, b) => {
+          const ratioA = (a.bistRow.ocfMillionTL || 0) / Math.max(0.5, a.bistRow.marketCapBillionTL || 10);
+          const ratioB = (b.bistRow.ocfMillionTL || 0) / Math.max(0.5, b.bistRow.marketCapBillionTL || 10);
+          return ratioB - ratioA;
+        })
+        .slice(0, 36);
+    }
+
+    if (activeLens === 'PASSIVE_RIVER') {
+      const fixed = ['kira-sertifikasi-sukuk', 'para-piyasasi-fonu', 'mevduat-ust', 'dibs-tahvil', 'eurobond-usdtr']
+        .map((k) => K.getAsset(k))
+        .filter(Boolean);
+      const divStocks = all
+        .filter((a) => a.bistRow && (a.bistRow.dividendYield || 0) >= 2.0 && (a.bistRow.ocfMillionTL || 0) > 0)
+        .sort((a, b) => (b.bistRow.dividendYield || 0) - (a.bistRow.dividendYield || 0))
+        .slice(0, 24);
+      return [...fixed, ...divStocks];
+    }
+
+    if (activeLens === 'ROTTEN_TRAPS') {
+      const s1 = K.getAsset('altin-sertifikasi');
+      const traps = all.filter((a) => a.isPumpAnomaly || a.isTms29Illusion || a.distributionTrap || a.isPatronSelling);
+      const out = s1 && K.getDarphanePremiumInfo().premiumPct >= 5 ? [s1, ...traps] : traps;
+      return Array.from(new Set(out)).slice(0, 36);
+    }
+
+    return CURATED_VITRIN_KEYS.map((k) => K.getAsset(k)).filter(Boolean);
   }
 
-  function computePortfolioScenarioImpact() {
+  function renderIpoAndDividendDeskHtml() {
     const K = global.AetherKernelV10;
-    const snap = K.evaluateMemberPortfolio();
-    const pct = Number(scenarioShock.pct) || 0;
-    if (pct === 0) return null;
+    const ipos = K.getActiveIpoCatalog();
+    const divs = K.getDividendSchedule();
+    const me = K.getActiveMember();
 
-    let deltaTL = 0;
-    for (const item of snap.spotItems) {
-      const a = K.getAsset(item.assetKey);
-      if (!a) continue;
-      let sensitivity = 0;
-      if (scenarioShock.type === 'USD') {
-        if (String(a.id).startsWith('doviz-') || a.isForeignUsd || a.id.includes('altin') || a.id.includes('gumus') || a.venue === 'CRYPTO_24_7') sensitivity = 0.95;
-        else if (['THYAO', 'FROTO', 'TOASO', 'TUPRS', 'ASELS', 'SISE', 'EREGL'].includes(a.ticker)) sensitivity = 0.55;
-        else if (a.venue === 'BIST') sensitivity = 0.25;
-      } else if (scenarioShock.type === 'OIL') {
-        if (a.id === 'emtia-petrol-bno') sensitivity = 1.0;
-        else if (a.ticker === 'TUPRS') sensitivity = 0.45;
-        else if (['THYAO', 'PGSUS'].includes(a.ticker)) sensitivity = -0.40;
-        else if (a.venue === 'BIST') sensitivity = -0.10;
-      } else if (scenarioShock.type === 'RATE') {
-        // Faiz artışı hisse ve GYO'yu baskılar
-        if (a.categoryName.includes('Gayrimenkul') || a.ticker === 'EKGYO' || a.ticker === 'SASA') sensitivity = -0.75;
-        else if (a.venue === 'BIST') sensitivity = -0.35;
-      }
-      deltaTL += item.netValTL * (pct / 100) * sensitivity;
-    }
-    return Math.round(deltaTL);
+    return `
+      <section class="ms-card" style="border:2px solid #bfdbfe;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%)">
+        <div class="ms-sec-head">
+          <div>
+            <h2 class="ms-sec-title">SPK Halka Arz Talep Toplama & Gerçek Temettü Takvimi</h2>
+            <p class="ms-sec-sub">Halka arzlarda tüm paranla talep girsen bile gerçek kişi sayısına göre eşit lot düşer; temettüler ise ödeme gününde %15 stopajı kesilmiş net TL olarak kasana yatar.</p>
+          </div>
+        </div>
+
+        ${lastIpoFeedback ? `<div class="ms-alert ${lastIpoFeedback.ok ? 'ok' : 'err'}">${esc(lastIpoFeedback.text)}</div>` : ''}
+
+        <div class="ms-two-col">
+          <div>
+            <h3 style="margin:0 0 10px;font-size:15px;font-weight:800">Aktif SPK Halka Arz Gişesi</h3>
+            <div class="ms-list">
+              ${ipos.map((ipo) => {
+                const already = (me.ipoRequests || []).find((r) => r.ipoId === ipo.id);
+                const estLots = Math.round(ipo.totalOfferedLots / ipo.estimatedParticipants);
+                return `
+                  <div class="ms-list-row" style="align-items:flex-start;flex-direction:column">
+                    <div style="width:100%;display:flex;justify-content:space-between;gap:8px;align-items:center">
+                      <div>
+                        <span class="ms-asset-code">${esc(ipo.ticker)}</span>
+                        <strong style="font-size:14.5px;margin-left:6px">${esc(ipo.name)}</strong>
+                      </div>
+                      <strong style="font-size:15px">${fmtUnitTL(ipo.offerPriceTL)}</strong>
+                    </div>
+                    <div style="font-size:12.4px;color:#334155">
+                      ${esc(ipo.distributionMethod)} · Tahmini Katılımcı: ~${ipo.estimatedParticipants.toLocaleString('tr-TR')} kişi (Kişi başı tahmini ~<strong>${estLots} lot / ${fmtTL(estLots * ipo.offerPriceTL)}</strong> düşer).<br/>
+                      <span style="color:#64748b">${esc(ipo.netCashUseNote)}</span>
+                    </div>
+                    ${already ? `
+                      <span class="ms-sig-pill good">Talebin Alındı: ${already.requestedLots} Lot (${fmtTL(already.blockedCashTL)} bloke edildi)</span>
+                    ` : `
+                      <div style="display:flex;gap:8px;width:100%;align-items:center;flex-wrap:wrap">
+                        <input type="number" class="ms-input" id="msIpoLots_${esc(ipo.id)}" value="100" min="10" step="10" style="width:120px;padding:7px 10px" />
+                        <span style="font-size:12px;color:#64748b">Lot Talep Et</span>
+                        <button type="button" class="ms-btn primary sm" data-join-ipo="${esc(ipo.id)}" style="margin-left:auto">Halka Arza Katıl</button>
+                      </div>
+                    `}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <div>
+            <h3 style="margin:0 0 10px;font-size:15px;font-weight:800">Yaklaşan Nakit Temettü Ödemeleri (%15 Stopaj Sonrası Net)</h3>
+            <div class="ms-list">
+              ${divs.slice(0, 6).map((d) => {
+                const held = me.positions?.[d.assetKey]?.qty || 0;
+                return `
+                  <div class="ms-list-row">
+                    <div>
+                      <strong>${esc(d.ticker)}</strong> · <span style="font-size:12.5px;color:#475569">${esc(d.frequency)}</span>
+                      <div style="font-size:12.2px;color:#334155">
+                        Pay Başı Net: <strong class="pos">+${fmtUnitTL(d.netPerShareTL)}</strong> (Net Verim %${d.netYieldPct}) · Ödeme: <strong>${esc(d.payDateYmd)}</strong>
+                        ${held > 0 ? ` · <span class="pos">Beklenen Tahsilatın: +${fmtTL(held * d.netPerShareTL)}</span>` : ''}
+                      </div>
+                    </div>
+                    <button type="button" class="ms-btn sm" data-open-asset="${esc(d.assetKey)}">İncele</button>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+      </section>
+    `;
   }
 
   function renderMarketTab(host) {
     const K = global.AetherKernelV10;
     const G = global.RealInvestmentGuide;
-    const md = K.getMarketData();
-    const member = K.getActiveMember();
+    const me = K.getActiveMember();
+    const snap = K.evaluateMemberPortfolio(me);
+    const brief = G.getDailyStreetBriefing();
+    const newsFeed = G.getEnrichedLiveNewsFeed();
+    const activeNews = newsFeed.find((x) => x.id === selectedNewsId) || null;
     const chains = G.getLiveWorldChains();
     const activeChain = chains.find((c) => c.id === selectedChainId) || null;
+    const crisisSim = G.simulatePortfolioCrisis(selectedCrisisId);
     const assets = getFilteredMarketAssets();
-    const topNews = (md?.liveRealWorldFeed || [])[0] || null;
-    const shockDelta = computePortfolioScenarioImpact();
 
     host.innerHTML = `
+      <!-- 1. GÜNÜN SOKAK ZEKÂSI & GÖRMÜŞ GEÇİRMİŞ DOST KOKPİTİ -->
+      <section class="ms-hero-brief">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <span class="ms-hero-kicker">Günün Sokak Zekâsı & Canlı Piyasa Röntgeni</span>
+          <button type="button" class="ms-btn sm" id="msToggleNewsBtn" style="background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.25);color:#fff">
+            ${showNewsPanel ? 'Haber Akışını Daralt' : `Canlı KAP & Resmi Akış (${newsFeed.length})`}
+          </button>
+        </div>
+        <h2 class="ms-hero-title">${esc(brief?.leadHeadline || '')}</h2>
+        <p class="ms-hero-body">${esc(brief?.friendAdvice || '')}</p>
+
+        <div class="ms-pulse-grid">
+          ${(brief?.pulses || []).map((p) => `
+            <div class="ms-pulse-box ${esc(p.tone)}">
+              <span>${esc(p.label)}</span>
+              <strong>${esc(p.value)}</strong>
+            </div>
+          `).join('')}
+        </div>
+      </section>
+
+      <!-- CANLI KAP, RESMİ GAZETE VE MUTFAK HABER AKIŞI -->
+      ${showNewsPanel || activeNews ? `
+        <section class="ms-card">
+          <div class="ms-sec-head">
+            <div>
+              <h3 class="ms-sec-title">Canlı KAP, Resmi Gazete & Piyasa Haber Akışı</h3>
+              <p class="ms-sec-sub">Bir habere dokunduğunda o gelişmenin gerçek hayatta hangi yatırımları etkilediğini aşağıda anında süzersin.</p>
+            </div>
+            ${selectedNewsId ? `<button type="button" class="ms-btn sm" id="msClearNewsBtn">Haber Filtresini Kaldır</button>` : ''}
+          </div>
+          <div class="ms-news-strip">
+            ${newsFeed.map((nw) => `
+              <button type="button" class="ms-news-item ${selectedNewsId === nw.id ? 'active' : ''}" data-news="${esc(nw.id)}">
+                <span class="ms-news-tag ${esc(nw.tone)}">${esc(nw.badge)} · ${esc(nw.source)}</span>
+                <div style="font-size:13.2px;font-weight:800;color:#0f172a;margin-bottom:4px">${esc(nw.title)}</div>
+                <div style="font-size:12px;color:#475569">${esc(nw.streetImpact)}</div>
+              </button>
+            `).join('')}
+          </div>
+        </section>
+      ` : ''}
+
+      <!-- 2. DOMİNO ZİNCİRLERİ VE CANLI KRİZ / FIRTINA TATBİKATI -->
       <section class="ms-card">
         <div class="ms-sec-head">
           <div>
-            <h2 class="ms-sec-title">Dünya Akışı & Hammadde - Şirket Bağlantıları</h2>
-            <p class="ms-sec-sub">
-              ${topNews ? `Güncel Akış: "${esc(topNews.title)}" — ` : ''}Bir hammadde veya ekonomik olaya dokunarak onunla bağlantılı gerçek yatırımları bir arada gör.
-            </p>
+            <h2 class="ms-sec-title">Hammadde -> Fabrika Zincirleri & Ani Fırtına Tatbikatı</h2>
+            <p class="ms-sec-sub">Mazottan domatese, kuraklıktan fabrikaya tüm bağlantıları kur; ortalık aniden karışırsa portföyüne ne olacağını önceden sına.</p>
           </div>
           ${selectedChainId ? `<button type="button" class="ms-btn sm" id="msClearChainBtn">Tüm Piyasaya Dön</button>` : ''}
         </div>
@@ -263,100 +441,154 @@
 
         ${activeChain ? `
           <div class="ms-chain-detail">
-            <div style="font-size:12.5px;font-weight:800;color:#1d4ed8">${esc(activeChain.triggerHeadline)}</div>
+            <div style="font-size:12.8px;font-weight:800;color:#1d4ed8">${esc(activeChain.triggerHeadline)}</div>
             <div class="ms-flow-steps">
-              <div class="ms-flow-box">
-                <span>1. KAYNAK / HAMMADDE</span>
-                <strong>${esc(activeChain.step1)}</strong>
-              </div>
-              <div class="ms-flow-box">
-                <span>2. ÜRETİM / FİNANSAL KANAL</span>
-                <strong>${esc(activeChain.step2)}</strong>
-              </div>
-              <div class="ms-flow-box">
-                <span>3. ETKİLENEN YATIRIMLAR</span>
-                <strong>${esc(activeChain.step3)}</strong>
-              </div>
+              <div class="ms-flow-box"><span>1. ÖNCÜ HAMMADDE / TETİK</span><strong>${esc(activeChain.step1)}</strong></div>
+              <div class="ms-flow-box"><span>2. ÜRETİM / FİNANS KANALI</span><strong>${esc(activeChain.step2)}</strong></div>
+              <div class="ms-flow-box"><span>3. KASASI ETKİLENENLER</span><strong>${esc(activeChain.step3)}</strong></div>
             </div>
-            <div style="font-size:13.2px;color:#334155">${esc(activeChain.insight)}</div>
+            <div style="font-size:13.3px;color:#1e293b;font-weight:500">${esc(activeChain.insight)}</div>
           </div>
         ` : ''}
 
-        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e2e8f0;display:flex;flex-wrap:wrap;align-items:center;gap:12px;font-size:13px">
-          <strong>Portföy Stres Testi:</strong>
-          <select id="msShockType" class="ms-member-select" style="font-size:12.5px;padding:5px 10px">
-            <option value="USD" ${scenarioShock.type === 'USD' ? 'selected' : ''}>Dolar / Döviz Kuru</option>
-            <option value="OIL" ${scenarioShock.type === 'OIL' ? 'selected' : ''}>Brent Petrol Fiyatı</option>
-            <option value="RATE" ${scenarioShock.type === 'RATE' ? 'selected' : ''}>Merkez Bankası Faizi</option>
+        <div style="margin-top:14px;padding-top:13px;border-top:1px solid #e2e8f0;display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+          <strong style="font-size:13.2px">Ani Fırtına Tatbikatı:</strong>
+          <select id="msCrisisSelect" class="ms-input" style="width:auto;min-width:260px;padding:8px 12px;font-weight:700;font-size:13px">
+            ${G.CRISIS_SCENARIOS.map((sc) => `
+              <option value="${esc(sc.id)}" ${selectedCrisisId === sc.id ? 'selected' : ''}>${esc(sc.title)}</option>
+            `).join('')}
           </select>
-          <input id="msShockRange" type="range" min="-25" max="30" step="5" value="${scenarioShock.pct}" style="width:150px;accent-color:#1d4ed8" />
-          <span>Değişim: <strong>${scenarioShock.pct >= 0 ? '+' : ''}%${scenarioShock.pct}</strong></span>
-          ${shockDelta !== null ? `
-            <span class="${shockDelta >= 0 ? 'pos' : 'neg'}" style="font-weight:800">
-              -> Mevcut Portföyüne Tahmini Etkisi: ${shockDelta >= 0 ? '+' : ''}${fmtTL(shockDelta)}
-            </span>
-          ` : `<span style="color:#64748b">(Portföyündeki yatırımların duyarlılığını test etmek için sürgüyü kaydır)</span>`}
+          ${selectedCrisisId !== 'NONE' ? `<button type="button" class="ms-btn sm" id="msResetCrisisBtn">Sıfırla</button>` : ''}
         </div>
+
+        ${crisisSim ? `
+          <div class="ms-alert ${crisisSim.totalDeltaTL >= 0 ? 'ok' : 'err'}" style="margin-bottom:0;margin-top:10px">
+            <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px">
+              <strong>Senaryo: ${esc(crisisSim.scenario.title)}</strong>
+              <strong style="font-size:14.5px">
+                Portföyüne Anlık Etkisi: ${crisisSim.totalDeltaTL >= 0 ? '+' : ''}${fmtTL(crisisSim.totalDeltaTL)} (${crisisSim.totalDeltaPct >= 0 ? '+' : ''}%${crisisSim.totalDeltaPct})
+                -> Yeni Değer: ${fmtTL(crisisSim.postNetWorthTL)}
+              </strong>
+            </div>
+            <div style="font-size:12.5px;font-weight:500">${esc(crisisSim.scenario.desc)}</div>
+            ${crisisSim.marginWiped ? `<div style="margin-top:6px;font-weight:800;color:#991b1b">⚠️ KREDİLİ BORÇ ALARMI: Bu şokta özsermaye teminatın %35'in altına çöküyor; aracı kurum saat 15:00'te hisselerini en dipten zorla satar!</div>` : ''}
+            ${crisisSim.itemImpacts.length > 0 ? `
+              <div style="margin-top:6px;font-size:12px">
+                <strong>Kalem Bazlı Dalga:</strong>
+                ${crisisSim.itemImpacts.map((it) => `${esc(it.name)} (${it.deltaTL >= 0 ? '+' : ''}${fmtTL(it.deltaTL)})`).join(' · ')}
+              </div>
+            ` : `<div style="margin-top:6px;font-size:12px">Portföyünün tamamı henüz boş nakitte olduğu için fiyat dalgası vurmadı; ancak kur/enflasyon şokunda nakdin alım gücü sessizce erir.</div>`}
+          </div>
+        ` : ''}
       </section>
 
+      <!-- 3. HALKA ARZ VE TEMETTÜ MASASI SEÇİLİYSE GÖSTER -->
+      ${activeLens === 'IPO_DIVIDEND' ? renderIpoAndDividendDeskHtml() : ''}
+
+      <!-- 4. KEŞİF MERCEKLERİ & 672+ GERÇEK YATIRIM ARACI MEYDANI -->
       <section class="ms-card">
         <div class="ms-sec-head">
           <div>
-            <h2 class="ms-sec-title">Gerçek Yatırım Araçları (1.000.000 ₺ Sermayeni Yönet)</h2>
-            <p class="ms-sec-sub">Her kart gerçek piyasa fiyatıyla çalışır. Detayına tıkladığında ne iş yaptığını, hammaddesini, vergisini ve al-sat ekranını görürsün.</p>
+            <h2 class="ms-sec-title">Yatırım Keşif Radarı & Gerçek Varlıklar</h2>
+            <p class="ms-sec-sub">Ezbere hisse arama; 5 usta bakış açısından birini seçerek 672+ gerçek yatırımı kasasına, nakit akışına ve fiyat döngüsüne göre incele.</p>
           </div>
+        </div>
+
+        <div class="ms-lens-grid">
+          <button type="button" class="ms-lens-card ${activeLens === 'VITRIN' && activeCategory === 'ALL' && !selectedChainId && !selectedNewsId ? 'active' : ''}" data-lens="VITRIN">
+            <strong>Vitrin: 20 Ana Kutup</strong>
+            <span>Altın, Sukuk, Döviz, Sanayi Devleri, ABD & Kripto</span>
+          </button>
+          <button type="button" class="ms-lens-card ${activeLens === 'FIRE_SALE' && activeCategory === 'ALL' ? 'active' : ''}" data-lens="FIRE_SALE">
+            <strong>🔥 Yangın Yeri Hazineleri</strong>
+            <span>Çok düşmüş ama kasası nakit üreten & toplananlar</span>
+          </button>
+          <button type="button" class="ms-lens-card ${activeLens === 'BAKERY_CASH' && activeCategory === 'ALL' ? 'active' : ''}" data-lens="BAKERY_CASH">
+            <strong>🥖 Fırın Gibi Nakit Basanlar</strong>
+            <span>Kağıt kârı değil, kasasına sıcak nakit giren kaleler</span>
+          </button>
+          <button type="button" class="ms-lens-card ${activeLens === 'PASSIVE_RIVER' && activeCategory === 'ALL' ? 'active' : ''}" data-lens="PASSIVE_RIVER">
+            <strong>💧 Düzenli Nakit Çarkı</strong>
+            <span>%0 Stopaj Sukuk, Günlük PPF & Temettü Şampiyonları</span>
+          </button>
+          <button type="button" class="ms-lens-card ${activeLens === 'ROTTEN_TRAPS' && activeCategory === 'ALL' ? 'active' : ''}" data-lens="ROTTEN_TRAPS">
+            <strong>⛔ Çürük Elma & Tuzaklar</strong>
+            <span>Nakit yakanlar, hava parası balonları & patron satışı</span>
+          </button>
+          <button type="button" class="ms-lens-card ${activeLens === 'IPO_DIVIDEND' ? 'active' : ''}" data-lens="IPO_DIVIDEND">
+            <strong>🏛️ Halka Arz & Temettü</strong>
+            <span>SPK eşit dağıtım gişesi & net temettü ödeme takvimi</span>
+          </button>
         </div>
 
         <div class="ms-search-row">
-          <input id="msSearchInp" class="ms-input" type="search" value="${esc(searchQuery)}" placeholder="Altın, Mevduat, Kira Sertifikası, Dolar, THYAO, FROTO, Bitcoin veya 619 şirketten ara..." />
+          <input id="msSearchInp" class="ms-input" type="search" value="${esc(searchQuery)}" placeholder="672+ gerçek yatırımdan ara: Gram Altın, Kira Sertifikası, TUPRS, THYAO, FROTO, BIMAS, S&P 500, Bitcoin..." />
         </div>
 
         <div class="ms-pills">
-          <button type="button" class="ms-pill ${!selectedChainId && activeCategory === 'STARTER' ? 'active' : ''}" data-cat="STARTER">Öne Çıkan 18 Araç</button>
-          <button type="button" class="ms-pill ${!selectedChainId && activeCategory === 'GOLD_COMMODITY' ? 'active' : ''}" data-cat="GOLD_COMMODITY">Altın, Gümüş & Emtia</button>
-          <button type="button" class="ms-pill ${!selectedChainId && activeCategory === 'RATE_SUKUK' ? 'active' : ''}" data-cat="RATE_SUKUK">Mevduat, Fon & Sukuk</button>
-          <button type="button" class="ms-pill ${!selectedChainId && activeCategory === 'FX' ? 'active' : ''}" data-cat="FX">Döviz</button>
-          <button type="button" class="ms-pill ${!selectedChainId && activeCategory === 'BIST_ALL' ? 'active' : ''}" data-cat="BIST_ALL">Türk Şirketleri (619)</button>
-          <button type="button" class="ms-pill ${!selectedChainId && activeCategory === 'FUNDS' ? 'active' : ''}" data-cat="FUNDS">Yatırım Fonları</button>
-          <button type="button" class="ms-pill ${!selectedChainId && activeCategory === 'GLOBAL_CRYPTO' ? 'active' : ''}" data-cat="GLOBAL_CRYPTO">ABD Borsası & Kripto</button>
+          <button type="button" class="ms-pill ${activeCategory === 'ALL' ? 'active' : ''}" data-cat="ALL">Seçili Radar</button>
+          <button type="button" class="ms-pill ${activeCategory === 'GOLD_COMMODITY' ? 'active' : ''}" data-cat="GOLD_COMMODITY">Altın, Gümüş & Emtia</button>
+          <button type="button" class="ms-pill ${activeCategory === 'RATE_SUKUK' ? 'active' : ''}" data-cat="RATE_SUKUK">Mevduat, PPF & Sukuk</button>
+          <button type="button" class="ms-pill ${activeCategory === 'FX' ? 'active' : ''}" data-cat="FX">Döviz</button>
+          <button type="button" class="ms-pill ${activeCategory === 'BIST_ALL' ? 'active' : ''}" data-cat="BIST_ALL">Türk Şirketleri (619)</button>
+          <button type="button" class="ms-pill ${activeCategory === 'FUNDS' ? 'active' : ''}" data-cat="FUNDS">Fonlar & BYF</button>
+          <button type="button" class="ms-pill ${activeCategory === 'GLOBAL_CRYPTO' ? 'active' : ''}" data-cat="GLOBAL_CRYPTO">ABD Borsası & Kripto</button>
         </div>
-
-        ${!selectedChainId && activeCategory === 'BIST_ALL' && !searchQuery ? `
-          <div class="ms-pills" style="margin-top:-6px">
-            <button type="button" class="ms-pill ${bistSubFilter === 'ALL' ? 'active' : ''}" data-bsub="ALL">En Çok İşlem Görenler</button>
-            <button type="button" class="ms-pill ${bistSubFilter === 'STRONG_CASH' ? 'active' : ''}" data-bsub="STRONG_CASH">Kasası Güçlü Nakit Üretenler</button>
-            <button type="button" class="ms-pill ${bistSubFilter === 'EXPORT_IND' ? 'active' : ''}" data-bsub="EXPORT_IND">İhracat, Sanayi & Havacılık</button>
-            <button type="button" class="ms-pill ${bistSubFilter === 'DIVIDEND' ? 'active' : ''}" data-bsub="DIVIDEND">Temettü Verenler</button>
-            <button type="button" class="ms-pill ${bistSubFilter === 'BANK_HOLDING' ? 'active' : ''}" data-bsub="BANK_HOLDING">Banka & Holdingler</button>
-          </div>
-        ` : ''}
 
         <div class="ms-asset-grid">
           ${assets.map((a) => {
-            const info = G.explainAsset(a);
+            const sig = G.getCardQuickSignal(a);
+            const r52 = G.computeRange52W(a);
             const chg = Number(a.change1D) || 0;
-            const isOwned = Boolean(member.positions?.[a.key] || (member.rateTranches || []).some((t) => t.assetKey === a.key));
+            const heldSpot = snap.spotItems.find((x) => x.assetKey === a.key);
+            const heldTr = snap.tranches.find((t) => t.assetKey === a.key);
+            const isOwned = Boolean(heldSpot || heldTr);
+            const flash = K.getPriceFlash(a.key);
             const priceLabel = a.isRateInstrument
               ? `Yıllık %${a.annualGrossRatePct.toFixed(1)}`
               : fmtUnitTL(a.priceTL);
             const chgLabel = a.isRateInstrument
-              ? (a.stopajPct === 0 ? '%0 Stopaj' : `%${a.stopajPct} Stopaj`)
+              ? (a.stopajPct === 0 ? '%0 Vergi' : `%${a.stopajPct} Stopaj`)
               : `${chg >= 0 ? '+' : ''}%${chg.toFixed(2)}`;
             const chgCls = a.isRateInstrument ? 'flat' : (chg > 0 ? 'pos' : (chg < 0 ? 'neg' : 'flat'));
 
             return `
-              <article class="ms-asset-card ${isOwned ? 'owned' : ''}" data-open-asset="${esc(a.key)}">
+              <article class="ms-asset-card ${isOwned ? 'owned' : ''} ${flash === 'up' ? 'flash-up' : (flash === 'down' ? 'flash-down' : '')}" data-open-asset="${esc(a.key)}">
                 <div>
                   <div class="ms-asset-top">
                     <span class="ms-asset-code">${esc(a.ticker)}</span>
-                    ${isOwned ? `<span style="font-size:11px;font-weight:800;color:#059669">Portföyde Var</span>` : ''}
+                    ${sig.badge ? `<span class="ms-sig-pill ${esc(sig.tone)}">${esc(sig.badge)}</span>` : ''}
                   </div>
                   <h3 class="ms-asset-name">${esc(a.name)}</h3>
-                  <p class="ms-asset-desc" style="margin-top:6px">${esc(info ? info.shortDesc : a.categoryName)}</p>
+                  <p class="ms-asset-desc">${esc(sig.oneLiner)}</p>
+
+                  ${r52 ? `
+                    <div class="ms-range-wrap">
+                      <div class="ms-range-labels">
+                        <span>52H Dip: ${fmtUnitTL(r52.low)}</span>
+                        <span>Zirveye ${r52.drawdownPct}%</span>
+                      </div>
+                      <div class="ms-range-track">
+                        <span class="ms-range-dot" style="left:${r52.pct}%"></span>
+                      </div>
+                    </div>
+                  ` : ''}
                 </div>
-                <div class="ms-asset-bottom">
-                  <span class="ms-price-val">${priceLabel}</span>
-                  <span class="ms-chg-badge ${chgCls}">${esc(chgLabel)}</span>
+
+                <div>
+                  ${heldSpot ? `
+                    <div style="font-size:11.8px;font-weight:800;margin-bottom:6px;color:${heldSpot.pnlNetTL >= 0 ? '#059669' : '#dc2626'}">
+                      Portföyde: ${fmtTL(heldSpot.netValTL)} (${heldSpot.pnlNetTL >= 0 ? '+' : ''}%${heldSpot.pnlNetPct})
+                    </div>
+                  ` : (heldTr ? `
+                    <div style="font-size:11.8px;font-weight:800;margin-bottom:6px;color:#059669">
+                      Portföyde Bağlı: ${fmtTL(heldTr.accruedNetValueTL)}
+                    </div>
+                  ` : '')}
+                  <div class="ms-asset-bottom">
+                    <span class="ms-price-val">${priceLabel}</span>
+                    <span class="ms-chg-badge ${chgCls}">${esc(chgLabel)}</span>
+                  </div>
                 </div>
               </article>
             `;
@@ -365,10 +597,31 @@
       </section>
     `;
 
+    document.getElementById('msToggleNewsBtn')?.addEventListener('click', () => {
+      showNewsPanel = !showNewsPanel;
+      renderMarketTab(host);
+    });
+
+    host.querySelectorAll('[data-news]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-news');
+        selectedNewsId = selectedNewsId === id ? null : id;
+        selectedChainId = null;
+        searchQuery = '';
+        renderMarketTab(host);
+      });
+    });
+
+    document.getElementById('msClearNewsBtn')?.addEventListener('click', () => {
+      selectedNewsId = null;
+      renderMarketTab(host);
+    });
+
     host.querySelectorAll('[data-chain]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-chain');
         selectedChainId = selectedChainId === id ? null : id;
+        selectedNewsId = null;
         searchQuery = '';
         renderMarketTab(host);
       });
@@ -379,14 +632,36 @@
       renderMarketTab(host);
     });
 
-    document.getElementById('msShockType')?.addEventListener('change', (e) => {
-      scenarioShock.type = e.target.value;
+    document.getElementById('msCrisisSelect')?.addEventListener('change', (e) => {
+      selectedCrisisId = e.target.value;
       renderMarketTab(host);
     });
 
-    document.getElementById('msShockRange')?.addEventListener('input', (e) => {
-      scenarioShock.pct = Number(e.target.value) || 0;
+    document.getElementById('msResetCrisisBtn')?.addEventListener('click', () => {
+      selectedCrisisId = 'NONE';
       renderMarketTab(host);
+    });
+
+    host.querySelectorAll('[data-lens]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        activeLens = btn.getAttribute('data-lens');
+        activeCategory = 'ALL';
+        selectedChainId = null;
+        selectedNewsId = null;
+        searchQuery = '';
+        lastIpoFeedback = null;
+        renderMarketTab(host);
+      });
+    });
+
+    host.querySelectorAll('[data-cat]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        activeCategory = btn.getAttribute('data-cat');
+        selectedChainId = null;
+        selectedNewsId = null;
+        searchQuery = '';
+        renderMarketTab(host);
+      });
     });
 
     const searchInp = document.getElementById('msSearchInp');
@@ -403,75 +678,113 @@
       });
     }
 
-    host.querySelectorAll('[data-cat]').forEach((btn) => {
+    host.querySelectorAll('[data-join-ipo]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        activeCategory = btn.getAttribute('data-cat');
-        selectedChainId = null;
-        searchQuery = '';
+        const ipoId = btn.getAttribute('data-join-ipo');
+        const inp = document.getElementById('msIpoLots_' + ipoId);
+        const lots = Number(inp?.value || 100);
+        const res = K.participateInIpo(ipoId, lots);
+        lastIpoFeedback = { ok: res.ok, text: res.ok ? res.message : res.reason };
+        renderHeader();
         renderMarketTab(host);
       });
     });
 
-    host.querySelectorAll('[data-bsub]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        bistSubFilter = btn.getAttribute('data-bsub');
-        renderMarketTab(host);
-      });
-    });
-
-    host.querySelectorAll('[data-open-asset]').forEach((card) => {
-      card.addEventListener('click', () => openAssetDrawer(card.getAttribute('data-open-asset')));
+    host.querySelectorAll('[data-open-asset]').forEach((el) => {
+      el.addEventListener('click', () => openAssetDrawer(el.getAttribute('data-open-asset')));
     });
   }
 
   // --------------------------------------------------------------------------
-  // 360° YATIRIM İNCELEME VE AL-SAT ÇEKMECESİ
+  // 360° YATIRIM RÖNTGENİ, MAHALLE FIRINI KASASI & GERÇEK EMİR GİŞESİ ÇEKMECESİ
   // --------------------------------------------------------------------------
-  function openAssetDrawer(assetKey) {
-    const K = global.AetherKernelV10;
-    const asset = K.getAsset(assetKey);
-    if (!asset) return;
-    drawerAssetKey = asset.key;
-    lastDrawerFeedback = null;
-    if (asset.bistRow || asset.subVenue === 'DARPHANE_S1') {
-      K.markInspectedCashScale();
-    }
-    renderAssetDrawer();
+  function openModalShell() {
     const bd = document.getElementById('msModalBackdrop');
     if (bd) bd.classList.add('open');
   }
 
-  function closeAssetDrawer() {
+  function closeModal() {
+    modalMode = null;
     drawerAssetKey = null;
+    inspectedPeerId = null;
     const bd = document.getElementById('msModalBackdrop');
     if (bd) bd.classList.remove('open');
   }
 
-  function renderHealthBlockHtml(health) {
-    if (!health) return '';
-    if (health.kind === 'COMPANY') {
-      const ocf = health.ocfMillionTL;
-      const inc = health.netIncomeMillionTL;
-      const cash = health.cashMillionTL;
-      const debt = health.totalDebtMillionTL;
-      const maxVal = Math.max(100, Math.abs(ocf), Math.abs(inc), cash, debt);
+  function openAssetDrawer(assetKey) {
+    const K = global.AetherKernelV10;
+    const asset = K.getAsset(assetKey);
+    if (!asset) return;
+    modalMode = 'ASSET';
+    drawerAssetKey = asset.key;
+    drawerOpenedAtMs = Date.now();
+    selectedUseMargin = false;
+    selectedThesisTag = asset.isRateInstrument ? 'INFLATION_SHIELD' : 'RESEARCH_FUNDAMENTAL';
+    draftThesisNote = '';
+    lastDrawerFeedback = null;
+
+    const snap = K.evaluateMemberPortfolio();
+    draftOrderAmount = Math.min(100000, Math.max(1000, Math.floor(snap.cashTL * 0.25) || 25000));
+
+    if (asset.bistRow || asset.subVenue === 'DARPHANE_S1') {
+      K.markInspectedCashScale();
+    }
+    renderAssetDrawer();
+    openModalShell();
+  }
+
+  function renderHealthAndBakeryHtml(info) {
+    const h = info?.health;
+    if (!h) return '';
+
+    if (h.kind === 'COMPANY') {
+      const bk = h.bakery100k;
+      const ocf = h.ocfMillionTL;
+      const cash = h.cashMillionTL;
+      const debt = h.totalDebtMillionTL;
+      const maxVal = Math.max(100, Math.abs(ocf), cash, debt);
       const wOcf = Math.max(6, Math.round((Math.abs(ocf) / maxVal) * 100));
       const wCash = Math.max(6, Math.round((cash / maxVal) * 100));
       const wDebt = Math.max(6, Math.round((debt / maxVal) * 100));
 
       return `
-        <div class="ms-card" style="background:#f8fafc;margin:12px 0;padding:14px">
-          <div style="font-size:13.5px;font-weight:800;margin-bottom:8px">Şirket Finansal Sağlığı (Gerçek Bilanço Verisi)</div>
+        <div class="ms-card" style="background:#f8fafc;margin:12px 0;padding:15px">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+            <strong style="font-size:14px">Mahalle Fırını Hesabı (100.000 ₺ Ortaklıkta Senin Payın)</strong>
+            ${h.pe != null ? `<span style="font-size:12px;font-weight:700;color:#475569">F/K: ${h.pe} · PD/DD: ${h.pb ?? '-'}</span>` : ''}
+          </div>
+          ${bk ? `
+            <p style="margin:0 0 8px;font-size:13px;color:#1e293b">${esc(bk.plainSummary)}</p>
+            <div class="ms-bakery-grid" style="margin-bottom:12px">
+              <div class="ms-bakery-cell">
+                <span>Günlük Kasaya Giren</span>
+                <strong class="${bk.dailyOcfTL >= 0 ? 'pos' : 'neg'}">${bk.dailyOcfTL >= 0 ? '+' : ''}${bk.dailyOcfTL.toLocaleString('tr-TR')} ₺/gün</strong>
+              </div>
+              <div class="ms-bakery-cell">
+                <span>Yıllık Faaliyet Nakdi</span>
+                <strong class="${bk.annualOcfTL >= 0 ? 'pos' : 'neg'}">${bk.annualOcfTL >= 0 ? '+' : ''}${fmtTL(bk.annualOcfTL)}</strong>
+              </div>
+              <div class="ms-bakery-cell">
+                <span>Hazır Kasa Nakdi Payın</span>
+                <strong>${fmtTL(bk.cashShareTL)}</strong>
+              </div>
+              <div class="ms-bakery-cell">
+                <span>Sırtına Binen Borç Payı</span>
+                <strong class="${bk.debtShareTL > bk.cashShareTL * 2 ? 'neg' : ''}">${fmtTL(bk.debtShareTL)}</strong>
+              </div>
+            </div>
+          ` : ''}
+
           <div class="ms-bar-row">
             <div class="ms-bar-label">
-              <span>Kasaya Giren Faaliyet Nakdi (Yıllık)</span>
+              <span>Şirket Toplam Faaliyet Nakdi (Yıllık)</span>
               <span class="${ocf >= 0 ? 'pos' : 'neg'}">${ocf >= 0 ? '+' : ''}${ocf.toLocaleString('tr-TR')} Milyon ₺</span>
             </div>
             <div class="ms-bar-track"><div class="ms-bar-fill ${ocf >= 0 ? 'green' : 'red'}" style="width:${wOcf}%"></div></div>
           </div>
           <div class="ms-bar-row">
             <div class="ms-bar-label">
-              <span>Kasadaki Hazır Nakit</span>
+              <span>Şirket Hazır Nakdi</span>
               <span>${cash.toLocaleString('tr-TR')} Milyon ₺</span>
             </div>
             <div class="ms-bar-track"><div class="ms-bar-fill" style="width:${wCash}%"></div></div>
@@ -483,39 +796,86 @@
             </div>
             <div class="ms-bar-track"><div class="ms-bar-fill ${debt > cash * 2 ? 'amber' : ''}" style="width:${wDebt}%"></div></div>
           </div>
-          <div style="font-size:12.8px;color:#334155;margin-top:8px">
-            <strong>Değerlendirme:</strong> ${esc(health.verdict)}
-            ${health.pe != null ? ` (F/K: ${health.pe} · PD/DD: ${health.pb ?? '-'})` : ''}
+          <div style="font-size:12.6px;color:#1e293b;margin-top:8px">
+            <strong>Kasa Hükmü:</strong> ${esc(h.verdict)}
+            ${h.smartMoneyNote ? `<br/><strong>Tahta Para İzi:</strong> ${esc(h.smartMoneyNote)}` : ''}
           </div>
         </div>
       `;
     }
 
-    if (health.kind === 'GOLD_SPREAD') {
+    if (h.kind === 'GOLD_SPREAD') {
       return `
-        <div class="ms-alert ${health.status === 'WARN' ? 'warn' : 'info'}">
-          <strong>Fiziki Altın vs Borsa Sertifikası Fiyat Farkı:</strong><br/>
-          Serbest Piyasa 1 Gr Fiziki Altın: <strong>${fmtTL(health.spotGramTL)}</strong> ·
-          100 Adet ALTIN.S1 (1 Gr Karşılığı): <strong>${fmtTL(health.s1GramTL)}</strong>.<br/>
-          ${esc(health.verdict)}
+        <div class="ms-alert ${h.status === 'WARN' ? 'warn' : 'ok'}">
+          <strong>Terazi Kontrolü (Fiziki Altın vs Borsa Sertifikası):</strong><br/>
+          Kapalıçarşı 1 Gr Fiziki Altın: <strong>${fmtTL(h.spotGramTL)}</strong> ·
+          100 Adet ALTIN.S1: <strong>${fmtTL(h.s1GramTL)}</strong>.<br/>
+          ${esc(h.verdict)}
         </div>
       `;
     }
 
-    if (health.kind === 'RATE_VS_INF') {
+    if (h.kind === 'RATE_VS_INF') {
       return `
-        <div class="ms-alert ${health.status === 'GOOD' ? 'ok' : 'warn'}">
-          <strong>Vergi Sonrası Net Getiri Hesabı:</strong>
-          Brüt %${health.grossPct.toFixed(1)} -> %${health.stopajPct} stopaj kesildikten sonra yıllık <strong>net %${health.netPct}</strong> kalır (TÜİK yıllık enflasyon: %${health.inflationPct.toFixed(1)}).
+        <div class="ms-alert ${h.status === 'GOOD' ? 'ok' : 'warn'}">
+          <strong>Vergi Sonrası Gerçek Getiri:</strong>
+          Brüt %${h.grossPct.toFixed(1)} -> %${h.stopajPct} stopaj kesildikten sonra yıllık <strong>net %${h.netPct}</strong> kalır (Yıllık TÜFE: %${h.inflationPct.toFixed(1)}). ${esc(h.verdict)}
         </div>
       `;
     }
     return '';
   }
 
+  function computeOrderRipplePreview(asset, amountTL) {
+    const K = global.AetherKernelV10;
+    const clock = K.getTurkishClock();
+    const snap = K.evaluateMemberPortfolio();
+    const amt = Math.max(0, Number(amountTL) || 0);
+
+    let frictionTL = 0;
+    let timingText = 'Anında portföye geçer';
+    let monthlyDripTL = 0;
+
+    if (asset.venue === 'TWO_DOOR') {
+      const sp = selectedDoor === 'BAZAAR' ? clock.bazaarSpreadPct : clock.bankSpreadPct;
+      const bsmv = selectedDoor === 'BANK' ? 0.20 : 0;
+      frictionTL = Math.round(amt * ((sp / 2 + bsmv) / 100));
+      timingText = selectedDoor === 'BAZAAR'
+        ? (clock.grandBazaarOpen ? 'Kapalıçarşı anında teslim (%0 vergi)' : 'Çarşı kapalı (Sabah 09:30)')
+        : 'Mobil Banka 7/24 anında (%0,2 vergi dahil)';
+    } else if (asset.venue === 'BIST') {
+      frictionTL = Math.round(amt * 0.00084);
+      timingText = clock.bistCanMatchNow ? 'Borsa açık: Anında eşleşir (Satışta T+2 takas)' : 'Borsa kapalı: Sabah 10:00 açılış eşleşmesine yazılır';
+      if (asset.bistRow?.dividendYield > 0) {
+        monthlyDripTL = Math.round((amt * (asset.bistRow.dividendYield / 100) * 0.85) / 12);
+      }
+    } else if (asset.venue === 'TEFAS') {
+      timingText = (asset.subVenue === 'TEFAS_PPF' && clock.tefasBeforeCutoff)
+        ? '13:30 öncesi: Bugün T+0 kazanmaya başlar'
+        : 'TEFAS Valör Sırası (+1 / +2 iş günü 10:30)';
+      const netR = asset.annualGrossRatePct * (1 - (asset.stopajPct || 0) / 100);
+      monthlyDripTL = Math.round((amt * (netR / 100)) / 12);
+    } else if (asset.venue === 'BANK_RATE') {
+      let stp = asset.stopajPct;
+      if (asset.subVenue === 'TERM_DEPOSIT') {
+        stp = selectedMaturity > 365 ? 10 : (selectedMaturity > 180 ? 15 : 17.5);
+        timingText = `${selectedMaturity} gün kilitlenir (Erken bozarsan faiz sıfırlanır)`;
+      }
+      const netR = asset.annualGrossRatePct * (1 - stp / 100);
+      monthlyDripTL = Math.round((amt * (netR / 100)) / 12);
+    } else {
+      frictionTL = Math.round(amt * 0.0012);
+    }
+
+    const existingVal = snap.spotItems.find((x) => x.assetKey === asset.key)?.netValTL || 0;
+    const newSingleSharePct = Math.min(100, Math.round(((existingVal + amt) / Math.max(1, snap.totalNetWorthTL)) * 100));
+
+    return { frictionTL, timingText, monthlyDripTL, newSingleSharePct };
+  }
+
   function renderAssetDrawer() {
     const sheet = document.getElementById('msModalSheet');
-    if (!sheet || !drawerAssetKey) return;
+    if (!sheet || modalMode !== 'ASSET' || !drawerAssetKey) return;
     const K = global.AetherKernelV10;
     const G = global.RealInvestmentGuide;
     const asset = K.getAsset(drawerAssetKey);
@@ -527,31 +887,31 @@
     const snap = K.evaluateMemberPortfolio(member);
     const micro = K.inspectBoardMicrostructure(asset);
     const existingPos = member.positions?.[asset.key] || null;
+    const ripple = computeOrderRipplePreview(asset, draftOrderAmount);
 
     let channelPickerHtml = '';
     if (asset.venue === 'TWO_DOOR') {
-      const exAmt = 100000;
-      const bazCost = Math.round(exAmt * (clock.bazaarSpreadPct / 200));
-      const bankCost = Math.round(exAmt * (clock.bankSpreadPct / 200 + 0.002));
+      const bazCost = Math.round(100000 * (clock.bazaarSpreadPct / 200));
+      const bankCost = Math.round(100000 * (clock.bankSpreadPct / 200 + 0.002));
       channelPickerHtml = `
         <div style="margin:12px 0">
-          <div style="font-size:13px;font-weight:800;margin-bottom:6px">Alım-Satım Kanalı Seç (Gerçek Makas ve Vergi Farkı):</div>
+          <div style="font-size:13px;font-weight:800;margin-bottom:6px">Alım-Satım Gişesini Seç (Gerçek Makas & Vergi Farkı):</div>
           <div class="ms-door-grid">
             <button type="button" class="ms-door-card ${selectedDoor === 'BAZAAR' ? 'selected' : ''}" data-door="BAZAAR">
               <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
                 <strong>Kapalıçarşı Serbest Piyasa</strong>
-                <span class="${clock.grandBazaarOpen ? 'pos' : 'neg'}" style="font-weight:800">${clock.grandBazaarOpen ? 'Açık' : 'Kapalı (09:30–18:30)'}</span>
+                <span class="${clock.grandBazaarOpen ? 'pos' : 'neg'}" style="font-weight:800">${clock.grandBazaarOpen ? 'Açık' : 'Kapalı (09:30)'}</span>
               </div>
               <div style="font-size:12.2px;color:#334155">Makas ~%${clock.bazaarSpreadPct.toFixed(2)} · Vergi: <strong>%0</strong></div>
-              <div style="font-size:11.8px;color:#64748b;margin-top:3px">100.000 ₺ işlemde makas maliyeti: ~${bazCost.toLocaleString('tr-TR')} ₺</div>
+              <div style="font-size:11.6px;color:#64748b;margin-top:3px">100.000 ₺ işlemde kayıp: ~${bazCost.toLocaleString('tr-TR')} ₺</div>
             </button>
             <button type="button" class="ms-door-card ${selectedDoor === 'BANK' ? 'selected' : ''}" data-door="BANK">
               <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
                 <strong>Mobil Banka (7/24)</strong>
-                <span class="${clock.bankDaytimeTight ? 'pos' : 'neg'}" style="font-weight:800">${clock.bankDaytimeTight ? 'Mesai İçi' : 'Mesai Dışı Geniş Makas!'}</span>
+                <span class="${clock.bankDaytimeTight ? 'pos' : 'neg'}" style="font-weight:800">${clock.bankDaytimeTight ? 'Mesai İçi' : 'Gece Makası Açık!'}</span>
               </div>
-              <div style="font-size:12.2px;color:#334155">Makas %${clock.bankSpreadPct.toFixed(2)} + <strong>%0,2 Kambiyo Vergisi</strong></div>
-              <div style="font-size:11.8px;color:#64748b;margin-top:3px">100.000 ₺ işlemde makas+vergi: ~${bankCost.toLocaleString('tr-TR')} ₺</div>
+              <div style="font-size:12.2px;color:#334155">Makas %${clock.bankSpreadPct.toFixed(2)} + <strong>%0,2 Vergi</strong></div>
+              <div style="font-size:11.6px;color:#64748b;margin-top:3px">100.000 ₺ işlemde kayıp: ~${bankCost.toLocaleString('tr-TR')} ₺</div>
             </button>
           </div>
         </div>
@@ -562,12 +922,26 @@
     if (asset.subVenue === 'TERM_DEPOSIT') {
       maturityPickerHtml = `
         <div style="margin:12px 0">
-          <div style="font-size:13px;font-weight:800;margin-bottom:6px">Mevduat Vadesi Seç (Vadeden önce bozulursa biriken faiz sıfırlanır):</div>
+          <div style="font-size:13px;font-weight:800;margin-bottom:6px">Mevduat Vadesi Seç (Vadeden önce bozulursa tüm faiz yanar!):</div>
           <div class="ms-pills" style="margin-bottom:0">
             <button type="button" class="ms-pill ${selectedMaturity === 32 ? 'active' : ''}" data-mat="32">32 Gün (%17,5 Stopaj)</button>
             <button type="button" class="ms-pill ${selectedMaturity === 181 ? 'active' : ''}" data-mat="181">181 Gün (%15 Stopaj)</button>
             <button type="button" class="ms-pill ${selectedMaturity === 366 ? 'active' : ''}" data-mat="366">366 Gün (%10 Stopaj)</button>
           </div>
+        </div>
+      `;
+    }
+
+    let marginToggleHtml = '';
+    if (micro.marginAllowed && clock.bistCanMatchNow) {
+      const maxBorrow = Math.max(0, Math.round(snap.totalNetWorthTL * 0.50 - snap.marginDebtTL));
+      marginToggleHtml = `
+        <div style="margin:10px 0;padding:10px 12px;border-radius:10px;border:1px solid ${selectedUseMargin ? '#fca5a5' : '#e2e8f0'};background:${selectedUseMargin ? '#fef2f2' : '#ffffff'};display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:8px;font-size:12.6px;font-weight:700;cursor:pointer">
+            <input type="checkbox" id="msUseMarginChk" ${selectedUseMargin ? 'checked' : ''} />
+            <span>Kredili İşlem (Aracı Kurumdan Borçla Al — Yıllık %${K.getAnnualMarginRatePct()} Günlük Faiz)</span>
+          </label>
+          <span style="font-size:11.8px;color:#64748b">Ek Kredi Limiti: ${fmtTL(maxBorrow)}</span>
         </div>
       `;
     }
@@ -580,34 +954,42 @@
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px">
         <div>
           <span class="ms-asset-code">${esc(asset.symbol)}</span>
-          <h2 style="margin:2px 0 0;font-size:20px;font-weight:800">${esc(asset.name)}</h2>
+          ${info.quickSignal?.badge ? `<span class="ms-sig-pill ${esc(info.quickSignal.tone)}" style="margin-left:6px">${esc(info.quickSignal.badge)}</span>` : ''}
+          <h2 style="margin:4px 0 0;font-size:20px;font-weight:800">${esc(asset.name)}</h2>
         </div>
         <button type="button" class="ms-btn sm" id="msCloseModalBtn">Kapat</button>
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px">
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px">
         <div class="ms-kpi-box" style="padding:10px">
-          <span style="font-size:10.5px">Fiyat / Oran</span>
-          <strong style="font-size:15px">${asset.isRateInstrument ? `Yıllık %${asset.annualGrossRatePct.toFixed(1)}` : fmtUnitTL(asset.priceTL)}</strong>
+          <span style="font-size:10.5px">Canlı Fiyat / Oran</span>
+          <strong style="font-size:14.5px">${asset.isRateInstrument ? `%${asset.annualGrossRatePct.toFixed(1)}` : fmtUnitTL(asset.priceTL)}</strong>
+        </div>
+        <div class="ms-kpi-box" style="padding:10px">
+          <span style="font-size:10.5px">1 Ay / 1 Yıl</span>
+          <strong style="font-size:13.5px">${asset.isRateInstrument ? 'Sabit Akış' : `%${asset.perf1M.toFixed(1)} / %${asset.perf1Y.toFixed(0)}`}</strong>
         </div>
         <div class="ms-kpi-box" style="padding:10px">
           <span style="font-size:10.5px">Boş Nakdin</span>
-          <strong style="font-size:15px">${fmtTL(snap.cashTL)}</strong>
+          <strong style="font-size:14.5px">${fmtTL(snap.cashTL)}</strong>
         </div>
         <div class="ms-kpi-box" style="padding:10px">
           <span style="font-size:10.5px">T+2 Takasta</span>
-          <strong style="font-size:15px">${fmtTL(snap.unsettledTL)}</strong>
+          <strong style="font-size:14.5px">${fmtTL(snap.unsettledTL)}</strong>
         </div>
       </div>
 
       ${lastDrawerFeedback ? `<div class="ms-alert ${lastDrawerFeedback.ok ? 'ok' : 'err'}">${esc(lastDrawerFeedback.text)}</div>` : ''}
       ${micro.statusNote ? `<div class="ms-alert warn">${esc(micro.statusNote)}</div>` : ''}
 
+      ${renderHealthAndBakeryHtml(info)}
+
       ${channelPickerHtml}
       ${maturityPickerHtml}
 
-      <div class="ms-card" style="background:#f8fafc;padding:14px;margin-bottom:12px">
-        <div style="font-size:13.5px;font-weight:800;margin-bottom:8px">Yatırım Tutarı Gir (₺)</div>
+      <!-- ALIM / SATIM VE KARAR GÜNLÜĞÜ KUTUSU -->
+      <div class="ms-card" style="background:#f8fafc;padding:15px;margin-bottom:12px;border:1.5px solid #cbd5e1">
+        <div style="font-size:13.5px;font-weight:800;margin-bottom:8px">1. Yatırım Tutarını Seç (₺)</div>
         <div class="ms-pills" style="margin-bottom:10px">
           <button type="button" class="ms-pill" data-qamt="50000">50.000 ₺</button>
           <button type="button" class="ms-pill" data-qamt="100000">100.000 ₺</button>
@@ -615,19 +997,40 @@
           <button type="button" class="ms-pill" data-qamt="500000">500.000 ₺</button>
           <button type="button" class="ms-pill" data-qamt="${Math.max(100, Math.floor(snap.cashTL))}">Tüm Nakit (${fmtTL(snap.cashTL)})</button>
         </div>
+
+        ${marginToggleHtml}
+
+        <div style="font-size:13px;font-weight:800;margin:10px 0 6px">2. Bu Hamleyi Neye Dayanarak Yapıyorsun? (Ay Sonu Karneni Belirler)</div>
+        <div class="ms-pills" style="margin-bottom:8px">
+          <button type="button" class="ms-pill ${selectedThesisTag === 'RESEARCH_FUNDAMENTAL' ? 'active' : ''}" data-thesis="RESEARCH_FUNDAMENTAL">📊 Bilanço & Kasa Sağlam</button>
+          <button type="button" class="ms-pill ${selectedThesisTag === 'MACRO_CHAIN' ? 'active' : ''}" data-thesis="MACRO_CHAIN">🛢️ Hammadde / Makro Öngörü</button>
+          <button type="button" class="ms-pill ${selectedThesisTag === 'INFLATION_SHIELD' ? 'active' : ''}" data-thesis="INFLATION_SHIELD">🛡️ Enflasyon / Nakit Kalkanı</button>
+          <button type="button" class="ms-pill ${selectedThesisTag === 'RUMOR_IMPULSE' ? 'active' : ''}" data-thesis="RUMOR_IMPULSE">🔥 Duyum / Anlık Heyecan</button>
+        </div>
+
+        <input id="msThesisNoteInp" class="ms-input" style="margin-bottom:10px;font-size:13px" type="text" value="${esc(draftThesisNote)}" placeholder="Kısa yatırım notun (İsteğe bağlı — Örn: Petrol düşerken marjı açılacak, Aile Liginde görünür)" />
+
+        <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:9px 12px;margin-bottom:10px;font-size:12.3px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px">
+          <span><strong>İşlem Akışı:</strong> ${esc(ripple.timingText)}</span>
+          <span><strong>Makas/Vergi Kaybı:</strong> ${ripple.frictionTL > 0 ? '-' + fmtTL(ripple.frictionTL) : '0 ₺'}</span>
+          <span class="${ripple.newSingleSharePct >= 65 ? 'neg' : ''}"><strong>Tek Sepet Ağırlığı:</strong> %${ripple.newSingleSharePct}</span>
+          ${ripple.monthlyDripTL > 0 ? `<span class="pos"><strong>Tahmini Nakit Çarkı:</strong> +${fmtTL(ripple.monthlyDripTL)}/ay</span>` : ''}
+        </div>
+
         <div style="display:flex;flex-wrap:wrap;gap:8px">
-          <input id="msOrderAmountInp" class="ms-input" style="flex:1 1 160px" type="number" min="100" step="1000" value="${Math.min(100000, Math.max(1000, Math.floor(snap.cashTL * 0.25)))}" />
-          <button type="button" class="ms-btn primary" style="flex:1 1 160px" id="msBuyConfirmBtn">
-            ${asset.isRateInstrument ? 'Vadeli / Fona Bağla' : 'Alım Emri Ver'}
+          <input id="msOrderAmountInp" class="ms-input" style="flex:1 1 160px;font-weight:800;font-size:15px" type="number" min="100" step="1000" value="${draftOrderAmount}" />
+          <button type="button" class="ms-btn primary" style="flex:1 1 190px;font-size:14.5px" id="msBuyConfirmBtn">
+            ${asset.isRateInstrument ? 'Vadeli / Fona Bağla' : (selectedUseMargin ? 'Kredili Alım Emri Ver' : 'Alım Emri Ver')}
           </button>
         </div>
 
         ${existingPos && existingPos.qty > 0 ? `
           <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e2e8f0;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px">
             <div style="font-size:13px">
-              Portföydeki Miktarın: <strong>${existingPos.qty} adet</strong> (Maliyet: ${fmtUnitTL(existingPos.avgCostTL)})
+              Elimdeki: <strong>${existingPos.qty} adet</strong> (Maliyet: ${fmtUnitTL(existingPos.avgCostTL)})
             </div>
-            <div style="display:flex;gap:8px">
+            <div style="display:flex;gap:7px;flex-wrap:wrap">
+              <button type="button" class="ms-btn sm" data-sell-part="0.25">%25 Sat</button>
               <button type="button" class="ms-btn sm" data-sell-part="0.5">Yarısını Sat</button>
               <button type="button" class="ms-btn danger sm" data-sell-part="1">Tamamını Sat</button>
             </div>
@@ -635,17 +1038,18 @@
         ` : ''}
       </div>
 
+      <!-- NASIL PARA KAZANIR & HAMMADDE ZİNCİRİ -->
       <div class="ms-card" style="background:#f8fafc;padding:14px;margin-bottom:12px">
         <div style="font-size:13.5px;font-weight:800;margin-bottom:4px">Nasıl Çalışır & Parayı Nereden Kazanır?</div>
-        <p style="margin:0 0 10px;font-size:13.3px;color:#334155">${esc(info.howItWorks)}</p>
+        <p style="margin:0 0 10px;font-size:13.2px;color:#334155">${esc(info.howItWorks)}</p>
         <div style="display:grid;gap:6px;font-size:12.6px">
           <div><strong>Bağlı Olduğu Hammadde ve Veriler:</strong> ${esc(info.rawInputs.join(' · '))}</div>
           <div><strong class="pos">Ne Zaman Güçlenir:</strong> ${esc(info.risesWhen)}</div>
-          <div><strong class="neg">Risk ve Baskı Unsuru:</strong> ${esc(info.fallsWhen)}</div>
+          <div><strong class="neg">Ne Zaman Zorlanır:</strong> ${esc(info.fallsWhen)}</div>
         </div>
         ${relatedAssets.length > 0 ? `
           <div style="margin-top:10px;padding-top:10px;border-top:1px solid #e2e8f0;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
-            <span style="font-size:12px;font-weight:700;color:#64748b">Bağlantılı Yatırımlar:</span>
+            <span style="font-size:12px;font-weight:700;color:#64748b">Zincirdeki Bağlantılı Varlıklar:</span>
             ${relatedAssets.map((ra) => `
               <button type="button" class="ms-btn sm" data-jump-asset="${esc(ra.key)}">${esc(ra.ticker)} · ${ra.isRateInstrument ? '%' + ra.annualGrossRatePct : fmtUnitTL(ra.priceTL)}</button>
             `).join('')}
@@ -653,14 +1057,12 @@
         ` : ''}
       </div>
 
-      ${renderHealthBlockHtml(info.health)}
-
       <div class="ms-alert info" style="font-weight:500;margin-bottom:0">
-        <strong>Türkiye İşlem & Vergi Kuralı:</strong> ${esc(info.executionRule)}
+        <strong>Türkiye Gerçek Piyasa & Vergi Kuralı:</strong> ${esc(info.executionRule)}
       </div>
     `;
 
-    document.getElementById('msCloseModalBtn')?.addEventListener('click', closeAssetDrawer);
+    document.getElementById('msCloseModalBtn')?.addEventListener('click', closeModal);
 
     sheet.querySelectorAll('[data-jump-asset]').forEach((b) => {
       b.addEventListener('click', () => {
@@ -683,23 +1085,49 @@
       });
     });
 
-    sheet.querySelectorAll('[data-qamt]').forEach((b) => {
+    document.getElementById('msUseMarginChk')?.addEventListener('change', (e) => {
+      selectedUseMargin = Boolean(e.target.checked);
+      renderAssetDrawer();
+    });
+
+    sheet.querySelectorAll('[data-thesis]').forEach((b) => {
       b.addEventListener('click', () => {
-        const inp = document.getElementById('msOrderAmountInp');
-        if (inp) inp.value = b.getAttribute('data-qamt');
+        selectedThesisTag = b.getAttribute('data-thesis');
+        renderAssetDrawer();
       });
     });
 
+    document.getElementById('msThesisNoteInp')?.addEventListener('input', (e) => {
+      draftThesisNote = e.target.value;
+    });
+
+    sheet.querySelectorAll('[data-qamt]').forEach((b) => {
+      b.addEventListener('click', () => {
+        draftOrderAmount = Number(b.getAttribute('data-qamt')) || 50000;
+        renderAssetDrawer();
+      });
+    });
+
+    document.getElementById('msOrderAmountInp')?.addEventListener('input', (e) => {
+      draftOrderAmount = Number(e.target.value) || 0;
+    });
+
     document.getElementById('msBuyConfirmBtn')?.addEventListener('click', () => {
-      const amt = Number(document.getElementById('msOrderAmountInp')?.value || 0);
+      const amt = Number(document.getElementById('msOrderAmountInp')?.value || draftOrderAmount || 0);
+      const noteVal = document.getElementById('msThesisNoteInp')?.value || draftThesisNote || '';
       const res = K.executeOrder({
         side: 'BUY',
         assetKey: asset.key,
         amountTL: amt,
         door: selectedDoor,
-        maturityDays: selectedMaturity
+        maturityDays: selectedMaturity,
+        useMargin: selectedUseMargin,
+        thesisTag: selectedThesisTag,
+        thesisNote: noteVal,
+        inspectedMs: Date.now() - drawerOpenedAtMs
       });
       lastDrawerFeedback = { ok: res.ok, text: res.ok ? res.message : res.reason };
+      if (res.ok) draftThesisNote = '';
       renderAssetDrawer();
       renderHeader();
       renderCurrentTab();
@@ -723,16 +1151,147 @@
   }
 
   // --------------------------------------------------------------------------
-  // SEKME 2: PORTFÖYÜM, BENCHMARK KIYASLAMASI & HATA KOÇU
+  // İLK AÇILIŞ HOŞ GELDİN & PROFİL / MAAŞ GÜNÜ MODALLARI
+  // --------------------------------------------------------------------------
+  function openWelcomeModal() {
+    modalMode = 'WELCOME';
+    const sheet = document.getElementById('msModalSheet');
+    if (!sheet) return;
+    sheet.innerHTML = `
+      <div style="margin-bottom:14px">
+        <span class="ms-asset-code">AETHER CANLI PİYASA & AİLE LİGİ</span>
+        <h2 style="margin:6px 0 4px;font-size:22px;font-weight:800">1.000.000 ₺ Gerçek Piyasa Sermayen Hazır</h2>
+        <p style="margin:0;font-size:13.6px;color:#475569">
+          İleri sarma veya hayali oyun yok: Borsa İstanbul, Kapalıçarşı, TEFAS ve dünya piyasalarının birebir kurallarıyla 1.000.000 ₺ yönetirsin. Uygulamayı yükleyen herkes Canlı Yatırımcı Liginde birbirinin portföyünü ve kâr/zararını anlık görür.
+        </p>
+      </div>
+
+      <div style="display:grid;gap:12px;margin-bottom:14px">
+        <div>
+          <label style="display:block;font-size:12.8px;font-weight:800;margin-bottom:5px">Canlı Ligde Görünecek Adın:</label>
+          <input id="msWelcomeName" class="ms-input" type="text" maxlength="28" placeholder="Örn: Hera, Ahmet, Babam, Kardeşim..." autofocus />
+        </div>
+        <div>
+          <label style="display:block;font-size:12.8px;font-weight:800;margin-bottom:5px">Yatırım Tarzın / Unvanın:</label>
+          <select id="msWelcomeRole" class="ms-input">
+            <option value="Değer & Kasa Avcısı">Değer & Kasa Avcısı</option>
+            <option value="Uzun Vadeli Ortak">Uzun Vadeli Ortak</option>
+            <option value="Temettü & Nakit Çarkı">Temettü & Nakit Çarkı</option>
+            <option value="Altın & Makro Stratejist">Altın & Makro Stratejist</option>
+            <option value="1 Milyon ₺ Portföy Yöneticisi">1 Milyon ₺ Portföy Yöneticisi</option>
+          </select>
+        </div>
+        <div id="msWelcomeErr" class="neg" style="font-size:12.5px;font-weight:700;display:none"></div>
+        <button type="button" class="ms-btn primary" style="padding:13px;font-size:15px" id="msWelcomeStartBtn">
+          1.000.000 ₺ Portföyümü Aç ve Canlı Lige Katıl
+        </button>
+      </div>
+    `;
+    openModalShell();
+
+    const submit = () => {
+      const name = document.getElementById('msWelcomeName')?.value || '';
+      const role = document.getElementById('msWelcomeRole')?.value || 'Yatırımcı';
+      const res = global.AetherKernelV10.completeOnboarding(name, role);
+      if (!res.ok) {
+        const errEl = document.getElementById('msWelcomeErr');
+        if (errEl) { errEl.style.display = 'block'; errEl.textContent = res.reason; }
+        return;
+      }
+      closeModal();
+      renderHeader();
+      renderCurrentTab();
+    };
+
+    document.getElementById('msWelcomeStartBtn')?.addEventListener('click', submit);
+    document.getElementById('msWelcomeName')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submit();
+    });
+  }
+
+  function openProfileModal() {
+    modalMode = 'PROFILE';
+    const K = global.AetherKernelV10;
+    const me = K.getActiveMember();
+    const st = K.getState();
+    const sheet = document.getElementById('msModalSheet');
+    if (!sheet) return;
+
+    sheet.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h2 style="margin:0;font-size:19px;font-weight:800">Yatırımcı Kimliğim & Maaş Günü Ayarları</h2>
+        <button type="button" class="ms-btn sm" id="msCloseModalBtn">Kapat</button>
+      </div>
+
+      <div style="display:grid;gap:12px">
+        <div>
+          <label style="display:block;font-size:12.5px;font-weight:800;margin-bottom:4px">Canlı Ligde Görünen Adın</label>
+          <input id="msProfName" class="ms-input" type="text" value="${esc(me.profileRegistered ? me.name : '')}" placeholder="Adın..." />
+        </div>
+        <div>
+          <label style="display:block;font-size:12.5px;font-weight:800;margin-bottom:4px">Yatırım Tarzı / Unvan</label>
+          <input id="msProfRole" class="ms-input" type="text" value="${esc(me.roleLabel)}" />
+        </div>
+        <div class="ms-two-col" style="gap:10px">
+          <div>
+            <label style="display:block;font-size:12.5px;font-weight:800;margin-bottom:4px">Aylık Yaşam Giderin (₺ — Özgürlük Çarkı İçin)</label>
+            <input id="msProfExpense" class="ms-input" type="number" step="5000" value="${me.monthlyExpenseTL || 40000}" />
+          </div>
+          <div>
+            <label style="display:block;font-size:12.5px;font-weight:800;margin-bottom:4px">Maaş Gününde Eklenecek Tasarruf (₺/Ay)</label>
+            <input id="msProfSavings" class="ms-input" type="number" step="5000" value="${me.monthlySavingsTL || 0}" placeholder="0 (Sadece 1M ile yarış)" />
+          </div>
+        </div>
+        <div class="ms-two-col" style="gap:10px">
+          <div>
+            <label style="display:block;font-size:12.5px;font-weight:800;margin-bottom:4px">Gerçek Takvim Maaş Günü</label>
+            <select id="msProfSalDay" class="ms-input">
+              <option value="1" ${Number(me.salaryDay) === 1 ? 'selected' : ''}>Her Ayın 1'i</option>
+              <option value="15" ${Number(me.salaryDay) !== 1 ? 'selected' : ''}>Her Ayın 15'i</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:12.5px;font-weight:800;margin-bottom:4px">Lig Odası (Varsayılan: ORTAK-LIG)</label>
+            <input id="msProfRoom" class="ms-input" type="text" value="${esc(st.roomCode || 'ORTAK-LIG')}" />
+          </div>
+        </div>
+        <div style="font-size:12px;color:#64748b">
+          Aynı Lig Odası kodundaki (varsayılan <strong>ORTAK-LIG</strong>) uygulamayı yükleyen herkes Wi-Fi veya 4G/5G fark etmeksizin birbirini otomatik görür.
+        </div>
+        <button type="button" class="ms-btn primary" id="msSaveProfileBtn">Ayarları Kaydet ve Senkronize Et</button>
+      </div>
+    `;
+    openModalShell();
+
+    document.getElementById('msCloseModalBtn')?.addEventListener('click', closeModal);
+    document.getElementById('msSaveProfileBtn')?.addEventListener('click', () => {
+      const nm = document.getElementById('msProfName')?.value || '';
+      const rl = document.getElementById('msProfRole')?.value || '';
+      const exp = Number(document.getElementById('msProfExpense')?.value || 40000);
+      const sav = Number(document.getElementById('msProfSavings')?.value || 0);
+      const sday = Number(document.getElementById('msProfSalDay')?.value || 15);
+      const room = document.getElementById('msProfRoom')?.value || 'ORTAK-LIG';
+      if (nm.trim().length >= 2) K.completeOnboarding(nm, rl);
+      K.updateHouseholdBaseline({ name: nm, roleLabel: rl, monthlyExpenseTL: exp, monthlySavingsTL: sav, salaryDay: sday, roomCode: room });
+      closeModal();
+      renderHeader();
+      renderCurrentTab();
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // SEKME 2: PORTFÖYÜM & USTALIK AYNASI (NAKİT ÇARKI, SABIR KANITI & KARAR KARNESİ)
   // --------------------------------------------------------------------------
   function renderPortfolioTab(host) {
     const K = global.AetherKernelV10;
     const member = K.getActiveMember();
     const snap = K.evaluateMemberPortfolio(member);
+    const mastery = K.evaluateInvestorMastery(member, snap);
     const idle = member.idleErosionLog || { cumulativeInflationLossTL: 0, missedSukukNetTL: 0 };
 
     const maxBench = Math.max(snap.totalNetWorthTL, snap.ifAllGoldTL, snap.ifAllDepositNetTL, snap.ifAllBist100TL, snap.inflationTargetTL, 1000000);
     const pctBar = (v) => Math.max(8, Math.round((v / maxBench) * 100));
+    const dailyPassive = +(snap.monthlyPassiveIncomeTL / 30).toFixed(0);
 
     host.innerHTML = `
       <div class="ms-kpi-grid">
@@ -740,57 +1299,77 @@
           <span>Güncel Net Portföy Değerin</span>
           <strong>${fmtTL(snap.totalNetWorthTL)}</strong>
           <small class="${snap.nominalPnlTL >= 0 ? 'pos' : 'neg'}">
-            1.000.000 ₺ başlangıca göre ${snap.nominalPnlTL >= 0 ? '+' : ''}${fmtTL(snap.nominalPnlTL)} (${snap.nominalPnlPct >= 0 ? '+' : ''}%${snap.nominalPnlPct})
+            Başlangıca göre ${snap.nominalPnlTL >= 0 ? '+' : ''}${fmtTL(snap.nominalPnlTL)} (${snap.nominalPnlPct >= 0 ? '+' : ''}%${snap.nominalPnlPct})
           </small>
         </div>
         <div class="ms-kpi-box">
-          <span>Enflasyon Karşısında Reel Durum</span>
+          <span>Enflasyona Karşı Reel Alım Gücü</span>
           <strong class="${snap.realPurchasingPnlPct >= 0 ? 'pos' : 'neg'}">${snap.realPurchasingPnlPct >= 0 ? '+' : ''}%${snap.realPurchasingPnlPct}</strong>
-          <small>Alım gücünü korumak için gereken alt sınır: ${fmtTL(snap.inflationTargetTL)}</small>
+          <small>Alım gücünü koruma eşiği: ${fmtTL(snap.inflationTargetTL)}</small>
         </div>
         <div class="ms-kpi-box">
-          <span>Kullanılabilir Boş Nakit</span>
+          <span>Kendi Nakit Çarkın (Pasif Gelir)</span>
+          <strong class="pos">+${fmtTL(snap.monthlyPassiveIncomeTL)} / ay</strong>
+          <small>Günde ~+${Number(dailyPassive).toLocaleString('tr-TR')} ₺ · Gider karşılama: <strong>%${snap.passiveCoveragePct}</strong></small>
+        </div>
+        <div class="ms-kpi-box">
+          <span>Boş Nakit & Takas/Valör</span>
           <strong>${fmtTL(snap.cashTL)}</strong>
-          <small>Portföy ağırlığı: %${((snap.cashTL / Math.max(1, snap.totalNetWorthTL)) * 100).toFixed(1)}</small>
-        </div>
-        <div class="ms-kpi-box">
-          <span>T+2 Takas & Bekleyen Emirler</span>
-          <strong>${fmtTL(snap.unsettledTL + snap.pendingOrderTL)}</strong>
-          <small>T+2 Takasta: ${fmtTL(snap.unsettledTL)} · Valör/Açılışta: ${fmtTL(snap.pendingOrderTL)}</small>
+          <small>T+2 Takas: ${fmtTL(snap.unsettledTL)} · Valör/Halka Arz: ${fmtTL(snap.pendingOrderTL + snap.ipoBlockedTL)}</small>
         </div>
       </div>
 
+      ${snap.marginStatus ? `
+        <div class="ms-alert ${snap.marginStatus.isWarning ? 'err' : 'warn'}" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <div>
+            <strong>Kredili Borç Baskısı: -${fmtTL(snap.marginStatus.debtTL)}</strong> ·
+            Özsermaye Oranı: <strong>%${snap.marginStatus.equityRatioPct}</strong> (Alt sınır %35) ·
+            Her gece işleyen faiz: <strong class="neg">-${fmtUnitTL(snap.marginStatus.dailyInterestCostTL)}/gün</strong>
+          </div>
+          ${snap.cashTL >= 100 ? `<button type="button" class="ms-btn danger sm" id="msRepayMarginBtn">Nakitle Borç Kapat</button>` : ''}
+        </div>
+      ` : ''}
+
       <div class="ms-two-col">
+        <!-- SOL SÜTUN: AÇIK POZİSYONLAR, VADELİ DİLİMLER, TAKAS VE İŞLEM GEÇMİŞİ -->
         <section class="ms-card">
           <div class="ms-sec-head">
             <div>
-              <h2 class="ms-sec-title">Portföyümdeki Yatırımlar</h2>
-              <p class="ms-sec-sub">Tüm değerler stopaj ve vergi karşılıkları düşülmüş net tutarlardır.</p>
+              <h2 class="ms-sec-title">Portföyümdeki Gerçek Varlıklar</h2>
+              <p class="ms-sec-sub">Stopaj, komisyon ve Yİ-ÜFE endeksli vergi karşılıkları düşülmüş net değerler.</p>
             </div>
           </div>
 
-          ${(member.settlementQueue || []).map((q) => `
-            <div class="ms-alert warn"><strong>T+2 Takas Beklemesi:</strong> ${esc(q.ticker)} satışından ${fmtTL(q.grossTL)} — ${esc(q.note)}</div>
-          `).join('')}
+          ${renderAllocRibbonHtml(snap.allocationBreakdown)}
 
-          ${(member.pendingOrders || []).map((o) => `
-            <div class="ms-alert info"><strong>Sırada Bekleyen Emir:</strong> ${esc(o.name)} (${o.side === 'BUY' ? fmtTL(o.reservedTL) : o.qty + ' adet'}) — ${esc(o.note)}</div>
-          `).join('')}
+          <div style="margin-top:12px">
+            ${(member.settlementQueue || []).map((q) => `
+              <div class="ms-alert warn"><strong>T+2 Takas Kum Saati:</strong> ${esc(q.ticker)} satışından ${fmtTL(q.grossTL)} — ${esc(q.note)}</div>
+            `).join('')}
 
-          <div class="ms-list">
+            ${(member.pendingOrders || []).map((o) => `
+              <div class="ms-alert info"><strong>Sırada Bekleyen Emir:</strong> ${esc(o.name)} (${o.side === 'BUY' ? fmtTL(o.reservedTL) : o.qty + ' adet'}) — ${esc(o.note)}</div>
+            `).join('')}
+
+            ${(member.ipoRequests || []).map((r) => `
+              <div class="ms-alert info"><strong>Halka Arz Blokesi:</strong> ${esc(r.ticker)} (${r.requestedLots} lot talep · ${fmtTL(r.blockedCashTL)} bloke)</div>
+            `).join('')}
+          </div>
+
+          <div class="ms-list" style="margin-top:10px">
             ${snap.tranches.map((tr) => {
               const early = tr.isTermDeposit && !tr.isMatured;
               return `
                 <div class="ms-list-row">
                   <div>
                     <strong>${esc(tr.name)}</strong>
-                    <div style="font-size:12.5px;color:#334155">
-                      Anapara: ${fmtTL(tr.principalTL)} · Biriken Net Getiri: <strong class="pos">+${fmtTL(tr.netInterestTL)}</strong> (%${tr.stopajPct} stopaj düşüldü)
+                    <div style="font-size:12.4px;color:#334155">
+                      Anapara: ${fmtTL(tr.principalTL)} · Biriken Net: <strong class="pos">+${fmtTL(tr.netInterestTL)}</strong> (Ayda ~+${fmtTL(tr.monthlyNetDripTL)})
                       ${early ? ` · Vadeye kalan: <strong>${tr.remainingDays} gün</strong>` : ''}
                     </div>
                   </div>
                   <button type="button" class="ms-btn ${early ? 'danger' : ''} sm" data-break-tr="${esc(tr.id)}">
-                    ${early ? `Erken Boz (${fmtTL(tr.forfeitedIfBrokenEarlyTL)} Faiz Yanar)` : 'Nakde Çevir'}
+                    ${early ? `Erken Boz (${fmtTL(tr.forfeitedIfBrokenEarlyTL)} Yanar)` : 'Nakde Çevir'}
                   </button>
                 </div>
               `;
@@ -799,77 +1378,111 @@
             ${snap.spotItems.map((it) => `
               <div class="ms-list-row">
                 <div>
-                  <strong>${esc(it.name)} (${it.qty} adet)</strong>
+                  <strong>${esc(it.ticker)} — ${esc(it.name)}</strong> <span style="font-size:12px;color:#64748b">(${it.qty} adet · Maliyet ${fmtUnitTL(it.avgCostTL)})</span>
                   <div style="font-size:12.5px;color:#334155">
                     Net Değer: <strong>${fmtTL(it.netValTL)}</strong> ·
                     Kâr/Zarar: <strong class="${it.pnlNetTL >= 0 ? 'pos' : 'neg'}">${it.pnlNetTL >= 0 ? '+' : ''}${fmtTL(it.pnlNetTL)} (${it.pnlNetPct >= 0 ? '+' : ''}%${it.pnlNetPct})</strong>
                   </div>
+                  ${it.thesisNote ? `<div style="font-size:11.8px;color:#1d4ed8;margin-top:2px">Alım Tezin: "${esc(it.thesisNote)}"</div>` : ''}
                 </div>
-                <button type="button" class="ms-btn sm" data-open-pos="${esc(it.assetKey)}">Al / Sat</button>
+                <button type="button" class="ms-btn sm" data-open-pos="${esc(it.assetKey)}">İncele / Sat</button>
               </div>
             `).join('')}
 
             ${snap.tranches.length === 0 && snap.spotItems.length === 0 ? `
-              <div style="padding:12px 2px;font-size:13.5px;color:#64748b">
-                Henüz yatırım yapmadın; <strong>1.000.000 ₺</strong> başlangıç sermayenin tamamı nakitte bekliyor. "Yatırım Yap" sekmesinden gerçek varlıkları seçerek portföyünü kurabilirsin.
+              <div style="padding:14px 4px;font-size:13.5px;color:#64748b">
+                Henüz yatırım yapmadın; <strong>1.000.000 ₺</strong> sermayenin tamamı boş nakitte duruyor. "Piyasa & Keşif" sekmesinden ilk gerçek adımını atabilirsin.
               </div>
             ` : ''}
           </div>
         </section>
 
+        <!-- SAĞ SÜTUN: USTALIK RADARI, SABIR KANITI & ARAŞTIRMA vs DEDİKODU KARNESİ -->
         <section class="ms-card">
           <div class="ms-sec-head">
             <div>
-              <h2 class="ms-sec-title">1.000.000 ₺ Kıyaslama & Yatırım Koçu</h2>
-              <p class="ms-sec-sub">Başladığın andan itibaren alternatiflere göre performansın ve karar analizin.</p>
+              <h2 class="ms-sec-title">Yatırımcı Ustalık Aynası (${mastery.overallScore}/100)</h2>
+              <p class="ms-sec-sub">Ünvanın: <strong>${esc(mastery.rankTitle)}</strong></p>
             </div>
           </div>
 
-          <div style="margin-bottom:16px">
+          <div class="ms-alert info" style="margin-top:0">
+            <strong>Usta Dostun Notu:</strong> ${esc(mastery.mentorVoice)}
+          </div>
+
+          <div style="margin:14px 0">
+            ${mastery.axes.map((ax) => `
+              <div class="ms-bar-row">
+                <div class="ms-bar-label"><span>${esc(ax.label)}</span><span>${ax.score}/100</span></div>
+                <div class="ms-bar-track"><div class="ms-bar-fill ${ax.score >= 75 ? 'green' : (ax.score >= 50 ? '' : 'amber')}" style="width:${ax.score}%"></div></div>
+              </div>
+            `).join('')}
+          </div>
+
+          <hr style="border:none;border-top:1px solid #e2e8f0;margin:14px 0" />
+
+          <h3 style="margin:0 0 8px;font-size:14.5px;font-weight:800">Sabır Testi & Alternatif Kıyaslama</h3>
+          <div class="ms-bar-row">
+            <div class="ms-bar-label"><span>Senin Portföyün</span><span>${fmtTL(snap.totalNetWorthTL)}</span></div>
+            <div class="ms-bar-track"><div class="ms-bar-fill" style="width:${pctBar(snap.totalNetWorthTL)}%"></div></div>
+          </div>
+          ${snap.ghostHoldNetWorthTL != null ? `
             <div class="ms-bar-row">
-              <div class="ms-bar-label"><span>Senin Portföyün</span><span>${fmtTL(snap.totalNetWorthTL)}</span></div>
-              <div class="ms-bar-track"><div class="ms-bar-fill" style="width:${pctBar(snap.totalNetWorthTL)}%"></div></div>
+              <div class="ms-bar-label">
+                <span>İlk Kurduğun Sepeti Hiç Kurcalamasaydın</span>
+                <span>${fmtTL(snap.ghostHoldNetWorthTL)}</span>
+              </div>
+              <div class="ms-bar-track"><div class="ms-bar-fill purple" style="width:${pctBar(snap.ghostHoldNetWorthTL)}%"></div></div>
             </div>
-            <div class="ms-bar-row">
-              <div class="ms-bar-label"><span>1 Milyonu Sadece Gram Altında Tutsaydın</span><span>${fmtTL(snap.ifAllGoldTL)}</span></div>
-              <div class="ms-bar-track"><div class="ms-bar-fill amber" style="width:${pctBar(snap.ifAllGoldTL)}%"></div></div>
-            </div>
-            <div class="ms-bar-row">
-              <div class="ms-bar-label"><span>1 Milyonu Net Mevduatta Tutsaydın</span><span>${fmtTL(snap.ifAllDepositNetTL)}</span></div>
-              <div class="ms-bar-track"><div class="ms-bar-fill green" style="width:${pctBar(snap.ifAllDepositNetTL)}%"></div></div>
-            </div>
-            <div class="ms-bar-row">
-              <div class="ms-bar-label"><span>1 Milyonu BIST 100 Endeksinde Tutsaydın</span><span>${fmtTL(snap.ifAllBist100TL)}</span></div>
-              <div class="ms-bar-track"><div class="ms-bar-fill" style="width:${pctBar(snap.ifAllBist100TL)}%"></div></div>
-            </div>
+          ` : ''}
+          <div class="ms-bar-row">
+            <div class="ms-bar-label"><span>1 Milyonu Sadece Gram Altında Tutsaydın</span><span>${fmtTL(snap.ifAllGoldTL)}</span></div>
+            <div class="ms-bar-track"><div class="ms-bar-fill amber" style="width:${pctBar(snap.ifAllGoldTL)}%"></div></div>
+          </div>
+          <div class="ms-bar-row">
+            <div class="ms-bar-label"><span>1 Milyonu Net Mevduatta Tutsaydın</span><span>${fmtTL(snap.ifAllDepositNetTL)}</span></div>
+            <div class="ms-bar-track"><div class="ms-bar-fill green" style="width:${pctBar(snap.ifAllDepositNetTL)}%"></div></div>
           </div>
 
           <div class="ms-alert warn">
-            <strong>Atıl Nakit Maliyeti:</strong> Boşta tuttuğun nakdin enflasyon karşısındaki alım gücü kaybı <strong>${fmtTL(idle.cumulativeInflationLossTL)}</strong>; aynı nakit %0 stopajlı Kira Sertifikasında dursaydı kazanacağı getiri: <strong>+${fmtTL(idle.missedSukukNetTL)}</strong>.
+            <strong>Sessiz Fırsat & Sürtünme Kaybı Kavanozu:</strong><br/>
+            • Korkup boşta tuttuğun nakdin enflasyon erimesi: <strong>-${fmtTL(idle.cumulativeInflationLossTL)}</strong> (Vergisiz Sukuk'ta dursaydı kazanacağı: <strong>+${fmtTL(idle.missedSukukNetTL)}</strong>).<br/>
+            • Al-sat makası, komisyon, erken bozum ve kredi faizinde yanan toplam para: <strong class="neg">-${fmtTL(snap.totalFrictionBurnedTL)}</strong>.
+          </div>
+
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:12px;font-size:12.6px">
+            <strong>Araştırma vs Duyum/Heyecan Karnesi:</strong><br/>
+            • Bilanço / Makro İnceleyerek Alınanlar (${mastery.researchVsRumor.researchCount} işlem):
+            <strong>${mastery.researchVsRumor.researchAvgPct != null ? (mastery.researchVsRumor.researchAvgPct >= 0 ? '+' : '') + '%' + mastery.researchVsRumor.researchAvgPct : 'Henüz veri yok'}</strong><br/>
+            • Duyum / Sürü Coşkusuyla Atlananlar (${mastery.researchVsRumor.rumorCount} işlem):
+            <strong>${mastery.researchVsRumor.rumorAvgPct != null ? (mastery.researchVsRumor.rumorAvgPct >= 0 ? '+' : '') + '%' + mastery.researchVsRumor.rumorAvgPct : '0 işlem (Temiz Disiplin)'}</strong>
           </div>
 
           <div class="ms-list">
-            ${(member.footprints || []).length > 0
-              ? member.footprints.map((fp) => `
-                <div class="ms-list-row">
-                  <div>
-                    <strong>${esc(fp.title)}</strong>
-                    <div style="font-size:12.4px;color:#334155">${esc(fp.detail)}</div>
-                  </div>
-                  ${fp.leakTL > 0 ? `<strong class="neg">-${fmtTL(fp.leakTL)}</strong>` : ''}
+            ${(member.footprints || []).map((fp) => `
+              <div class="ms-list-row">
+                <div>
+                  <strong>${esc(fp.title)}</strong>
+                  <div style="font-size:12.3px;color:#334155">${esc(fp.detail)}</div>
                 </div>
-              `).join('')
-              : `<div style="font-size:13px;color:#64748b">Henüz mesai dışı yüksek banka makası, erken mevduat bozumu veya panik satışı hatası yapmadın. Tüm hamlelerin burada analiz edilir.</div>`
-            }
+                ${fp.leakTL > 0 ? `<strong class="neg">-${fmtTL(fp.leakTL)}</strong>` : ''}
+              </div>
+            `).join('')}
           </div>
 
           <div style="margin-top:16px;padding-top:14px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-            <span style="font-size:12.5px;color:#64748b">Portföyü temiz 1.000.000 ₺ ile baştan başlatmak istersen:</span>
+            <span style="font-size:12.4px;color:#64748b">Portföyünü temiz 1.000.000 ₺ ile sıfırdan başlatmak istersen:</span>
             <button type="button" class="ms-btn danger sm" id="msReset1MBtn">1.000.000 ₺ Baştan Başlat</button>
           </div>
         </section>
       </div>
     `;
+
+    document.getElementById('msRepayMarginBtn')?.addEventListener('click', () => {
+      K.executeOrder({ side: 'REPAY_MARGIN' });
+      renderHeader();
+      renderPortfolioTab(host);
+    });
 
     host.querySelectorAll('[data-break-tr]').forEach((b) => {
       b.addEventListener('click', () => {
@@ -884,433 +1497,297 @@
     });
 
     document.getElementById('msReset1MBtn')?.addEventListener('click', () => {
-      K.resetMemberOneMillion(member.id);
+      K.resetMemberOneMillion();
       renderHeader();
       renderPortfolioTab(host);
     });
   }
 
   // --------------------------------------------------------------------------
-  // SEKME 3: AİLE 1 MİLYON TL LİGİ (AÇIK PORTFÖYLER & REKABET)
+  // SEKME 3: CANLI YATIRIMCI LİGİ (UYGULAMAYI YÜKLEYEN HERKESİN CANLI PORTFÖYÜ)
   // --------------------------------------------------------------------------
+  function openPeerXrayModal(peerId) {
+    const K = global.AetherKernelV10;
+    const all = K.getAllLeagueMembers();
+    const peer = all.find((x) => x.id === peerId);
+    if (!peer) return;
+    modalMode = 'PEER_XRAY';
+    inspectedPeerId = peer.id;
+    const snap = K.evaluateMemberPortfolio(peer);
+    const mastery = K.evaluateInvestorMastery(peer, snap);
+    const sheet = document.getElementById('msModalSheet');
+    if (!sheet) return;
+
+    sheet.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="ms-avatar" style="width:40px;height:40px;font-size:16px;background:${esc(peer.avatarColor || '#2563eb')}">${esc(initials(peer.name))}</span>
+          <div>
+            <h2 style="margin:0;font-size:20px;font-weight:800">${esc(peer.name)} — Açık Portföy Röntgeni</h2>
+            <div style="font-size:12.5px;color:#64748b">${esc(peer.roleLabel)} · ${esc(peer.deviceLabel || 'Cihaz')} · Ustalık: ${mastery.overallScore}/100 (${esc(mastery.rankTitle)})</div>
+          </div>
+        </div>
+        <button type="button" class="ms-btn sm" id="msCloseModalBtn">Kapat</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px">
+        <div class="ms-kpi-box" style="padding:11px">
+          <span>Toplam Portföy</span>
+          <strong style="font-size:17px">${fmtTL(snap.totalNetWorthTL)}</strong>
+        </div>
+        <div class="ms-kpi-box" style="padding:11px">
+          <span>Net Kâr / Zarar</span>
+          <strong style="font-size:17px" class="${snap.nominalPnlTL >= 0 ? 'pos' : 'neg'}">${snap.nominalPnlTL >= 0 ? '+' : ''}${fmtTL(snap.nominalPnlTL)} (${snap.nominalPnlPct >= 0 ? '+' : ''}%${snap.nominalPnlPct})</strong>
+        </div>
+        <div class="ms-kpi-box" style="padding:11px">
+          <span>Boş Nakit</span>
+          <strong style="font-size:17px">${fmtTL(snap.cashTL)}</strong>
+        </div>
+      </div>
+
+      ${renderAllocRibbonHtml(snap.allocationBreakdown)}
+
+      <h3 style="margin:16px 0 8px;font-size:15px;font-weight:800">Taşıdığı Yatırımlar ve Canlı Kâr/Zarar Durumu</h3>
+      <div class="ms-list">
+        ${snap.spotItems.map((it) => `
+          <div class="ms-list-row">
+            <div>
+              <strong>${esc(it.ticker)} — ${esc(it.name)}</strong> (${it.qty} adet · Maliyet: ${fmtUnitTL(it.avgCostTL)})
+              <div style="font-size:12.5px;color:#334155">
+                Güncel Değer: <strong>${fmtTL(it.netValTL)}</strong> ·
+                Kâr/Zarar: <strong class="${it.pnlNetTL >= 0 ? 'pos' : 'neg'}">${it.pnlNetTL >= 0 ? '+' : ''}${fmtTL(it.pnlNetTL)} (${it.pnlNetPct >= 0 ? '+' : ''}%${it.pnlNetPct})</strong>
+              </div>
+              ${it.thesisNote ? `<div style="font-size:12px;color:#1d4ed8">Notu: "${esc(it.thesisNote)}"</div>` : ''}
+            </div>
+            <button type="button" class="ms-btn sm" data-xray-jump="${esc(it.assetKey)}">Bu Varlığı İncele</button>
+          </div>
+        `).join('')}
+
+        ${snap.tranches.map((tr) => `
+          <div class="ms-list-row">
+            <div>
+              <strong>${esc(tr.name)}</strong>
+              <div style="font-size:12.5px;color:#334155">
+                Bağlı Tutar: ${fmtTL(tr.principalTL)} · Biriken Net: <strong class="pos">+${fmtTL(tr.netInterestTL)}</strong>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+
+        ${snap.spotItems.length === 0 && snap.tranches.length === 0 ? `
+          <div style="font-size:13px;color:#64748b">Henüz pozisyon açmamış; tamamı nakitte bekliyor.</div>
+        ` : ''}
+      </div>
+
+      ${(peer.tradeHistory || []).length > 0 ? `
+        <h3 style="margin:16px 0 8px;font-size:15px;font-weight:800">Son Yaptığı Hamleler</h3>
+        <div class="ms-list">
+          ${peer.tradeHistory.slice(0, 6).map((th) => `
+            <div class="ms-list-row">
+              <div style="font-size:12.6px">
+                <strong>${esc(th.side)} — ${esc(th.name)}</strong> (${fmtTL(th.amountTL)})
+                ${th.thesisNote ? `<div style="color:#1d4ed8">Tezi: "${esc(th.thesisNote)}"</div>` : ''}
+              </div>
+              <span style="font-size:11.5px;color:#64748b">${esc(fmtAgo(th.ts))}</span>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+    `;
+
+    openModalShell();
+    document.getElementById('msCloseModalBtn')?.addEventListener('click', closeModal);
+    sheet.querySelectorAll('[data-xray-jump]').forEach((b) => {
+      b.addEventListener('click', () => openAssetDrawer(b.getAttribute('data-xray-jump')));
+    });
+  }
+
   function renderFamilyTab(host) {
     const K = global.AetherKernelV10;
     const st = K.getState();
-    const sharePack = K.exportFamilySharePacket();
+    const me = K.getActiveMember();
+    const league = K.getLeagueStatus();
 
-    const ranked = st.members
-      .map((m) => ({ raw: m, snap: K.evaluateMemberPortfolio(m) }))
-      .sort((a, b) => b.snap.totalNetWorthTL - a.snap.totalNetWorthTL);
+    const evaluated = K.getAllLeagueMembers()
+      .filter((m) => m.profileRegistered !== false || m.id === me.id)
+      .map((m) => {
+        const snap = K.evaluateMemberPortfolio(m);
+        const mastery = K.evaluateInvestorMastery(m, snap);
+        return { raw: m, snap, mastery };
+      });
+
+    evaluated.sort((a, b) => {
+      if (leagueSortBy === 'PNL_PCT') return b.snap.nominalPnlPct - a.snap.nominalPnlPct;
+      if (leagueSortBy === 'MASTERY') return b.mastery.overallScore - a.mastery.overallScore;
+      return b.snap.totalNetWorthTL - a.snap.totalNetWorthTL;
+    });
 
     host.innerHTML = `
-      <section class="ms-card">
-        <div class="ms-sec-head">
+      <section class="ms-card" style="border-left:4px solid ${league.isOnline ? '#10b981' : '#f59e0b'}">
+        <div class="ms-sec-head" style="margin-bottom:8px">
           <div>
-            <h2 class="ms-sec-title">Aile 1.000.000 ₺ Yatırım Ligi — Açık Portföyler</h2>
-            <p class="ms-sec-sub">Evdeki herkes eşit 1.000.000 ₺ ile başlar. Herkesin portföy dağılımı, kâr/zararı ve yaptığı son hamle şeffafça görünür.</p>
+            <h2 class="ms-sec-title">Canlı Yatırımcı Ligi — Uygulamayı Yükleyenlerin Açık Portföyleri</h2>
+            <p class="ms-sec-sub">
+              Uygulamayı telefonuna veya bilgisayarına yükleyip adını giren herkes (4G/5G veya farklı Wi-Fi fark etmeksizin) bu meydanda otomatik görünür. Herkesin portföy dağılımı ve kâr/zararı canlı fiyatlarla anlık hesaplanır.
+            </p>
           </div>
+          <button type="button" class="ms-btn sm" id="msEditRoomBtn">Profil & Oda (${esc(league.roomCode)})</button>
         </div>
 
-        <div class="ms-league-grid">
-          ${ranked.map(({ raw, snap }, idx) => {
-            const isAct = raw.id === st.activeMemberId;
-            const lastMove = (raw.tradeHistory || [])[0] || null;
-            const lines = [
-              ...snap.spotItems.map((s) => `${s.ticker}: ${fmtTL(s.netValTL)} (${s.pnlNetPct >= 0 ? '+' : ''}%${s.pnlNetPct})`),
-              ...snap.tranches.map((t) => `${t.name}: ${fmtTL(t.accruedNetValueTL)}`),
-              ...(raw.pendingOrders || []).map((o) => `Bekleyen Emir (${o.name}): ${fmtTL(o.reservedTL)}`),
-              ...(raw.settlementQueue || []).map((q) => `T+2 Takas (${q.ticker}): ${fmtTL(q.grossTL)}`)
-            ];
-            if (snap.cashTL > 100) lines.push(`Nakit: ${fmtTL(snap.cashTL)}`);
-
-            return `
-              <article class="ms-member-card ${isAct ? 'active' : ''}">
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-                  <div style="display:flex;align-items:center;gap:8px">
-                    <span class="ms-rank-badge">${idx + 1}</span>
-                    <div>
-                      <strong style="font-size:16px">${esc(snap.name)}</strong>
-                      <div style="font-size:11.8px;color:#64748b">${esc(raw.roleLabel)}</div>
-                    </div>
-                  </div>
-                  <div style="text-align:right">
-                    <strong style="font-size:17px;display:block">${fmtTL(snap.totalNetWorthTL)}</strong>
-                    <span class="${snap.nominalPnlTL >= 0 ? 'pos' : 'neg'}" style="font-size:12.5px;font-weight:800">
-                      ${snap.nominalPnlTL >= 0 ? '+' : ''}${fmtTL(snap.nominalPnlTL)} (${snap.nominalPnlPct >= 0 ? '+' : ''}%${snap.nominalPnlPct})
-                    </span>
-                  </div>
-                </div>
-
-                <div class="ms-holdings-box">
-                  <strong>Portföy Dağılımı:</strong><br/>
-                  ${esc(lines.join(' · '))}
-                </div>
-
-                <div style="font-size:12.3px;color:#475569">
-                  <strong>Son Hamle:</strong>
-                  ${lastMove ? `${esc(lastMove.side)} — ${esc(lastMove.name)} (${fmtTL(lastMove.amountTL)})` : 'Henüz işlem yapmadı'}
-                </div>
-
-                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:auto">
-                  ${!isAct ? `<button type="button" class="ms-btn primary sm" data-sw-mem="${esc(raw.id)}">Bu Portföye Geç</button>` : `<span class="ms-chg-badge flat">Aktif Portföy</span>`}
-                  <button type="button" class="ms-btn sm" data-comment-mem="${esc(snap.name)}" data-comment-move="${esc(lastMove ? lastMove.name : 'nakitte beklemek')}">Hamleye Yorum Yaz</button>
-                </div>
-              </article>
-            `;
-          }).join('')}
+        <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;padding-top:8px;border-top:1px solid #e2e8f0">
+          <div style="display:flex;align-items:center;gap:8px;font-size:12.8px;font-weight:700">
+            <span class="ms-dot ${league.isOnline ? 'open' : ''}"></span>
+            <span>${league.isOnline
+              ? `Küresel Canlı Ağ Bağlı (${league.connectedBrokers}/${league.totalBrokers} Sunucu) · ${evaluated.length} Yatırımcı Ligde`
+              : 'Canlı Bulut Ağına Bağlanılıyor...'}</span>
+          </div>
+          <div class="ms-pills" style="margin:0">
+            <button type="button" class="ms-pill ${leagueSortBy === 'NET_WORTH' ? 'active' : ''}" data-lsort="NET_WORTH">Portföy Büyüklüğü</button>
+            <button type="button" class="ms-pill ${leagueSortBy === 'PNL_PCT' ? 'active' : ''}" data-lsort="PNL_PCT">% Kâr / Zarar</button>
+            <button type="button" class="ms-pill ${leagueSortBy === 'MASTERY' ? 'active' : ''}" data-lsort="MASTERY">Ustalık Puanı</button>
+          </div>
         </div>
       </section>
 
-      <div class="ms-two-col">
-        <section class="ms-card">
-          <h3 class="ms-sec-title" style="margin-bottom:10px">Aileye Yeni Yatırımcı Ekle (1.000.000 ₺ İle Başlar)</h3>
-          <div style="display:grid;gap:10px">
-            <input id="msNewMemberName" class="ms-input" type="text" placeholder="İsim (Örn: Babam, Annem, Kardeşim)" />
-            <input id="msNewMemberRole" class="ms-input" type="text" placeholder="Unvan / Strateji (Örn: Uzun Vadeci, Temettücü)" />
-            <button type="button" class="ms-btn primary" id="msAddMemberBtn">1.000.000 ₺ Ver ve Lige Ekle</button>
-          </div>
+      ${!me.profileRegistered ? `
+        <div class="ms-alert warn" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <span>Diğer telefonların seni Canlı Ligde görebilmesi için adını kaydetmelisin.</span>
+          <button type="button" class="ms-btn primary sm" id="msPromptRegBtn">Adımı Kaydet ve Lige Çık</button>
+        </div>
+      ` : ''}
 
-          <hr style="border:none;border-top:1px solid #e2e8f0;margin:16px 0" />
-          <h4 style="margin:0 0 6px;font-size:14px">Telefonlar Arası Portföy Eşitleme</h4>
-          <p style="margin:0 0 10px;font-size:12.6px;color:#64748b">Aynı ev Wi-Fi ağındayken tüm telefonlar otomatik eşitlenir. Uzaktayken WhatsApp ile eşitleme kodunu paylaşabilirsin:</p>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-            <button type="button" class="ms-btn sm" id="msCopySyncBtn">Eşitleme Kodunu Kopyala</button>
-          </div>
-          <div style="display:flex;gap:8px">
-            <input id="msPasteSyncInp" class="ms-input" type="text" placeholder="Aileden gelen AETHER-SALON kodunu yapıştır..." />
-            <button type="button" class="ms-btn primary sm" id="msApplySyncBtn">Eşitle</button>
-          </div>
-          <div id="msSyncMsg" style="font-size:12.5px;font-weight:700;margin-top:6px"></div>
-        </section>
+      <div class="ms-league-grid" style="margin-bottom:16px">
+        ${evaluated.map(({ raw, snap, mastery }, idx) => {
+          const isMe = raw.id === me.id;
+          const onlineNow = isMe || (Date.now() - (raw.lastSeenAt || raw.updatedAt || 0)) < 75000;
+          const lastMove = (raw.tradeHistory || [])[0] || null;
+          const rankCls = idx === 0 ? 'gold' : (idx === 1 ? 'silver' : (idx === 2 ? 'bronze' : ''));
+          const displayName = raw.profileRegistered ? raw.name : 'Ben (Henüz Ad Girilmedi)';
 
-        <section class="ms-card">
-          <h3 class="ms-sec-title" style="margin-bottom:10px">Aile İçi Hamle Yorumları</h3>
-          <div style="display:flex;gap:8px;margin-bottom:12px">
-            <input id="msBanterInp" class="ms-input" type="text" placeholder="Portföyler veya günün hamlesi hakkında yaz..." />
-            <button type="button" class="ms-btn primary sm" id="msSendBanterBtn">Gönder</button>
-          </div>
-          <div class="ms-list" style="max-height:290px;overflow-y:auto">
-            ${(st.banterFeed || []).map((b) => `
-              <div class="ms-list-row">
-                <div style="font-size:13px">
-                  <strong>${esc(b.authorName)}${b.targetName ? ' -> ' + esc(b.targetName) : ''}:</strong>
-                  ${esc(b.text)}
+          return `
+            <article class="ms-member-card ${isMe ? 'is-me' : ''}">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <span class="ms-rank-badge ${rankCls}">${idx + 1}</span>
+                  <span class="ms-avatar" style="background:${esc(raw.avatarColor || '#2563eb')}">${esc(initials(displayName))}</span>
+                  <div>
+                    <strong style="font-size:15.5px">${esc(displayName)} ${isMe ? '<small style="color:#2563eb">(Sen)</small>' : ''}</strong>
+                    <div style="font-size:11.6px;color:#64748b">
+                      <span style="color:${onlineNow ? '#059669' : '#64748b'};font-weight:700">${onlineNow ? '● Şimdi Açık' : '○ ' + esc(fmtAgo(raw.lastSeenAt || raw.updatedAt))}</span>
+                      · ${esc(raw.deviceLabel || 'Cihaz')} · Ustalık ${mastery.overallScore}
+                    </div>
+                  </div>
+                </div>
+
+                <div style="text-align:right">
+                  <strong style="font-size:17px;display:block">${fmtTL(snap.totalNetWorthTL)}</strong>
+                  <span class="${snap.nominalPnlTL >= 0 ? 'pos' : 'neg'}" style="font-size:12.6px;font-weight:800">
+                    ${snap.nominalPnlTL >= 0 ? '+' : ''}${fmtTL(snap.nominalPnlTL)} (${snap.nominalPnlPct >= 0 ? '+' : ''}%${snap.nominalPnlPct})
+                  </span>
                 </div>
               </div>
-            `).join('')}
-          </div>
-        </section>
+
+              ${renderAllocRibbonHtml(snap.allocationBreakdown)}
+
+              <div class="ms-holdings-box">
+                <div style="font-weight:800;margin-bottom:3px;color:#334155">Portföy Dağılımı & Kâr/Zarar:</div>
+                ${snap.spotItems.map((s) => `
+                  <span class="ms-holding-chip">
+                    ${esc(s.ticker)} ${fmtTL(s.netValTL)}
+                    <span class="${s.pnlNetPct >= 0 ? 'pos' : 'neg'}">(${s.pnlNetPct >= 0 ? '+' : ''}%${s.pnlNetPct})</span>
+                  </span>
+                `).join('')}
+                ${snap.tranches.map((t) => `
+                  <span class="ms-holding-chip">${esc(t.name.split(' ')[0])} ${fmtTL(t.accruedNetValueTL)}</span>
+                `).join('')}
+                ${snap.cashTL > 200 ? `<span class="ms-holding-chip">Nakit ${fmtTL(snap.cashTL)}</span>` : ''}
+                ${snap.unsettledTL > 0 ? `<span class="ms-holding-chip">T+2 Takas ${fmtTL(snap.unsettledTL)}</span>` : ''}
+              </div>
+
+              <div style="font-size:12.3px;color:#334155">
+                <strong>Son Hamle:</strong>
+                ${lastMove
+                  ? `${esc(lastMove.side)} — ${esc(lastMove.name)} (${fmtTL(lastMove.amountTL)})${lastMove.thesisNote ? ` · "${esc(lastMove.thesisNote)}"` : ''}`
+                  : 'Henüz alım-satım yapmadı'}
+              </div>
+
+              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:auto">
+                <button type="button" class="ms-btn primary sm" data-xray-peer="${esc(raw.id)}">Portföy Röntgenini Gör</button>
+                ${!isMe ? `
+                  <button type="button" class="ms-btn sm" data-ask-peer="${esc(raw.name)}" data-ask-move="${esc(lastMove ? lastMove.name : 'portföy stratejisi')}">
+                    "Bunu Nereden Gördün?" Sor
+                  </button>
+                ` : ''}
+              </div>
+            </article>
+          `;
+        }).join('')}
       </div>
+
+      <!-- CANLI HAMLE AKIŞI & MEYDAN SOHBETİ -->
+      <section class="ms-card">
+        <div class="ms-sec-head">
+          <div>
+            <h3 class="ms-sec-title">Canlı Hamle Akışı & "Bunu Nereden Gördün?" Meydanı</h3>
+            <p class="ms-sec-sub">Ailede ve ligde biri güzel bir hamle yakaladığında kıskanmak yerine mantığını sor, aynı pencereden bakmayı öğren.</p>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input id="msBanterInp" class="ms-input" type="text" placeholder="Bir hamleyi sor veya piyasa öngörünü paylaş..." />
+          <button type="button" class="ms-btn primary" id="msSendBanterBtn">Gönder</button>
+        </div>
+        <div class="ms-list" style="max-height:340px;overflow-y:auto">
+          ${(st.banterFeed || []).length > 0 ? (st.banterFeed || []).map((b) => `
+            <div class="ms-list-row" style="background:${b.kind === 'TRADE' ? '#eff6ff' : '#f8fafc'}">
+              <div style="font-size:13px">
+                <strong>${esc(b.authorName)}${b.targetName ? ' -> ' + esc(b.targetName) : ''}:</strong>
+                ${esc(b.text)}
+              </div>
+              <span style="font-size:11.5px;color:#64748b">${esc(fmtAgo(b.ts))}</span>
+            </div>
+          `).join('') : `
+            <div style="font-size:13px;color:#64748b">Henüz meydan mesajı yok. Yapılan tüm işlemler ve sorular tüm cihazlarda anında burada akar.</div>
+          `}
+        </div>
+      </section>
     `;
 
-    host.querySelectorAll('[data-sw-mem]').forEach((b) => {
+    document.getElementById('msEditRoomBtn')?.addEventListener('click', openProfileModal);
+    document.getElementById('msPromptRegBtn')?.addEventListener('click', openWelcomeModal);
+
+    host.querySelectorAll('[data-lsort]').forEach((b) => {
       b.addEventListener('click', () => {
-        K.switchActiveMember(b.getAttribute('data-sw-mem'));
-        renderHeader();
+        leagueSortBy = b.getAttribute('data-lsort');
         renderFamilyTab(host);
       });
     });
 
-    host.querySelectorAll('[data-comment-mem]').forEach((b) => {
+    host.querySelectorAll('[data-xray-peer]').forEach((b) => {
+      b.addEventListener('click', () => openPeerXrayModal(b.getAttribute('data-xray-peer')));
+    });
+
+    host.querySelectorAll('[data-ask-peer]').forEach((b) => {
       b.addEventListener('click', () => {
-        const who = b.getAttribute('data-comment-mem');
-        const mv = b.getAttribute('data-comment-move');
+        const who = b.getAttribute('data-ask-peer');
+        const mv = b.getAttribute('data-ask-move');
         const inp = document.getElementById('msBanterInp');
         if (inp) {
-          inp.value = `${who}, ${mv} hamlesini neye göre yaptın?`;
+          inp.value = `${who}, ${mv} hamlesini nereden gördün, hangi veriye güvendin?`;
           inp.focus();
         }
       });
     });
 
-    document.getElementById('msAddMemberBtn')?.addEventListener('click', () => {
-      const name = document.getElementById('msNewMemberName')?.value || '';
-      const role = document.getElementById('msNewMemberRole')?.value || 'Yatırımcı';
-      const res = K.addFamilyMember(name, role, 40000, 1000000);
-      if (res.ok) {
-        renderHeader();
-        renderFamilyTab(host);
-      }
-    });
-
-    document.getElementById('msSendBanterBtn')?.addEventListener('click', () => {
+    const sendChat = () => {
       const inp = document.getElementById('msBanterInp');
       if (inp && inp.value.trim()) {
         K.postTeaBanter(inp.value);
         renderFamilyTab(host);
       }
-    });
-
-    document.getElementById('msCopySyncBtn')?.addEventListener('click', async () => {
-      const msg = document.getElementById('msSyncMsg');
-      try {
-        await navigator.clipboard.writeText(sharePack.syncCode);
-        if (msg) { msg.className = 'pos'; msg.textContent = 'Eşitleme kodu panoya kopyalandı!'; }
-      } catch (_) {
-        if (msg) { msg.className = 'pos'; msg.textContent = sharePack.syncCode; }
-      }
-    });
-
-    document.getElementById('msApplySyncBtn')?.addEventListener('click', () => {
-      const raw = document.getElementById('msPasteSyncInp')?.value || '';
-      const res = K.importFamilySharePacket(raw);
-      const msg = document.getElementById('msSyncMsg');
-      if (res.ok) {
-        renderHeader();
-        renderFamilyTab(host);
-      } else if (msg) {
-        msg.className = 'neg';
-        msg.textContent = res.reason;
-      }
-    });
-  }
-
-  // --------------------------------------------------------------------------
-  // SEKME 4: 10 YILLIK 1.000.000 ₺ HIZLANDIRILMIŞ PİYASA SİMÜLASYONU (2016–2026)
-  // --------------------------------------------------------------------------
-  function getHistUnitPrice(asset, mRow) {
-    if (!mRow) return 1;
-    if (asset.kind === 'sukuk' || asset.kind === 'deposit') return 1;
-    if (asset.kind === 'usd_etf') return +((Number(mRow[asset.field]) || 1) * (Number(mRow.usd) || 3.41)).toFixed(4);
-    return Math.max(0.001, Number(mRow[asset.field]) || 1);
-  }
-
-  function createFresh10YSim() {
-    const pack = global.__AETHER_HISTORY_121M__ || { months: [] };
-    const m0 = pack.months[0] || { gramGoldTL: 140.39, usd: 3.41 };
-    return {
-      idx: 0,
-      playing: false,
-      speedMs: 2500,
-      startCapitalTL: 1000000,
-      cumInflation: 1.0,
-      cashTL: 1000000,
-      sukukTL: 0,
-      depositTL: 0,
-      units: {},
-      goldBenchmarkUnits: 1000000 / (m0.gramGoldTL || 140.39),
-      tradeCount: 0,
-      logs: ['Kasım 2016: 1.000.000 ₺ başlangıç sermayesiyle 120 aylık gerçek Türkiye piyasa testi başladı.']
     };
-  }
-
-  function eval10YSim() {
-    const pack = global.__AETHER_HISTORY_121M__ || { months: [], eventsByYm: {} };
-    const mRow = pack.months[sim10Y.idx] || pack.months[0];
-    let spotTL = 0;
-    for (const a of HIST_ASSETS) {
-      const q = Number(sim10Y.units[a.id]) || 0;
-      if (q > 0) spotTL += q * getHistUnitPrice(a, mRow);
-    }
-    const totalTL = +(sim10Y.cashTL + sim10Y.sukukTL + sim10Y.depositTL + spotTL).toFixed(2);
-    const infTargetTL = +(1000000 * sim10Y.cumInflation).toFixed(2);
-    const realTodayEquivTL = +(totalTL / sim10Y.cumInflation).toFixed(2);
-    const realPct = +(((totalTL / infTargetTL) - 1) * 100).toFixed(2);
-    const goldBenchTL = +(sim10Y.goldBenchmarkUnits * (mRow?.gramGoldTL || 140.39)).toFixed(2);
-    return { mRow, totalTL, infTargetTL, realTodayEquivTL, realPct, goldBenchTL };
-  }
-
-  function step10YMonth() {
-    const pack = global.__AETHER_HISTORY_121M__ || { months: [], eventsByYm: {} };
-    if (!sim10Y || sim10Y.idx >= pack.months.length - 1) {
-      stop10YTimer();
-      renderCurrentTab();
-      return;
-    }
-    sim10Y.idx += 1;
-    const mRow = pack.months[sim10Y.idx];
-    const cpiMoM = (Number(mRow.cpiMoM) || 0) / 100;
-    sim10Y.cumInflation *= (1 + cpiMoM);
-
-    if (sim10Y.depositTL > 0) {
-      const netMo = ((Number(mRow.depGross) || 12) * (1 - (Number(mRow.stopaj) || 15) / 100)) / 1200;
-      sim10Y.depositTL = +(sim10Y.depositTL * (1 + netMo)).toFixed(2);
-    }
-    if (sim10Y.sukukTL > 0) {
-      const sukMo = (Number(mRow.sukukGross) || 12) / 1200;
-      sim10Y.sukukTL = +(sim10Y.sukukTL * (1 + sukMo)).toFixed(2);
-    }
-
-    const ev = pack.eventsByYm?.[mRow.ym];
-    if (ev) {
-      sim10Y.logs.unshift(`${mRow.ym}: ${ev.lateHeadline}`);
-      if (sim10Y.logs.length > 12) sim10Y.logs.length = 12;
-    }
-    if (sim10Y.idx >= pack.months.length - 1) stop10YTimer();
-    renderCurrentTab();
-  }
-
-  function stop10YTimer() {
-    if (simTimer) { clearInterval(simTimer); simTimer = null; }
-    if (sim10Y) sim10Y.playing = false;
-  }
-
-  function trade10Y(assetId, side, ratio) {
-    const pack = global.__AETHER_HISTORY_121M__ || { months: [] };
-    const mRow = pack.months[sim10Y.idx];
-    const a = HIST_ASSETS.find((x) => x.id === assetId);
-    if (!a || !mRow) return;
-
-    if (side === 'BUY') {
-      const spend = +(sim10Y.cashTL * ratio).toFixed(2);
-      if (spend < 1000) return;
-      sim10Y.cashTL = +(sim10Y.cashTL - spend).toFixed(2);
-      sim10Y.tradeCount += 1;
-      const net = spend * (1 - a.spreadPct / 200);
-      if (a.kind === 'sukuk') sim10Y.sukukTL = +(sim10Y.sukukTL + net).toFixed(2);
-      else if (a.kind === 'deposit') sim10Y.depositTL = +(sim10Y.depositTL + net).toFixed(2);
-      else {
-        const u = getHistUnitPrice(a, mRow);
-        sim10Y.units[a.id] = +((Number(sim10Y.units[a.id]) || 0) + net / u).toFixed(6);
-      }
-    } else if (side === 'SELL') {
-      sim10Y.tradeCount += 1;
-      if (a.kind === 'sukuk' && sim10Y.sukukTL > 0) {
-        const amt = +(sim10Y.sukukTL * ratio).toFixed(2);
-        sim10Y.sukukTL = +(sim10Y.sukukTL - amt).toFixed(2);
-        sim10Y.cashTL = +(sim10Y.cashTL + amt).toFixed(2);
-      } else if (a.kind === 'deposit' && sim10Y.depositTL > 0) {
-        const amt = +(sim10Y.depositTL * ratio).toFixed(2);
-        sim10Y.depositTL = +(sim10Y.depositTL - amt).toFixed(2);
-        sim10Y.cashTL = +(sim10Y.cashTL + amt * 0.985).toFixed(2);
-      } else {
-        const curQ = Number(sim10Y.units[a.id]) || 0;
-        if (curQ <= 0) return;
-        const sellQ = curQ * ratio;
-        const gross = sellQ * getHistUnitPrice(a, mRow) * (1 - a.spreadPct / 200);
-        sim10Y.units[a.id] = +(curQ - sellQ).toFixed(6);
-        if (sim10Y.units[a.id] < 0.0001) delete sim10Y.units[a.id];
-        sim10Y.cashTL = +(sim10Y.cashTL + gross).toFixed(2);
-      }
-    }
-    renderCurrentTab();
-  }
-
-  function renderSim10YTab(host) {
-    if (!sim10Y) sim10Y = createFresh10YSim();
-    const pack = global.__AETHER_HISTORY_121M__ || { months: [], eventsByYm: {} };
-    const v = eval10YSim();
-    const mRow = v.mRow || {};
-    const ev = pack.eventsByYm?.[mRow.ym] || null;
-
-    host.innerHTML = `
-      <section class="ms-card">
-        <div class="ms-sec-head">
-          <div>
-            <h2 class="ms-sec-title">1.000.000 ₺ Hızlandırılmış 10 Yıl Simülasyonu (${esc(mRow.ym)} · ${sim10Y.idx}/120 Ay)</h2>
-            <p class="ms-sec-sub">Kasım 2016'daki 1.000.000 ₺ sermayeyi gerçek Türkiye krizleri, faiz döngüleri ve enflasyon karşısında yöneterek stratejini test et.</p>
-          </div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px">
-            ${sim10Y.playing
-              ? `<button type="button" class="ms-btn danger sm" id="msSimPause">Duraklat</button>`
-              : `<button type="button" class="ms-btn primary sm" id="msSimPlay">Başlat (2,5 sn/ay)</button>`}
-            <button type="button" class="ms-btn sm" id="msSimFast">Hızlı (0,8 sn/ay)</button>
-            <button type="button" class="ms-btn sm" id="msSimStep">+1 Ay İlerle</button>
-            <button type="button" class="ms-btn sm" id="msSimReset">1.000.000 ₺ Sıfırla</button>
-          </div>
-        </div>
-
-        <div class="ms-kpi-grid">
-          <div class="ms-kpi-box">
-            <span>Portföy Büyüklüğün</span>
-            <strong>${fmtTL(v.totalTL)}</strong>
-            <small>2016 alım gücüyle karşılığı: ${fmtTL(v.realTodayEquivTL)}</small>
-          </div>
-          <div class="ms-kpi-box">
-            <span>Enflasyon Koruma Sınırı</span>
-            <strong>${fmtTL(v.infTargetTL)}</strong>
-            <small class="${v.realPct >= 0 ? 'pos' : 'neg'}">Enflasyona karşı reel fark: ${v.realPct >= 0 ? '+' : ''}%${v.realPct}</small>
-          </div>
-          <div class="ms-kpi-box">
-            <span>Sadece Altında Kalsaydı</span>
-            <strong>${fmtTL(v.goldBenchTL)}</strong>
-            <small>Toplam yaptığın işlem: ${sim10Y.tradeCount}</small>
-          </div>
-          <div class="ms-kpi-box">
-            <span>Boş Nakit Bakiyen</span>
-            <strong>${fmtTL(sim10Y.cashTL)}</strong>
-            <small>Dolar: ${mRow.usd} ₺ · Politika Faizi: %${mRow.policy}</small>
-          </div>
-        </div>
-
-        <div class="ms-two-col" style="margin-bottom:14px">
-          <div class="ms-alert info" style="margin:0">
-            <strong>Öncü Hammadde & Faiz Verisi:</strong><br/>
-            ${ev ? esc(ev.kitchenGauge) : `Brent Petrol: ${mRow.bnoUsd} $ · Tarım Emtiası: ${mRow.dbaUsd} $ · Mevduat Brüt: %${mRow.depGross} · Aylık Enflasyon: %${mRow.cpiMoM}`}
-          </div>
-          <div class="ms-alert ${ev?.rumorTrap ? 'warn' : 'info'}" style="margin:0">
-            <strong>Günün Manşeti & Piyasa Söylentisi:</strong><br/>
-            ${ev ? esc(ev.lateHeadline) : 'Piyasalarda normal fiyatlama akışı devam ediyor.'}
-            ${ev?.rumorTrap ? `<div style="margin-top:4px;color:#b91c1c">${esc(ev.rumorTrap)}</div>` : ''}
-          </div>
-        </div>
-
-        <div class="ms-asset-grid">
-          ${HIST_ASSETS.map((a) => {
-            const u = getHistUnitPrice(a, mRow);
-            let heldTL = 0;
-            if (a.kind === 'sukuk') heldTL = sim10Y.sukukTL;
-            else if (a.kind === 'deposit') heldTL = sim10Y.depositTL;
-            else heldTL = (Number(sim10Y.units[a.id]) || 0) * u;
-
-            const pText = a.kind === 'sukuk'
-              ? `Yıllık %${mRow.sukukGross} (%0 Vergi)`
-              : (a.kind === 'deposit' ? `Yıllık %${mRow.depGross} (%${mRow.stopaj} Stopaj)` : fmtUnitTL(u));
-
-            return `
-              <div class="ms-asset-card ${heldTL > 100 ? 'owned' : ''}" style="cursor:default">
-                <div>
-                  <div class="ms-asset-top">
-                    <span class="ms-asset-code">${esc(a.cat)}</span>
-                    <strong>${pText}</strong>
-                  </div>
-                  <h4 class="ms-asset-name">${esc(a.name)}</h4>
-                  <div style="font-size:12.4px;color:#475569;margin-top:4px">
-                    Portföyde: <strong>${heldTL > 100 ? fmtTL(heldTL) : 'Yok'}</strong>
-                  </div>
-                </div>
-                <div style="display:flex;gap:6px;flex-wrap:wrap">
-                  <button type="button" class="ms-btn primary sm" data-sbuy="${a.id}">Naktin %25'iyle Al</button>
-                  ${heldTL > 100 ? `<button type="button" class="ms-btn danger sm" data-ssell="${a.id}">Tamamını Sat</button>` : ''}
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      </section>
-    `;
-
-    document.getElementById('msSimPlay')?.addEventListener('click', () => {
-      stop10YTimer();
-      sim10Y.playing = true;
-      simTimer = setInterval(step10YMonth, 2500);
-      renderSim10YTab(host);
-    });
-    document.getElementById('msSimFast')?.addEventListener('click', () => {
-      stop10YTimer();
-      sim10Y.playing = true;
-      simTimer = setInterval(step10YMonth, 800);
-      renderSim10YTab(host);
-    });
-    document.getElementById('msSimPause')?.addEventListener('click', () => {
-      stop10YTimer();
-      renderSim10YTab(host);
-    });
-    document.getElementById('msSimStep')?.addEventListener('click', () => {
-      stop10YTimer();
-      step10YMonth();
-    });
-    document.getElementById('msSimReset')?.addEventListener('click', () => {
-      stop10YTimer();
-      sim10Y = createFresh10YSim();
-      renderSim10YTab(host);
-    });
-
-    host.querySelectorAll('[data-sbuy]').forEach((b) => {
-      b.addEventListener('click', () => trade10Y(b.getAttribute('data-sbuy'), 'BUY', 0.25));
-    });
-    host.querySelectorAll('[data-ssell]').forEach((b) => {
-      b.addEventListener('click', () => trade10Y(b.getAttribute('data-ssell'), 'SELL', 1.0));
+    document.getElementById('msSendBanterBtn')?.addEventListener('click', sendChat);
+    document.getElementById('msBanterInp')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendChat();
     });
   }
 
@@ -1326,11 +1803,9 @@
     if (activeTab === 'market') renderMarketTab(host);
     else if (activeTab === 'portfolio') renderPortfolioTab(host);
     else if (activeTab === 'family') renderFamilyTab(host);
-    else if (activeTab === 'sim10y') renderSim10YTab(host);
   }
 
   function switchTab(tabName) {
-    if (activeTab === 'sim10y' && tabName !== 'sim10y') stop10YTimer();
     activeTab = tabName;
     renderCurrentTab();
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -1339,9 +1814,13 @@
   function mount() {
     const K = global.AetherKernelV10;
     K.init();
+
     K.subscribe(() => {
       renderHeader();
-      if (activeTab === 'portfolio' || activeTab === 'family') renderCurrentTab();
+      // Kullanıcı arama kutusunda veya sohbet kutusunda yazı yazıyorsa imleci bozmamak için korumalı yenile
+      const activeId = document.activeElement?.id || '';
+      if (activeId === 'msSearchInp' || activeId === 'msBanterInp') return;
+      renderCurrentTab();
     });
 
     document.querySelectorAll('.ms-tab-btn').forEach((btn) => {
@@ -1349,18 +1828,27 @@
     });
 
     document.getElementById('msModalBackdrop')?.addEventListener('click', (e) => {
-      if (e.target && e.target.id === 'msModalBackdrop') closeAssetDrawer();
+      if (e.target && e.target.id === 'msModalBackdrop' && modalMode !== 'WELCOME') {
+        closeModal();
+      }
     });
 
     renderHeader();
     renderCurrentTab();
     setInterval(renderHeader, 1000);
+
+    // İlk kez açan kullanıcıya 3 saniyelik net karşılama ekranı göster
+    if (!K.getActiveMember().profileRegistered) {
+      openWelcomeModal();
+    }
   }
 
   global.MillionSimApp = {
     mount,
     switchTab,
     openAssetDrawer,
-    closeAssetDrawer
+    openWelcomeModal,
+    openProfileModal,
+    closeModal
   };
 })(typeof window !== 'undefined' ? window : globalThis);

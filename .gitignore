@@ -5,4 +5,7 @@ mkk_float_ledger.json
 realtime_anomaly_log.json
 AETHER-Sideload.ipa
 AETHER-iOS.ipa
+AETHER-iOS-Standalone.html
+family-hub.json
+family-hub-v13.json
 *.log

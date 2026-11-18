@@ -4,14 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="AETHER 1M" />
-  <meta name="theme-color" content="#f4f6f9" />
-  <title>AETHER — 1.000.000 ₺ Gerçek Yatırım Simülasyonu</title>
+  <meta name="theme-color" content="#0f172a" />
+  <title>AETHER — 1.000.000 ₺ Gerçek Yatırım Meydanı &amp; Canlı Lig</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" href="apple-touch-icon.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-  <link rel="stylesheet" href="million-sim.css?v=12.0.0" />
+  <link rel="stylesheet" href="million-sim.css?v=13.0.0" />
 </head>
 <body>
   <header class="ms-header">
@@ -19,10 +19,12 @@
   </header>
 
   <nav class="ms-tabs" aria-label="Ana Bölümler">
-    <button type="button" class="ms-tab-btn active" data-tab="market">Piyasa &amp; Yatırım Yap</button>
-    <button type="button" class="ms-tab-btn" data-tab="portfolio">Portföyüm</button>
-    <button type="button" class="ms-tab-btn" data-tab="family">Aile Ligi (1 Milyon ₺)</button>
-    <button type="button" class="ms-tab-btn" data-tab="sim10y">10 Yıl Simülasyon</button>
+    <button type="button" class="ms-tab-btn active" data-tab="market">Piyasa &amp; Keşif</button>
+    <button type="button" class="ms-tab-btn" data-tab="portfolio">Portföyüm &amp; Ustalık</button>
+    <button type="button" class="ms-tab-btn" data-tab="family">
+      <span>Canlı Yatırımcı Ligi</span>
+      <span id="msLeagueTabBadge" class="ms-tab-badge">1</span>
+    </button>
   </nav>
 
   <main id="msMainContainer" class="ms-container"></main>
@@ -31,11 +33,10 @@
     <div id="msModalSheet" class="ms-modal-sheet"></div>
   </div>
 
-  <script src="aether-data-bundle.js?v=12.0.0"></script>
-  <script src="aether-history-121m.js?v=12.0.0"></script>
-  <script src="aether-kernel-v10.js?v=12.0.0"></script>
-  <script src="real-investment-guide.js?v=12.0.0"></script>
-  <script src="million-sim-app.js?v=12.0.0"></script>
+  <script src="aether-data-bundle.js?v=13.0.0"></script>
+  <script src="aether-kernel-v10.js?v=13.0.0"></script>
+  <script src="real-investment-guide.js?v=13.0.0"></script>
+  <script src="million-sim-app.js?v=13.0.0"></script>
   <script>
     (function () {
       'use strict';
@@ -43,7 +44,7 @@
         window.MillionSimApp.mount();
       }
       if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-        navigator.serviceWorker.register('./sw.js').catch(function () {});
+        navigator.serviceWorker.register('./sw.js?v=13.0.0').catch(function () {});
       }
     })();
   </script>
