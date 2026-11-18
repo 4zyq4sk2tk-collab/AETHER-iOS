@@ -1,13 +1,14 @@
-const CACHE_NAME = 'aether-v10-zero-spreadsheet-r1';
+const CACHE_NAME = 'ocak-living-world-v11-r1';
 const CORE_ASSETS = [
   './',
   './index.html',
-  './aether-v10.css',
+  './world-stage.css',
   './aether-data-bundle.js',
   './aether-history-121m.js',
   './aether-kernel-v10.js',
-  './aether-canvas-world-v10.js',
-  './aether-arena-120m-v10.js',
+  './human-wisdom-and-bridge.js',
+  './decade-life-journey.js',
+  './world-scene-engine.js',
   './manifest.json',
   './apple-touch-icon.png',
   './apple-touch-icon.svg'

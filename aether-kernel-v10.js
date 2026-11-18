@@ -67,7 +67,7 @@
   // 1. ZAMAN VE TÜRKİYE PİYASA SAATİ (EUROPE/ISTANBUL UTC+3)
   // --------------------------------------------------------------------------
   function getIstanbulParts(customMs) {
-    const baseMs = clockOverride != null ? clockOverride : (customMs != null ? customMs : Date.now());
+    const baseMs = customMs != null ? customMs : (clockOverride != null ? clockOverride : Date.now());
     const d = new Date(baseMs);
     // Türkiye kalıcı UTC+3 saat dilimindedir
     const trMs = d.getTime() + (3 * 3600 * 1000);

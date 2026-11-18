@@ -5,11 +5,12 @@ on:
     branches: [main]
     paths:
       - 'index.html'
-      - 'aether-v10.css'
+      - 'world-stage.css'
       - 'aether-history-121m.js'
       - 'aether-kernel-v10.js'
-      - 'aether-canvas-world-v10.js'
-      - 'aether-arena-120m-v10.js'
+      - 'human-wisdom-and-bridge.js'
+      - 'decade-life-journey.js'
+      - 'world-scene-engine.js'
       - 'sw.js'
       - 'manifest.json'
       - 'ios/**'
@@ -61,7 +62,7 @@ jobs:
           cp apple-touch-icon.png build-ios/Payload/AETHER.app/AppIcon60x60@2x.png
           cp apple-touch-icon.png build-ios/Payload/AETHER.app/AppIcon60x60@3x.png
 
-          cp index.html aether-v10.css aether-data-bundle.js aether-history-121m.js aether-kernel-v10.js aether-canvas-world-v10.js aether-arena-120m-v10.js manifest.json sw.js apple-touch-icon.png apple-touch-icon.svg build-ios/Payload/AETHER.app/www/
+          cp index.html world-stage.css aether-data-bundle.js aether-history-121m.js aether-kernel-v10.js human-wisdom-and-bridge.js decade-life-journey.js world-scene-engine.js manifest.json sw.js apple-touch-icon.png apple-touch-icon.svg build-ios/Payload/AETHER.app/www/
 
           codesign --force --deep --sign - --timestamp=none build-ios/Payload/AETHER.app
           (cd build-ios && ditto -c -k --sequesterRsrc --keepParent Payload ../AETHER-iOS.ipa)
@@ -77,8 +78,8 @@ jobs:
       - name: Publish IPA to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v10.0.0-ios
-          name: "AETHER v10.0 — Sıfır-Tablo Yaşayan Türkiye Ekonomisi Haritası, 120 Aylık Gerçek Zaman Tüneli & Aile Kileri (ARM64 iOS IPA)"
+          tag_name: v11.0.0-ios
+          name: "OCAK v11.0 — Tam Ekran Yaşayan Memleket Dünyası, Sıfır-Terim Sokak Dili, 8 Gerçek Hayat Tatbikatı & 10 Yıl Kiler Yolculuğu (ARM64 iOS IPA)"
           files: AETHER-iOS.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

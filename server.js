@@ -27,6 +27,7 @@ const {
   computeMkkFloatDeltaLedgerEngine,
   computeRealtimeAnomalyEventLogEngine
 } = require('./deep_kitchen_intel');
+const { computeAutonomousWorldEvolution } = require('./autonomous_world_evolver');
 
 const PORT = process.env.PORT || 3847;
 
@@ -2079,6 +2080,11 @@ async function refreshMarketDataset() {
         fetchLiveTurkishRealWorldFeed().catch(() => cachedRealWorldFeed)
       ]);
       fresh.liveRealWorldFeed = Array.isArray(realFeed) ? realFeed : [];
+      try {
+        fresh.worldLiveEvolution = computeAutonomousWorldEvolution(fresh);
+      } catch (evolErr) {
+        console.error('Autonomous world evolution error:', evolErr.message);
+      }
       const jsonStr = JSON.stringify(fresh);
       const rawBuf = Buffer.from(jsonStr, 'utf8');
       const gzBuf = await gzipAsync(rawBuf, { level: zlib.constants.Z_BEST_SPEED });
@@ -2344,12 +2350,13 @@ const server = http.createServer(async (req, res) => {
 
   // Statik iOS / PWA / Veri Paketi Dosyaları
   const staticMap = {
-    '/aether-v10.css': { file: 'aether-v10.css', mime: 'text/css; charset=utf-8', cc: 'no-cache' },
+    '/world-stage.css': { file: 'world-stage.css', mime: 'text/css; charset=utf-8', cc: 'no-cache' },
     '/aether-data-bundle.js': { file: 'aether-data-bundle.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
     '/aether-history-121m.js': { file: 'aether-history-121m.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
     '/aether-kernel-v10.js': { file: 'aether-kernel-v10.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
-    '/aether-canvas-world-v10.js': { file: 'aether-canvas-world-v10.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
-    '/aether-arena-120m-v10.js': { file: 'aether-arena-120m-v10.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
+    '/human-wisdom-and-bridge.js': { file: 'human-wisdom-and-bridge.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
+    '/decade-life-journey.js': { file: 'decade-life-journey.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
+    '/world-scene-engine.js': { file: 'world-scene-engine.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
     '/manifest.json': { file: 'manifest.json', mime: 'application/manifest+json; charset=utf-8', cc: 'no-cache' },
     '/sw.js': { file: 'sw.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
     '/apple-touch-icon.svg': { file: 'apple-touch-icon.svg', mime: 'image/svg+xml', cc: 'public, max-age=3600' },
@@ -2440,25 +2447,27 @@ const server = http.createServer(async (req, res) => {
       const bp = path.join(__dirname, 'aether-data-bundle.js');
       const histPath = path.join(__dirname, 'aether-history-121m.js');
       const kernelPath = path.join(__dirname, 'aether-kernel-v10.js');
-      const worldJsPath = path.join(__dirname, 'aether-canvas-world-v10.js');
-      const arenaJsPath = path.join(__dirname, 'aether-arena-120m-v10.js');
-      const worldCssPath = path.join(__dirname, 'aether-v10.css');
+      const wisdomPath = path.join(__dirname, 'human-wisdom-and-bridge.js');
+      const journeyPath = path.join(__dirname, 'decade-life-journey.js');
+      const scenePath = path.join(__dirname, 'world-scene-engine.js');
+      const stageCssPath = path.join(__dirname, 'world-stage.css');
       const bundleRaw = fs.existsSync(bp)
         ? await fsp.readFile(bp, 'utf8')
         : (cachedJsonBuf ? 'window.__AETHER_EMBEDDED_DATA__ = ' + cachedJsonBuf.toString('utf8') + ';' : '');
       const histRaw = fs.existsSync(histPath) ? await fsp.readFile(histPath, 'utf8') : '';
       const kernelRaw = fs.existsSync(kernelPath) ? await fsp.readFile(kernelPath, 'utf8') : '';
-      const worldJsRaw = fs.existsSync(worldJsPath) ? await fsp.readFile(worldJsPath, 'utf8') : '';
-      const arenaJsRaw = fs.existsSync(arenaPathFix(arenaJsPath)) ? await fsp.readFile(arenaJsPath, 'utf8') : '';
-      function arenaPathFix(p) { return p; }
-      const worldCssRaw = fs.existsSync(worldCssPath) ? await fsp.readFile(worldCssPath, 'utf8') : '';
+      const wisdomRaw = fs.existsSync(wisdomPath) ? await fsp.readFile(wisdomPath, 'utf8') : '';
+      const journeyRaw = fs.existsSync(journeyPath) ? await fsp.readFile(journeyPath, 'utf8') : '';
+      const sceneRaw = fs.existsSync(scenePath) ? await fsp.readFile(scenePath, 'utf8') : '';
+      const stageCssRaw = fs.existsSync(stageCssPath) ? await fsp.readFile(stageCssPath, 'utf8') : '';
       const standaloneHtml = htmlRaw
-        .replace(/<link rel="stylesheet" href="aether-v10\.css[^"]*" \/>/, `<style>${worldCssRaw}</style>`)
+        .replace(/<link rel="stylesheet" href="world-stage\.css[^"]*" \/>/, `<style>${stageCssRaw}</style>`)
         .replace(/<script src="aether-data-bundle\.js[^"]*"><\/script>/, `<script>${bundleRaw}</script>`)
         .replace(/<script src="aether-history-121m\.js[^"]*"><\/script>/, `<script>${histRaw}</script>`)
         .replace(/<script src="aether-kernel-v10\.js[^"]*"><\/script>/, `<script>${kernelRaw}</script>`)
-        .replace(/<script src="aether-canvas-world-v10\.js[^"]*"><\/script>/, `<script>${worldJsRaw}</script>`)
-        .replace(/<script src="aether-arena-120m-v10\.js[^"]*"><\/script>/, `<script>${arenaJsRaw}</script>`);
+        .replace(/<script src="human-wisdom-and-bridge\.js[^"]*"><\/script>/, `<script>${wisdomRaw}</script>`)
+        .replace(/<script src="decade-life-journey\.js[^"]*"><\/script>/, `<script>${journeyRaw}</script>`)
+        .replace(/<script src="world-scene-engine\.js[^"]*"><\/script>/, `<script>${sceneRaw}</script>`);
       const outBuf = clientAcceptsGzip(req)
         ? await gzipAsync(Buffer.from(standaloneHtml, 'utf8'), { level: zlib.constants.Z_BEST_SPEED })
         : Buffer.from(standaloneHtml, 'utf8');
