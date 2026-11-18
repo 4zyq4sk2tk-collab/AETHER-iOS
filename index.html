@@ -1481,27 +1481,31 @@
       .mob-spark-col { display: none; }
     }
   </style>
-  <script src="aether-data-bundle.js"></script>
+  <link rel="stylesheet" href="aether-world-v9.css?v=9.0" />
+  <script src="aether-data-bundle.js?v=9.0"></script>
 </head>
 <body>
   <!-- ÜST BAR -->
   <header class="app-header">
     <div class="header-inner">
-      <div class="brand" onclick="switchTab('meydan')">
+      <div class="brand" onclick="openCarsiHomeTab()">
         <div class="brand-mark" aria-hidden="true">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 3 3 20h18L12 3Z"/><path d="M8.5 14h7"/>
           </svg>
         </div>
-        <span class="brand-name">AETHER</span>
+        <div>
+          <span class="brand-name">AETHER</span>
+          <span class="brand-sub">Yaşayan Ekonomi</span>
+        </div>
       </div>
 
       <nav class="desktop-nav" aria-label="Ana Menü">
-        <button class="nav-btn active" data-tab="meydan" onclick="switchTab('meydan')">Meydan</button>
-        <button class="nav-btn" data-tab="kesfet" onclick="switchTab('kesfet')">Pusula</button>
-        <button class="nav-btn" data-tab="sepet" onclick="switchTab('sepet')">Planla</button>
+        <button class="nav-btn active" data-tab="meydan" onclick="openCarsiHomeTab()">Çarşı &amp; Dünya</button>
+        <button class="nav-btn" data-tab="yolculuk" onclick="switchTab('yolculuk')">10 Yıllık Yolculuk</button>
+        <button class="nav-btn" data-tab="aile" onclick="openFamilySalonTab()">Aile Masası</button>
         <button class="nav-btn" data-tab="varliklar" onclick="switchTab('varliklar')">Araçlar <span class="nav-badge" id="navAssetCount">69</span></button>
-        <button class="nav-btn" data-tab="bist" onclick="switchTab('bist')">Şirketler <span class="nav-badge" id="navBistCount">619</span></button>
+        <button class="nav-btn" data-tab="bist" onclick="switchTab('bist')">Dükkânlar <span class="nav-badge" id="navBistCount">619</span></button>
         <button class="nav-btn" data-tab="portfoy" onclick="switchTab('portfoy')">Kasam <span class="nav-badge" id="navPortCount">0</span></button>
       </nav>
 
@@ -1523,15 +1527,20 @@
 
   <!-- ANA İÇERİK -->
   <main class="app-main">
-    <!-- ==================== SEKME 0: MEYDAN (GERÇEK ZAMANLI TÜRKİYE PİYASASI + SOKAK ZEKASI + AİLE ÇAY MASASI + İZ AYNASI) ==================== -->
+    <!-- ==================== SEKME 0: ÇARŞI & DÜNYA (YAŞAYAN HARİTA, ZİNCİRLER, AİLE MASASI VE İZ AYNASI) ==================== -->
     <section id="tab-meydan" class="tab-panel active">
       <div class="seg-bar" style="margin-bottom:12px;" id="meydanSubNav">
-        <button class="seg-item active" data-msub="today" onclick="window.AetherExp && window.AetherExp.setMeydanSubMode('today')">Bugün</button>
-        <button class="seg-item" data-msub="chains" onclick="window.AetherExp && window.AetherExp.setMeydanSubMode('chains')">Zincirler</button>
+        <button class="seg-item active" data-msub="today" onclick="window.AetherExp && window.AetherExp.setMeydanSubMode('today')">Yaşayan Çarşı</button>
+        <button class="seg-item" data-msub="chains" onclick="window.AetherExp && window.AetherExp.setMeydanSubMode('chains')">6 Canlı Zincir</button>
         <button class="seg-item" data-msub="family" onclick="window.AetherExp && window.AetherExp.setMeydanSubMode('family')">Aile Masası</button>
         <button class="seg-item" data-msub="mirror" onclick="window.AetherExp && window.AetherExp.setMeydanSubMode('mirror')">İzim &amp; Aynam</button>
       </div>
       <div id="meydanRootMount"></div>
+    </section>
+
+    <!-- ==================== SEKME 0.5: 10 YILLIK HIZLANDIRILMIŞ BİSİKLET SAHASI (2017–2026) ==================== -->
+    <section id="tab-yolculuk" class="tab-panel">
+      <div id="yolculukRootMount"></div>
     </section>
 
     <!-- ==================== SEKME 1: PUSULA (AKILLI SERMAYE DÖNGÜSÜ + SÜRÜDEN ÖNCE GÖR + 30SN HİKAYELER) ==================== -->
@@ -1828,23 +1837,23 @@
     </section>
   </main>
 
-  <!-- MOBİL ALT SEKME ÇUBUĞU -->
+  <!-- MOBİL ALT SEKME ÇUBUĞU (5 YAŞAYAN DÜNYA) -->
   <nav class="mobile-tabbar" aria-label="Alt Menü">
-    <button class="mob-tab active" data-tab="meydan" onclick="switchTab('meydan')">
-      <svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="4"/></svg>
-      <span>Meydan</span>
+    <button class="mob-tab active" data-tab="meydan" onclick="openCarsiHomeTab()">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"/></svg>
+      <span>Çarşı</span>
     </button>
-    <button class="mob-tab" data-tab="kesfet" onclick="switchTab('kesfet')">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
-      <span>Pusula</span>
+    <button class="mob-tab" data-tab="yolculuk" onclick="switchTab('yolculuk')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>
+      <span>Yolculuk</span>
     </button>
-    <button class="mob-tab" data-tab="sepet" onclick="switchTab('sepet')">
-      <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-7"/></svg>
-      <span>Planla</span>
+    <button class="mob-tab" data-tab="aile" onclick="openFamilySalonTab()">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>Aile Masası</span>
     </button>
-    <button class="mob-tab" data-tab="varliklar" onclick="switchTab('varliklar')">
-      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-      <span>Keşfet</span>
+    <button class="mob-tab" data-tab="bist" onclick="switchTab('bist')">
+      <svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01"/><path d="M9 13v.01"/></svg>
+      <span>Dükkânlar</span>
     </button>
     <button class="mob-tab" data-tab="portfoy" onclick="switchTab('portfoy')">
       <svg viewBox="0 0 24 24"><path d="M21 12V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5Z"/><path d="M16 12h5"/></svg>
@@ -3050,8 +3059,16 @@
        ========================================================================= */
     window.__AETHER_CONN_MODE__ = 'INIT';
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+      navigator.serviceWorker.addEventListener('message', (ev) => {
+        if (ev.data && ev.data.type === 'AETHER_SW_UPDATED') {
+          if (!sessionStorage.getItem('aether_v9_reloaded')) {
+            sessionStorage.setItem('aether_v9_reloaded', '1');
+            location.reload();
+          }
+        }
+      });
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=8.0', { updateViaCache: 'none' }).then((reg) => {
+        navigator.serviceWorker.register('sw.js?v=9.0', { updateViaCache: 'none' }).then((reg) => {
           reg.update().catch(() => {});
         }).catch(() => {});
       });
@@ -4371,6 +4388,26 @@
     /* =========================================================================
        SEKME VE PERİYOT YÖNETİMİ + 60FPS RAF PLANLAYICILAR
        ========================================================================= */
+    function openCarsiHomeTab() {
+      switchTab('meydan');
+      if (window.AetherExp) window.AetherExp.setMeydanSubMode('today');
+      document.querySelectorAll('.nav-btn, .mob-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === 'meydan');
+      });
+    }
+
+    function openFamilySalonTab() {
+      activeTab = 'meydan';
+      document.querySelectorAll('.tab-panel').forEach(el => {
+        el.classList.toggle('active', el.id === 'tab-meydan');
+      });
+      document.querySelectorAll('.nav-btn, .mob-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === 'aile');
+      });
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      if (window.AetherExp) window.AetherExp.setMeydanSubMode('family');
+    }
+
     function switchTab(tabId) {
       activeTab = tabId;
       document.querySelectorAll('.tab-panel').forEach(el => {
@@ -4380,8 +4417,8 @@
         btn.classList.toggle('active', btn.dataset.tab === tabId);
       });
       document.querySelectorAll('.mob-tab').forEach(btn => {
-        const isUnifiedKesfet = btn.dataset.tab === 'varliklar' && (tabId === 'varliklar' || tabId === 'bist');
-        btn.classList.toggle('active', btn.dataset.tab === tabId || isUnifiedKesfet);
+        const isUnifiedDukkan = btn.dataset.tab === 'bist' && (tabId === 'varliklar' || tabId === 'bist');
+        btn.classList.toggle('active', btn.dataset.tab === tabId || isUnifiedDukkan);
       });
       window.scrollTo({ top: 0, behavior: 'instant' });
       renderActiveView();
@@ -4425,6 +4462,8 @@
       renderPeriodBars();
       if (activeTab === 'meydan') {
         if (window.AetherExp) window.AetherExp.renderMeydanView();
+      } else if (activeTab === 'yolculuk') {
+        if (window.AetherWorld) window.AetherWorld.renderYolculukView();
       } else if (activeTab === 'kesfet') renderKesfetView();
       else if (activeTab === 'sepet') renderToolsView();
       else if (activeTab === 'varliklar') renderVarliklarView();
@@ -8684,7 +8723,8 @@
     });
 
   </script>
-  <script src="aether-experience-engine.js"></script>
+  <script src="aether-experience-engine.js?v=9.0"></script>
+  <script src="aether-living-world-v9.js?v=9.0"></script>
   <script>
     // Başlat ve biz içeride deneyim kazanırken arka planda sessizce canlı veriyi + bültenleri tazele
     loadMarketData(false);

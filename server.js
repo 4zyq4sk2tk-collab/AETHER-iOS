@@ -2332,8 +2332,10 @@ const server = http.createServer(async (req, res) => {
 
   // Statik iOS / PWA / Veri Paketi Dosyaları
   const staticMap = {
+    '/aether-world-v9.css': { file: 'aether-world-v9.css', mime: 'text/css; charset=utf-8', cc: 'no-cache' },
     '/aether-data-bundle.js': { file: 'aether-data-bundle.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
     '/aether-experience-engine.js': { file: 'aether-experience-engine.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
+    '/aether-living-world-v9.js': { file: 'aether-living-world-v9.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
     '/manifest.json': { file: 'manifest.json', mime: 'application/manifest+json; charset=utf-8', cc: 'no-cache' },
     '/sw.js': { file: 'sw.js', mime: 'application/javascript; charset=utf-8', cc: 'no-cache' },
     '/apple-touch-icon.svg': { file: 'apple-touch-icon.svg', mime: 'image/svg+xml', cc: 'public, max-age=3600' },
@@ -2423,13 +2425,19 @@ const server = http.createServer(async (req, res) => {
       const htmlRaw = await fsp.readFile(path.join(__dirname, 'index.html'), 'utf8');
       const bp = path.join(__dirname, 'aether-data-bundle.js');
       const expPath = path.join(__dirname, 'aether-experience-engine.js');
+      const worldJsPath = path.join(__dirname, 'aether-living-world-v9.js');
+      const worldCssPath = path.join(__dirname, 'aether-world-v9.css');
       const bundleRaw = fs.existsSync(bp)
         ? await fsp.readFile(bp, 'utf8')
         : (cachedJsonBuf ? 'window.__AETHER_EMBEDDED_DATA__ = ' + cachedJsonBuf.toString('utf8') + ';' : '');
       const expRaw = fs.existsSync(expPath) ? await fsp.readFile(expPath, 'utf8') : '';
+      const worldJsRaw = fs.existsSync(worldJsPath) ? await fsp.readFile(worldJsPath, 'utf8') : '';
+      const worldCssRaw = fs.existsSync(worldCssPath) ? await fsp.readFile(worldCssPath, 'utf8') : '';
       const standaloneHtml = htmlRaw
-        .replace('<script src="aether-data-bundle.js"></script>', `<script>${bundleRaw}</script>`)
-        .replace('<script src="aether-experience-engine.js"></script>', `<script>${expRaw}</script>`);
+        .replace(/<link rel="stylesheet" href="aether-world-v9\.css[^"]*" \/>/, `<style>${worldCssRaw}</style>`)
+        .replace(/<script src="aether-data-bundle\.js[^"]*"><\/script>/, `<script>${bundleRaw}</script>`)
+        .replace(/<script src="aether-experience-engine\.js[^"]*"><\/script>/, `<script>${expRaw}</script>`)
+        .replace(/<script src="aether-living-world-v9\.js[^"]*"><\/script>/, `<script>${worldJsRaw}</script>`);
       const outBuf = clientAcceptsGzip(req)
         ? await gzipAsync(Buffer.from(standaloneHtml, 'utf8'), { level: zlib.constants.Z_BEST_SPEED })
         : Buffer.from(standaloneHtml, 'utf8');

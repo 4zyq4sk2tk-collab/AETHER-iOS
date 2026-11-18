@@ -1405,7 +1405,44 @@
     const feed = window.marketData?.liveRealWorldFeed || [];
     const topNews = feed[0];
 
-    // Saate ve gerçek piyasa durumuna duyarlı canlı hikâye
+    // Saate ve gerçek piyasa durumuna duyarlı canlı hikâye (Sabah Açılış Öncesi vs Gece Mesai Dışı vs Canlı Seans)
+    if (clk.isBusinessDay && clk.hour >= 6 && !clk.bistIsTradableNow && clk.minsOfDay < 10 * 60) {
+      const targetTicker = topSmart ? topSmart.ticker : 'BIMAS';
+      return {
+        id: 'story_morning_prep_' + clk.dateKey,
+        kicker: `SABAH AÇILIŞ HAZIRLIĞI · SAAT ${clk.timeStr}`,
+        headline: clk.minsOfDay < 9 * 60
+          ? 'Sabah çayı vakti: 09:00’da banka makası daralır, 09:55’te Borsa eşleşmesi başlar.'
+          : 'Banka makasları daraldı; 09:55 açılış eşleşmesine ve 10:00 Borsa ziline dakikalar kaldı!',
+        body: `${topNews ? `Sabah masasında "${topNews.title}" başlığı var. ` : ''}${clk.minsOfDay < 9 * 60 ? `Şu an saat 09:00 öncesi olduğu için bankalarda döviz/altın makası hâlâ ~%${clk.bankSpreadPct.toFixed(1).replace('.', ',')} açık; 09:00’u beklemeden bankadan işlem yapan güne ekside başlar.` : 'Bankalar mesaiye geçti (~%0,65 dar makas).'} Şimdi acemi gibi ilk saniye paniğine kapılmak yerine sabah stratejini seç:`,
+        pathA: {
+          label: '10:00 Zili Çalsın, İlk Köpük Geçsin Öyle Bak',
+          sub: 'Sabah açılış heyecanına atlamadan sakin kal (Usta sabrı)',
+          act: () => {
+            const mem = getActiveMember();
+            if (mem) {
+              mem.storyChoices['morning_' + clk.dateKey] = 'waited_bell';
+              mem.stats.calmScore = Math.min(100, (mem.stats.calmScore || 65) + 3);
+              mem.activityFeed.unshift({
+                ts: Date.now(),
+                action: 'Sabah Açılış Sabrı Gösterdi',
+                detail: 'Açılış öncesi acele etmeyip 10:00 zilinden sonra tahtaların oturmasını beklemeyi seçti.',
+                why: 'Açılış köpüğünden ve erken makastan korundu'
+              });
+              saveFamilyState(true);
+              renderAllExperienceSurfaces();
+              window.showToast('Doğru sabah duruşu: İlk dakika gürültüsüne yem olmadın.');
+            }
+          }
+        },
+        pathB: {
+          label: `09:55 Eşleşmesi İçin ${targetTicker} Mutfağını İncele`,
+          sub: 'Zil çalmadan önce şirketin kasasına ve hammaddesine hazırlıklı gir',
+          act: () => window.openBistDetailDrawer(targetTicker)
+        }
+      };
+    }
+
     if (!clk.bankHoursOpen) {
       return {
         id: 'story_afterhours_' + clk.dateKey,
@@ -2227,6 +2264,10 @@
       renderPersonalMirrorInto(mount, clk, myCap);
       return;
     }
+    if (window.AetherWorld && typeof window.AetherWorld.renderLivingHomeInto === 'function') {
+      window.AetherWorld.renderLivingHomeInto(mount, clk, myCap);
+      return;
+    }
 
     const story = buildTodayMorningStory();
     const allPz = getAllBlindPuzzles();
@@ -2506,6 +2547,21 @@
             </div>
           </div>
         `).join('')}
+      </div>
+
+      <div class="v9-salon-hero">
+        <div style="font-size:11px;font-weight:800;color:#fbbf24;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">
+          AKŞAM ÇAYI MUHABBETİ · BİRBİRİNİZE LAF ATIN VEYA NEDENİNİ SORUN
+        </div>
+        <div class="chip-rail" style="margin-bottom:8px;">
+          <button class="chip" onclick="window.AetherWorld.sendFamilyTeaBanter('Sen niye bugün elindekini sattın?')">"Sen niye bugün elindekini sattın?"</button>
+          <button class="chip" onclick="window.AetherWorld.sendFamilyTeaBanter('Gece banka makasına yem olmuşsun, sabahı bekleseydin!')">"Gece makasına yem olmuşsun!"</button>
+          <button class="chip" onclick="window.AetherWorld.sendFamilyTeaBanter('Helal, sürü bakmazken sağlam dükkânı güzel yakalamışsın.')">"Sağlam dükkânı güzel yakalamışsın"</button>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="v9TeaBanterInp" class="inp" placeholder="Çay masasına not bırak (Örn: Baba o hissenin borcu çok, dikkat et)…" />
+          <button class="btn-primary" onclick="window.AetherWorld.sendFamilyTeaBanter()">Masaya Yaz</button>
+        </div>
       </div>
 
       <div class="surface" style="background:var(--bg-input);box-shadow:none;">
@@ -3088,8 +3144,42 @@
     renderAllExperienceSurfaces();
   });
 
+  function postFamilyBanterNote(msg) {
+    const m = getActiveMember();
+    if (!m || !msg) return;
+    m.activityFeed.unshift({
+      ts: Date.now(),
+      action: 'Çay Masası Notu',
+      detail: String(msg).slice(0, 220),
+      why: 'Aile içi muhabbet'
+    });
+    saveFamilyState(true);
+    renderAllExperienceSurfaces();
+    if (window.showToast) window.showToast('Notun aile çay masasına bırakıldı');
+  }
+
+  function recordJourneyGraduation(summary) {
+    const m = getActiveMember();
+    if (!m || !summary) return;
+    m.storyChoices['journey_10y_done'] = summary.finalBags;
+    if (summary.finalBags >= 120) {
+      m.stats.smartRawReads = (m.stats.smartRawReads || 0) + 2;
+      m.stats.calmScore = Math.min(100, (m.stats.calmScore || 65) + 8);
+    }
+    m.activityFeed.unshift({
+      ts: Date.now(),
+      action: `10 Yıllık Fırtına Sınavını Bitirdi (${window.fmtNum(summary.finalBags, 0)} File)`,
+      detail: `100 pazar filesiyle başladığı 2017–2026 Türkiye döngüsünü ${window.fmtNum(summary.finalBags, 0)} pazar filesi ve %${Math.round(summary.sleep || 80)} uyku huzuruyla tamamladı.`,
+      why: (summary.lessons && summary.lessons[0]) || 'Düşe kalka bisiklet dengesi'
+    });
+    saveFamilyState(true);
+    renderHeaderMemberBadge();
+  }
+
   window.AetherExp = {
     getIstanbulMarketClock,
+    formatCountdownShort,
+    buildTodayMorningStory,
     getBistTradingRestriction,
     getEntity360Chain,
     buildEntityEcosystem360Html,
@@ -3106,6 +3196,10 @@
     shareFamilyToWhatsApp,
     selectBlindPuzzleChoice,
     nextBlindPuzzle,
+    getActivePuzzleIdx: () => activePuzzleIdx,
+    getRevealedPuzzleChoice: () => revealedPuzzleChoice,
+    postFamilyBanterNote,
+    recordJourneyGraduation,
     setMeydanSubMode,
     toggleMirrorDebtSim,
     unlockFogPreview,
