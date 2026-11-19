@@ -686,12 +686,13 @@ async function buildFullDataset() {
     };
     const chg1D = +((Number(a.change1D) || 0) * weightA + (Number(b.change1D) || 0) * weightB).toFixed(2);
     const p1M = blend(a.perf1M, b.perf1M, 1 / 12);
-    const navNow = +(baseNavAnchor * (1 + (p1M || 0) / 1200)).toFixed(4);
+    const navNow = +(baseNavAnchor * (1 + chg1D / 100)).toFixed(4);
     return {
       ...meta,
       isUsdAsset: false,
       isRateInstrument: false,
       isTefasSpotFund: true,
+      navAnchor: baseNavAnchor,
       currency: 'TRY',
       currentPrice: navNow > 0 ? navNow : baseNavAnchor,
       change1D: chg1D,
@@ -1890,6 +1891,8 @@ async function buildFullDataset() {
       inst.change1D = gramSilverChange1D;
     } else if (inst.id === 'gayrimenkul-konut-tcmb') {
       inst.change1D = +((tcmbHpiMom || 0) / 30).toFixed(2);
+    } else if (inst.isTefasSpotFund) {
+      inst.change1D = +Number(inst.change1D || 0).toFixed(2);
     } else {
       const mKey = symChangeMap[inst.symbol] || inst.symbol;
       const rawChg = macroMap[mKey]?.change;
@@ -2402,6 +2405,11 @@ function normalizeRoomCode(roomCode) {
   return String(roomCode || 'ORTAK-LIG').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '') || 'ORTAK-LIG';
 }
 
+function isBlockedAuditRoom(roomCode) {
+  const c = normalizeRoomCode(roomCode);
+  return c === 'LOCAL_ISOLATED_AUDIT' || c === 'SHOT-ONLY' || c.startsWith('TEST_') || c.startsWith('AUDIT_');
+}
+
 function getOrInitRoom(roomCode) {
   const clean = normalizeRoomCode(roomCode);
   if (!hubRoomsMemory[clean]) hubRoomsMemory[clean] = { members: {}, banterFeed: [] };
@@ -2419,6 +2427,7 @@ function pruneEmptyRoom(roomCode) {
 
 function mergeMemberIntoRoom(roomObj, pkt) {
   if (!pkt || !pkt.id || !pkt.name || pkt.profileRegistered === false) return false;
+  if (String(pkt.name).includes('[object') || pkt.id === 'inv_pmjrwvggu5sj') return false;
   const prev = roomObj.members[pkt.id];
   const incRev = Number(pkt.rev) || 0;
   const prevRev = Number(prev?.rev) || 0;
@@ -2443,7 +2452,7 @@ function mergeBanterIntoRoom(roomObj, items) {
   const seen = new Set((roomObj.banterFeed || []).map((x) => x.id));
   let added = false;
   for (const it of items) {
-    if (it && it.id && it.text && !seen.has(it.id)) {
+    if (it && it.id && it.text && !seen.has(it.id) && !String(it.authorName || '').includes('[object') && !String(it.text || '').includes('[object')) {
       roomObj.banterFeed.push(it);
       seen.add(it.id);
       added = true;
@@ -2572,45 +2581,56 @@ function startServerCloudBridge() {
                   const rel = topic.slice(SERVER_MESH_NS.length + 1);
                   const segs = rel.split('/');
                   const roomCode = normalizeRoomCode(segs[0]);
-                  const sub = segs[1];
-                  if (sub === 'member') {
-                    if (payload) {
+                  if (isBlockedAuditRoom(roomCode)) {
+                    if (segs[1] === 'member' && segs[2] && payload) {
+                      try { ws.send(mqttPublishBuf(topic, '', true)); } catch (_) {}
+                    }
+                  } else {
+                    const sub = segs[1];
+                    if (sub === 'member') {
+                      if (payload) {
+                        const parsedMem = JSON.parse(payload);
+                        if (parsedMem && (String(parsedMem.name || '').includes('[object') || parsedMem.id === 'inv_pmjrwvggu5sj')) {
+                          try { ws.send(mqttPublishBuf(topic, '', true)); } catch (_) {}
+                        } else {
+                          const { room } = getOrInitRoom(roomCode);
+                          if (mergeMemberIntoRoom(room, parsedMem)) scheduleHubDiskSave();
+                        }
+                      } else if (segs[2] && hubRoomsMemory[roomCode]?.members?.[segs[2]]) {
+                        delete hubRoomsMemory[roomCode].members[segs[2]];
+                        hubRoomsMemory[roomCode].banterFeed = (hubRoomsMemory[roomCode].banterFeed || []).filter((b) => b.authorId !== segs[2]);
+                        pruneEmptyRoom(roomCode);
+                        scheduleHubDiskSave();
+                      }
+                    } else if (sub === 'event' && payload) {
+                      const evObj = JSON.parse(payload);
                       const { room } = getOrInitRoom(roomCode);
-                      if (mergeMemberIntoRoom(room, JSON.parse(payload))) scheduleHubDiskSave();
-                    } else if (segs[2] && hubRoomsMemory[roomCode]?.members?.[segs[2]]) {
-                      delete hubRoomsMemory[roomCode].members[segs[2]];
-                      hubRoomsMemory[roomCode].banterFeed = (hubRoomsMemory[roomCode].banterFeed || []).filter((b) => b.authorId !== segs[2]);
+                      let chg = false;
+                      if (evObj.memberPacket && mergeMemberIntoRoom(room, evObj.memberPacket)) chg = true;
+                      if (evObj.banterItem && mergeBanterIntoRoom(room, [evObj.banterItem])) chg = true;
                       pruneEmptyRoom(roomCode);
-                      scheduleHubDiskSave();
-                    }
-                  } else if (sub === 'event' && payload) {
-                    const evObj = JSON.parse(payload);
-                    const { room } = getOrInitRoom(roomCode);
-                    let chg = false;
-                    if (evObj.memberPacket && mergeMemberIntoRoom(room, evObj.memberPacket)) chg = true;
-                    if (evObj.banterItem && mergeBanterIntoRoom(room, [evObj.banterItem])) chg = true;
-                    pruneEmptyRoom(roomCode);
-                    if (chg) scheduleHubDiskSave();
-                  } else if (sub === 'banter_snapshot') {
-                    if (payload) {
-                      const snap = JSON.parse(payload);
-                      if (Array.isArray(snap.items) && snap.items.length > 0) {
-                        const { room } = getOrInitRoom(roomCode);
-                        if (mergeBanterIntoRoom(room, snap.items)) scheduleHubDiskSave();
+                      if (chg) scheduleHubDiskSave();
+                    } else if (sub === 'banter_snapshot') {
+                      if (payload) {
+                        const snap = JSON.parse(payload);
+                        if (Array.isArray(snap.items) && snap.items.length > 0) {
+                          const { room } = getOrInitRoom(roomCode);
+                          if (mergeBanterIntoRoom(room, snap.items)) scheduleHubDiskSave();
+                        }
+                      } else if (hubRoomsMemory[roomCode]) {
+                        hubRoomsMemory[roomCode].banterFeed = [];
+                        pruneEmptyRoom(roomCode);
+                        scheduleHubDiskSave();
                       }
-                    } else if (hubRoomsMemory[roomCode]) {
-                      hubRoomsMemory[roomCode].banterFeed = [];
-                      pruneEmptyRoom(roomCode);
-                      scheduleHubDiskSave();
-                    }
-                  } else if (sub === 'sync_ping') {
-                    const existing = hubRoomsMemory[roomCode];
-                    if (existing) {
-                      for (const mem of Object.values(existing.members || {})) {
-                        ws.send(mqttPublishBuf(`${SERVER_MESH_NS}/${roomCode}/member/${mem.id}`, JSON.stringify(mem), true));
-                      }
-                      if ((existing.banterFeed || []).length > 0) {
-                        ws.send(mqttPublishBuf(`${SERVER_MESH_NS}/${roomCode}/banter_snapshot`, JSON.stringify({ ts: Date.now(), items: existing.banterFeed.slice(0, 30) }), true));
+                    } else if (sub === 'sync_ping') {
+                      const existing = hubRoomsMemory[roomCode];
+                      if (existing) {
+                        for (const mem of Object.values(existing.members || {})) {
+                          ws.send(mqttPublishBuf(`${SERVER_MESH_NS}/${roomCode}/member/${mem.id}`, JSON.stringify(mem), true));
+                        }
+                        if ((existing.banterFeed || []).length > 0) {
+                          ws.send(mqttPublishBuf(`${SERVER_MESH_NS}/${roomCode}/banter_snapshot`, JSON.stringify({ ts: Date.now(), items: existing.banterFeed.slice(0, 30) }), true));
+                        }
                       }
                     }
                   }
@@ -2804,6 +2824,23 @@ async function fetchYahooChartRaw(yahooSym, rangeStr, intervalStr) {
       });
     }
   }
+  // Tek mumluk hatalı kur/veri iğnelerini (Yahoo TRY=X / .IS glitch) temizle; gerçek trendleri koru
+  for (let i = 1; i < bars.length - 1; i++) {
+    const prev = bars[i - 1].c;
+    const cur = bars[i].c;
+    const next = bars[i + 1].c;
+    if (prev > 0 && next > 0) {
+      const neighborDiff = Math.abs(prev - next) / Math.min(prev, next);
+      const jumpPrev = Math.abs(cur - prev) / prev;
+      const jumpNext = Math.abs(cur - next) / next;
+      if (neighborDiff < 0.04 && jumpPrev > 0.18 && jumpNext > 0.18) {
+        const mid = +((prev + next) * 0.5).toFixed(6);
+        bars[i].c = mid;
+        bars[i].h = Math.max(prev, next);
+        bars[i].l = Math.min(prev, next);
+      }
+    }
+  }
   if (bars.length > 0) {
     rawYahooMemCache.set(ck, { ts: now, bars });
     if (rawYahooMemCache.size > 400) {
@@ -2838,6 +2875,7 @@ function resolveChartSourceSpec(assetKey, md) {
     'doviz-gbp': { mode: 'DIRECT_TL', sym: 'GBPTRY=X', livePriceTL: inst?.currentPrice },
     'doviz-chf': { mode: 'DIRECT_TL', sym: 'CHFTRY=X', livePriceTL: inst?.currentPrice },
     'gram-altin-spot': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 6050 },
+    'altin-ons': { mode: 'USD_ASSET', usdSym: 'GC=F', livePriceUsd: inst?.currentPrice },
     'ceyrek-altin': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 10040 },
     'cumhuriyet-altini': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 41080 },
     'bilezik-22-ayar': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 5755 },
@@ -2847,7 +2885,9 @@ function resolveChartSourceSpec(assetKey, md) {
     'fon-degisken-isglk': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 625 },
     'tefas-kzl': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 19.8 },
     'gram-gumus-spot': { mode: 'COMPOSITE_FX', usdSym: 'SI=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 73.2 },
+    'gumus-ons': { mode: 'USD_ASSET', usdSym: 'SI=F', livePriceUsd: inst?.currentPrice },
     'gumus-fonu-gmstr': { mode: 'COMPOSITE_FX', usdSym: 'SI=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 459 },
+    'gayrimenkul-konut-tcmb': { mode: 'ANCHOR_CURVE', instRef: inst },
     'eurobond-usdtr': { mode: 'BIST_OR_FALLBACK', sym: 'USDTR.IS', fallbackUsdSym: 'EMB', livePriceTL: inst?.currentPrice },
     'eurobond-emb': { mode: 'USD_ASSET', usdSym: 'EMB', livePriceUsd: inst?.currentPrice },
     'ons-platin': { mode: 'USD_ASSET', usdSym: 'PL=F', livePriceUsd: inst?.currentPrice },
@@ -2893,7 +2933,39 @@ function resolveChartSourceSpec(assetKey, md) {
   if (bRow) {
     return { mode: 'DIRECT_TL', sym: `${bRow.ticker}.IS`, livePriceTL: bRow.close };
   }
+  if (!/^[A-Z0-9]{2,7}$/.test(cleanTk)) {
+    return { mode: 'NONE' };
+  }
   return { mode: 'DIRECT_TL', sym: `${cleanTk}.IS`, livePriceTL: null };
+}
+
+function sliceChartWindowBars(rawBars, rk) {
+  if (!Array.isArray(rawBars) || rawBars.length < 2) return rawBars || [];
+  const lastTs = rawBars[rawBars.length - 1].t;
+  if (rk === '1D') {
+    const lookback36h = lastTs - 36 * 3600000;
+    let sessionStartIdx = -1;
+    for (let i = rawBars.length - 1; i >= 1; i--) {
+      if (rawBars[i].t < lookback36h) break;
+      if (rawBars[i].t - rawBars[i - 1].t > 5 * 3600000) {
+        sessionStartIdx = i;
+        break;
+      }
+    }
+    if (sessionStartIdx > 0) {
+      const sessionBars = rawBars.slice(sessionStartIdx);
+      return sessionBars.length >= 2 ? sessionBars : rawBars.slice(Math.max(0, sessionStartIdx - 1));
+    }
+    const cutoff24h = lastTs - 24 * 3600000;
+    const dayBars = rawBars.filter((b) => b.t >= cutoff24h);
+    return dayBars.length >= 2 ? dayBars : rawBars.slice(-Math.min(rawBars.length, 32));
+  }
+  if (rk === '1W') {
+    const cutoff7d = lastTs - 7 * 86400000;
+    const wkBars = rawBars.filter((b) => b.t >= cutoff7d);
+    return wkBars.length >= 2 ? wkBars : rawBars.slice(-Math.min(rawBars.length, 42));
+  }
+  return rawBars;
 }
 
 function findClosestFxAt(fxBars, targetMs, fallbackUsdTry) {
@@ -2966,7 +3038,47 @@ async function getOrBuildServerChartSeries(assetKey, rangeKey = '1Y') {
         usd: +(p.tl / Math.max(0.1, fx)).toFixed(3)
       };
     });
-  } else {
+  } else if (spec.mode === 'ANCHOR_CURVE' && spec.instRef) {
+    const ir = spec.instRef;
+    const curP = Math.max(0.01, Number(ir.currentPrice) || 100);
+    const fromPerf = (pct) => (pct != null && Number.isFinite(Number(pct)) && Number(pct) > -98) ? (curP / (1 + Number(pct) / 100)) : null;
+    const anchors = [{ d: 0, p: curP }];
+    const pushAnc = (d, v) => { if (v && v > 0) anchors.push({ d, p: v }); };
+    pushAnc(1, fromPerf(ir.change1D));
+    pushAnc(7, fromPerf(ir.perf1W));
+    pushAnc(31, fromPerf(ir.perf1M));
+    pushAnc(92, fromPerf(ir.perf3M));
+    pushAnc(182, fromPerf(ir.perf6M));
+    pushAnc(365, fromPerf(ir.perf1Y));
+    pushAnc(1095, fromPerf(ir.perf3Y));
+    pushAnc(1826, fromPerf(ir.perf5Y));
+    anchors.sort((x, y) => x.d - y.d);
+    const steps = rk === '1D' ? 24 : (rk === '1W' ? 21 : (rk === '1M' ? 31 : (rk === '3M' ? 46 : (rk === '1Y' ? 52 : 60))));
+    const startMs = now - rangeCfg.daysSpan * 86400000;
+    const interpP = (daysAgo) => {
+      if (daysAgo <= 0) return curP;
+      if (daysAgo >= anchors[anchors.length - 1].d) return anchors[anchors.length - 1].p;
+      for (let i = 0; i < anchors.length - 1; i++) {
+        if (daysAgo >= anchors[i].d && daysAgo <= anchors[i + 1].d) {
+          const u = (daysAgo - anchors[i].d) / Math.max(0.0001, anchors[i + 1].d - anchors[i].d);
+          return Math.exp(Math.log(anchors[i].p) * (1 - u) + Math.log(anchors[i + 1].p) * u);
+        }
+      }
+      return curP;
+    };
+    for (let i = 0; i <= steps; i++) {
+      const tMs = Math.round(startMs + ((now - startMs) * i) / steps);
+      const tlVal = i === steps ? curP : interpP((now - tMs) / 86400000);
+      const fx = findClosestFxAt(fxBars, tMs, usdTryNow);
+      const infMult = cumulativeCpiMultiplierSince(tMs, now, cpiYoy);
+      points.push({
+        t: tMs,
+        tl: +tlVal.toFixed(2),
+        realTl: +(tlVal * infMult).toFixed(2),
+        usd: +(tlVal / Math.max(0.1, fx)).toFixed(3)
+      });
+    }
+  } else if (spec.mode !== 'NONE') {
     let rawBars = [];
     let isUsdQuoted = false;
     let scaleToLiveTL = null;
@@ -2992,11 +3104,7 @@ async function getOrBuildServerChartSeries(assetKey, rangeKey = '1Y') {
       isUsdQuoted = true;
     }
 
-    if (rk === '1D' && rawBars.length > 28) {
-      rawBars = rawBars.slice(-34);
-    } else if (rk === '1W' && rawBars.length > 42) {
-      rawBars = rawBars.slice(-42);
-    }
+    rawBars = sliceChartWindowBars(rawBars, rk);
 
     if (rawBars.length >= 2) {
       const prelim = rawBars.map((b) => {
@@ -3006,15 +3114,17 @@ async function getOrBuildServerChartSeries(assetKey, rangeKey = '1Y') {
         return { t: b.t, tlRaw, usdRaw, fx };
       });
       const lastRawTl = prelim[prelim.length - 1].tlRaw || 1;
+      const lastBarTs = prelim[prelim.length - 1].t || now;
       const mult = (scaleToLiveTL && scaleToLiveTL > 0 && lastRawTl > 0)
         ? (scaleToLiveTL / lastRawTl)
         : 1.0;
 
       points = prelim.map((p) => {
         const tl = +(p.tlRaw * mult).toFixed(p.tlRaw * mult >= 100 ? 2 : 4);
-        const infMult = cumulativeCpiMultiplierSince(p.t, now, cpiYoy);
+        const infMult = cumulativeCpiMultiplierSince(p.t, lastBarTs, cpiYoy);
         const realTl = +(tl * infMult).toFixed(tl >= 100 ? 2 : 4);
-        const usd = +((tl / Math.max(0.1, p.fx))).toFixed(p.usdRaw >= 10 ? 2 : 4);
+        const usdVal = (isUsdQuoted && mult === 1.0) ? p.usdRaw : (tl / Math.max(0.1, p.fx));
+        const usd = +usdVal.toFixed(usdVal >= 10 ? 2 : 4);
         return { t: p.t, tl, realTl, usd };
       });
     }
@@ -3093,7 +3203,13 @@ const server = http.createServer(async (req, res) => {
           chunks.push(chunk);
         }
         const incoming = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
-        const { code, room } = getOrInitRoom(incoming.roomCode || 'ORTAK-LIG');
+        const reqRoomCode = normalizeRoomCode(incoming.roomCode || 'ORTAK-LIG');
+        if (isBlockedAuditRoom(reqRoomCode)) {
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': '*' });
+          res.end(JSON.stringify({ roomCode: reqRoomCode, updatedAt: Date.now(), members: [], banterFeed: [] }));
+          return;
+        }
+        const { code, room } = getOrInitRoom(reqRoomCode);
 
         const incList = Array.isArray(incoming.members)
           ? incoming.members

@@ -1419,7 +1419,7 @@ function computeSelfDiagnosticReport(ctx, weather) {
       macroChainAgeMinutes
     },
     instrumentsAudit: {
-      expectedInstrumentsCount: 69,
+      expectedInstrumentsCount: 76,
       totalInstrumentsCount: instruments.length,
       validPriceInstrumentsCount,
       invalidOrMissingInstrumentCount: invalidOrMissingInstrumentIds.length,

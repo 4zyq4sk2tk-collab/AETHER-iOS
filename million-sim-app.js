@@ -1,5 +1,5 @@
 // ============================================================================
-// AETHER v16.0.0 — TAM EKRAN NATIVE MOBİL YATIRIM MEYDANI UYGULAMASI
+// AETHER v16.1.0 — TAM EKRAN NATIVE MOBİL YATIRIM MEYDANI UYGULAMASI
 // Çoklu Gerçeklik Dokunmatik Grafik (TL / Reel TÜFE / $) · Kafa Kafaya Düello ·
 // Ham Malzeme Süzgeci · Canlı Kasa Dedektifi · Sıfır Web Karmaşası
 // ============================================================================
@@ -586,7 +586,7 @@
         a.name.toLocaleUpperCase('tr-TR').includes(q) ||
         a.ticker.toLocaleUpperCase('tr-TR').includes(q) ||
         (a.categoryName || '').toLocaleUpperCase('tr-TR').includes(q) ||
-        (a.sector || '').toLocaleUpperCase('tr-TR').includes(q)
+        (a.bistRow?.sector || a.sector || '').toLocaleUpperCase('tr-TR').includes(q)
       );
     } else if (activeCategory !== 'ALL') {
       if (activeCategory === 'GOLD_COMMODITY') list = all.filter((a) => a.categoryId === '2' || a.subVenue === 'DARPHANE_S1' || a.id === 'tefas-kzl');
@@ -767,7 +767,7 @@
                     <div style="font-size:11.6px;color:var(--ink-400)">
                       ${esc(ipo.distributionMethod)} · ~${ipo.estimatedParticipants.toLocaleString('tr-TR')} kişi -> Tahmini <strong style="color:var(--ink-100)">~${estLots} lot (${fmtTL(estLots * ipo.offerPriceTL)})</strong> düşer.
                     </div>
-                    ${ipo.fundUseNote ? `<div style="font-size:11px;color:var(--cyan)">İzahname: ${esc(ipo.fundUseNote)}</div>` : ''}
+                    ${(ipo.netCashUseNote || ipo.fundUseNote) ? `<div style="font-size:11px;color:var(--cyan)">İzahname: ${esc(ipo.netCashUseNote || ipo.fundUseNote)}</div>` : ''}
                     ${already ? `
                       <span class="ms-sig-pill good">Talebin Alındı: ${already.requestedLots} Lot (${fmtTL(already.blockedCashTL)} bloke)</span>
                     ` : `
@@ -785,22 +785,26 @@
             ${(spkDesk.recentListed || []).length > 0 ? `
               <div style="font-size:11.6px;font-weight:800;color:var(--cyan);margin-bottom:6px">🔓 Son Halka Arzlar: Canlı Getiri & 180-Gün Lock-Up Kilidi</div>
               <div class="ms-list" style="margin-bottom:10px">
-                ${spkDesk.recentListed.slice(0, 6).map((ri) => `
+                ${spkDesk.recentListed.slice(0, 6).map((ri) => {
+                  const lockDays = ri.lockUpRemDays ?? ri.lockupDaysLeft ?? null;
+                  const retPct = Number(ri.sinceIpoPct ?? ri.returnSinceIpoPct ?? 0);
+                  return `
                   <div class="ms-list-row">
                     <div style="min-width:0;flex:1">
                       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
                         <span class="ms-asset-code">${esc(ri.ticker)}</span>
                         <strong style="font-size:12.8px">${esc(ri.name)}</strong>
-                        ${ri.lockupDaysLeft != null ? `<span class="ms-sig-pill ${ri.lockupDaysLeft <= 30 ? 'warn' : 'neutral'}">${ri.lockupDaysLeft > 0 ? `Lock-Up ${ri.lockupDaysLeft}g` : 'Kilit Açıldı'}</span>` : ''}
+                        ${lockDays != null ? `<span class="ms-sig-pill ${lockDays <= 30 ? 'warn' : 'neutral'}">${lockDays > 0 ? `Lock-Up ${lockDays}g` : 'Kilit Açıldı'}</span>` : ''}
                       </div>
                       <div style="font-size:11.4px;color:var(--ink-400);margin-top:2px">
                         Arz: ${fmtUnitTL(ri.offerPriceTL)} -> Canlı: <strong style="color:var(--ink-100)">${fmtUnitTL(ri.currentPriceTL)}</strong>
-                        <strong class="${(ri.returnSinceIpoPct || 0) >= 0 ? 'pos' : 'neg'}"> (${(ri.returnSinceIpoPct || 0) >= 0 ? '+' : ''}%${ri.returnSinceIpoPct})</strong>
+                        <strong class="${retPct >= 0 ? 'pos' : 'neg'}"> (${retPct >= 0 ? '+' : ''}%${retPct})</strong>
                       </div>
                     </div>
                     ${ri.assetKey ? `<button type="button" class="ms-btn sm" data-open-asset="${esc(ri.assetKey)}">Tahta</button>` : ''}
                   </div>
-                `).join('')}
+                `;
+                }).join('')}
               </div>
             ` : ''}
           </div>
@@ -942,9 +946,9 @@
               </div>
               <div class="ae-row-spark">
                 ${buildMiniSparkSvg(a)}
-                ${r52 && r52.posPct != null ? `
-                  <div class="ae-r52-wrap" title="52 Hafta Konumu">
-                    <div class="ae-r52-track"><div class="ae-r52-fill" style="width:${Math.max(4, Math.min(100, r52.posPct))}%"></div></div>
+                ${r52 && r52.pct != null ? `
+                  <div class="ae-r52-wrap ae-r52-mini" title="52 Hafta Konumu (%${r52.pct})">
+                    <div class="ae-r52-track"><div class="ae-r52-fill" style="width:${Math.max(4, Math.min(100, r52.pct))}%"></div></div>
                     <span style="font-size:9px;color:var(--ink-500);font-weight:800">52H</span>
                   </div>
                 ` : ''}
@@ -2723,7 +2727,7 @@
                 </div>
                 ${revealed ? `
                   <div style="font-size:12.6px;font-weight:900;margin-bottom:4px;line-height:1.25">${esc(cardObj.reveal.name)}</div>
-                  <div style="font-size:10.8px;color:var(--ink-400);margin-bottom:7px">${esc(cardObj.reveal.sector)} · ${fmtUnitTL(cardObj.reveal.priceTL)}</div>
+                  <div style="font-size:10.8px;color:var(--ink-400);margin-bottom:7px">${esc(cardObj.reveal.sector || 'Borsa İstanbul')} · ${fmtUnitTL(cardObj.reveal.priceTL)}</div>
                 ` : ''}
 
                 <div style="display:grid;gap:5px">
@@ -3650,9 +3654,18 @@
 
       if (lbl100k && val100k) {
         if (isScrubbing && idx < pts.length - 1) {
-          lbl100k.innerHTML = `${esc(fmtChartDateLabel(p.t, rangeAtCall))} <strong>100.000 ₺</strong> -> Bugün:`;
-          val100k.textContent = realityAtCall === 'USD' ? `$${Math.round(eq100k / (payload.usdTryNow || 50.44)).toLocaleString('tr-TR')} (${fmtTL(eq100k)})` : fmtTL(eq100k);
-          val100k.className = eq100k >= 100000 ? 'pos' : 'neg';
+          if (realityAtCall === 'USD') {
+            const eqUsd10k = Math.round(10000 * (endV / Math.max(1e-9, v)));
+            lbl100k.innerHTML = `${esc(fmtChartDateLabel(p.t, rangeAtCall))} <strong>$10.000</strong> -> Bugün:`;
+            val100k.textContent = `$${eqUsd10k.toLocaleString('tr-TR')}`;
+            val100k.className = eqUsd10k >= 10000 ? 'pos' : 'neg';
+          } else {
+            lbl100k.innerHTML = realityAtCall === 'REAL'
+              ? `${esc(fmtChartDateLabel(p.t, rangeAtCall))} <strong>100.000 ₺ Alım Gücü</strong> -> Bugün:`
+              : `${esc(fmtChartDateLabel(p.t, rangeAtCall))} <strong>100.000 ₺</strong> -> Bugün:`;
+            val100k.textContent = fmtTL(eq100k);
+            val100k.className = eq100k >= 100000 ? 'pos' : 'neg';
+          }
         } else {
           lbl100k.innerHTML = realityAtCall === 'REAL'
             ? `Dönem Başı <strong>100.000 ₺ Alım Gücü</strong> -> Bugün:`
@@ -3709,14 +3722,39 @@
       applyIndexReadout(pts.length - 1, false);
     };
 
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let scrubDirectionLock = null;
+
     stage.addEventListener('touchstart', (e) => {
-      if (e.touches && e.touches.length === 1) handleScrubAtClientX(e.touches[0].clientX);
+      if (e.touches && e.touches.length === 1) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        scrubDirectionLock = null;
+        handleScrubAtClientX(touchStartX);
+      }
     }, { passive: true });
     stage.addEventListener('touchmove', (e) => {
-      if (e.touches && e.touches.length === 1) handleScrubAtClientX(e.touches[0].clientX);
-    }, { passive: true });
-    stage.addEventListener('touchend', endScrub, { passive: true });
-    stage.addEventListener('touchcancel', endScrub, { passive: true });
+      if (!e.touches || e.touches.length !== 1) return;
+      const cx = e.touches[0].clientX;
+      const cy = e.touches[0].clientY;
+      if (!scrubDirectionLock) {
+        const dx = Math.abs(cx - touchStartX);
+        const dy = Math.abs(cy - touchStartY);
+        if (dx + dy > 5) {
+          scrubDirectionLock = dx >= dy * 0.72 ? 'x' : 'y';
+        }
+      }
+      if (scrubDirectionLock === 'y') {
+        endScrub();
+        return;
+      }
+      if (e.cancelable) e.preventDefault();
+      e.stopPropagation();
+      handleScrubAtClientX(cx);
+    }, { passive: false });
+    stage.addEventListener('touchend', () => { scrubDirectionLock = null; endScrub(); }, { passive: true });
+    stage.addEventListener('touchcancel', () => { scrubDirectionLock = null; endScrub(); }, { passive: true });
     stage.addEventListener('mousemove', (e) => handleScrubAtClientX(e.clientX));
     stage.addEventListener('mouseleave', endScrub);
   }
@@ -4300,7 +4338,11 @@
 
             <div id="aeSellPreviewLine" style="font-size:11.8px;color:var(--ink-400);margin-bottom:10px">
               Satılacak: <strong style="color:var(--ink-100)">${effectiveSellQty} ${isIntLot ? 'lot' : 'birim'} (%${effectivePct})</strong> · Tahmini Net Tutar: <strong style="color:var(--ink-100)">~${fmtTL(estGross)}</strong> ·
-              ${asset.venue === 'BIST' ? 'BIST kuralıyla satış tutarı T+2 takas kum saatine girer (2 iş günü nakit çekilemez).' : 'Anında nakit kasana geçer.'}
+              ${asset.venue === 'BIST'
+                ? 'BIST kuralıyla satış tutarı T+2 takas kum saatine girer (2 iş günü nakit çekilemez).'
+                : (asset.venue === 'TEFAS'
+                  ? `TEFAS valör kuralıyla bozum tutarı T+${asset.sellValorDays || 1} iş gününde nakit kasana geçer${asset.stopajPct > 0 ? ` (kârdan %${asset.stopajPct} stopaj kesilir)` : ' (%0 stopaj)'}.`
+                  : 'Anında nakit kasana geçer.')}
             </div>
 
             <button type="button" class="ms-btn sell-cta" style="width:100%;padding:13px;font-size:15px" id="aeConfirmSellBtn" ${availQty <= 0 ? 'disabled' : ''}>
@@ -4725,7 +4767,12 @@
         sheet.querySelectorAll('[data-sratio]').forEach((rb) => rb.classList.remove('active'));
         const prevEl = document.getElementById('aeSellPreviewLine');
         if (prevEl) {
-          prevEl.innerHTML = `Satılacak: <strong style="color:var(--ink-100)">${effQ} ${isInt ? 'lot' : 'birim'} (%${effPct})</strong> · Tahmini Net Tutar: <strong style="color:var(--ink-100)">~${fmtTL(eGross)}</strong> · ${asset.venue === 'BIST' ? 'BIST kuralıyla satış tutarı T+2 takas kum saatine girer (2 iş günü nakit çekilemez).' : 'Anında nakit kasana geçer.'}`;
+          const sellSettleNote = asset.venue === 'BIST'
+            ? 'BIST kuralıyla satış tutarı T+2 takas kum saatine girer (2 iş günü nakit çekilemez).'
+            : (asset.venue === 'TEFAS'
+              ? `TEFAS valör kuralıyla bozum tutarı T+${asset.sellValorDays || 1} iş gününde nakit kasana geçer${asset.stopajPct > 0 ? ` (kârdan %${asset.stopajPct} stopaj kesilir)` : ' (%0 stopaj)'}.`
+              : 'Anında nakit kasana geçer.');
+          prevEl.innerHTML = `Satılacak: <strong style="color:var(--ink-100)">${effQ} ${isInt ? 'lot' : 'birim'} (%${effPct})</strong> · Tahmini Net Tutar: <strong style="color:var(--ink-100)">~${fmtTL(eGross)}</strong> · ${sellSettleNote}`;
         }
         const sellBtn = document.getElementById('aeConfirmSellBtn');
         if (sellBtn) {
@@ -5106,7 +5153,7 @@
     const sheet = document.getElementById('msModalSheet');
     if (!sheet) return;
 
-    const releaseIpaUrl = 'https://github.com/4zyq4sk2tk-collab/AETHER-iOS/releases/download/v16.0.0-ios/AETHER-iOS.ipa';
+    const releaseIpaUrl = 'https://github.com/4zyq4sk2tk-collab/AETHER-iOS/releases/download/v16.1.0-ios/AETHER-iOS.ipa';
     const sideStoreDeepLink = 'sidestore://install?url=' + encodeURIComponent(releaseIpaUrl);
     const isLocalServer = global.location?.port === '3847';
     const directIpaHref = isLocalServer ? './download/AETHER-Sideload.ipa' : releaseIpaUrl;

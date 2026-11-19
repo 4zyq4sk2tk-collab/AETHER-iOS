@@ -349,6 +349,22 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
     });
 }
 
+- (void)ensureWritablePermissionsInDirectory:(NSURL *)dirUrl {
+    if (!dirUrl) return;
+    NSFileManager *fm = [NSFileManager defaultManager];
+    [fm setAttributes:@{ NSFilePosixPermissions: @(0755) } ofItemAtPath:[dirUrl path] error:nil];
+    NSDirectoryEnumerator<NSURL *> *enumerator = [fm enumeratorAtURL:dirUrl
+                                          includingPropertiesForKeys:@[NSURLIsDirectoryKey]
+                                                             options:0
+                                                        errorHandler:nil];
+    for (NSURL *itemUrl in enumerator) {
+        NSNumber *isDir = nil;
+        [itemUrl getResourceValue:&isDir forKey:NSURLIsDirectoryKey error:nil];
+        NSUInteger mode = [isDir boolValue] ? 0755 : 0644;
+        [fm setAttributes:@{ NSFilePosixPermissions: @(mode) } ofItemAtPath:[itemUrl path] error:nil];
+    }
+}
+
 - (NSURL *)prepareLocalLiveWwwDirectory {
     NSFileManager *fm = [NSFileManager defaultManager];
     NSURL *bundledWww = [[[NSBundle mainBundle] resourceURL] URLByAppendingPathComponent:@"www" isDirectory:YES];
@@ -356,23 +372,50 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
     NSURL *appSup = supDirs.firstObject;
     if (!appSup) return bundledWww;
 
-    [fm createDirectoryAtURL:appSup withIntermediateDirectories:YES attributes:nil error:nil];
+    [fm createDirectoryAtURL:appSup withIntermediateDirectories:YES attributes:@{ NSFilePosixPermissions: @(0755) } error:nil];
     NSURL *liveDir = [appSup URLByAppendingPathComponent:@"AETHER_LiveWWW" isDirectory:YES];
     NSURL *liveIndex = [liveDir URLByAppendingPathComponent:@"index.html"];
+    NSURL *stageDir = [appSup URLByAppendingPathComponent:@"AETHER_StageWWW" isDirectory:YES];
+    NSURL *stageIndex = [stageDir URLByAppendingPathComponent:@"index.html"];
 
-    NSString *bundleVer = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] ?: @"1600";
-    NSString *bundleShort = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"16.0.0";
+    NSString *bundleVer = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] ?: @"1610";
+    NSString *bundleShort = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"16.1.0";
     NSUserDefaults *ud = [NSUserDefaults standardUserDefaults];
     NSString *savedBundleVer = [ud stringForKey:@"aether_live_bundle_ver"];
 
     BOOL needsSeed = (!savedBundleVer || ![savedBundleVer isEqualToString:bundleVer] || ![fm fileExistsAtPath:[liveIndex path]]);
     if (needsSeed && [fm fileExistsAtPath:[bundledWww path]]) {
+        [fm removeItemAtURL:stageDir error:nil];
         [fm removeItemAtURL:liveDir error:nil];
         NSError *cpErr = nil;
         if ([fm copyItemAtURL:bundledWww toURL:liveDir error:&cpErr] && !cpErr) {
+            [self ensureWritablePermissionsInDirectory:liveDir];
             [ud setObject:bundleVer forKey:@"aether_live_bundle_ver"];
             [ud setObject:bundleShort forKey:@"aether_live_ota_ver"];
+            [ud removeObjectForKey:@"aether_staged_ota_ver"];
             [ud synchronize];
+        }
+    } else {
+        // Önceki oturumda arka planda indirilen OTA paketini WKWebView açılmadan ÖNCE atomik terfi ettir
+        NSString *stagedVer = [ud stringForKey:@"aether_staged_ota_ver"];
+        if (stagedVer.length > 0 && [fm fileExistsAtPath:[stageIndex path]]) {
+            NSURL *backupDir = [appSup URLByAppendingPathComponent:@"AETHER_BackupWWW" isDirectory:YES];
+            [fm removeItemAtURL:backupDir error:nil];
+            BOOL movedOld = ![fm fileExistsAtPath:[liveDir path]] || [fm moveItemAtURL:liveDir toURL:backupDir error:nil];
+            if (movedOld && [fm moveItemAtURL:stageDir toURL:liveDir error:nil]) {
+                [self ensureWritablePermissionsInDirectory:liveDir];
+                [fm removeItemAtURL:backupDir error:nil];
+                [ud setObject:stagedVer forKey:@"aether_live_ota_ver"];
+                [ud removeObjectForKey:@"aether_staged_ota_ver"];
+                [ud synchronize];
+            } else {
+                if (![fm fileExistsAtPath:[liveDir path]] && [fm fileExistsAtPath:[backupDir path]]) {
+                    [fm moveItemAtURL:backupDir toURL:liveDir error:nil];
+                }
+                [fm removeItemAtURL:stageDir error:nil];
+                [ud removeObjectForKey:@"aether_staged_ota_ver"];
+                [ud synchronize];
+            }
         }
     }
     if ([fm fileExistsAtPath:[liveIndex path]]) {
@@ -388,7 +431,7 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
     NSMutableURLRequest *req = [NSMutableURLRequest requestWithURL:url
                                                        cachePolicy:NSURLRequestReloadIgnoringLocalCacheData
                                                    timeoutInterval:14.0];
-    [req setValue:@"AETHER-iOS-OTA/16.0" forHTTPHeaderField:@"User-Agent"];
+    [req setValue:@"AETHER-iOS-OTA/16.1" forHTTPHeaderField:@"User-Agent"];
     NSURLSessionDataTask *t = [[NSURLSession sharedSession] dataTaskWithRequest:req
                                                               completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
         if (!error && [response isKindOfClass:[NSHTTPURLResponse class]] && ((NSHTTPURLResponse *)response).statusCode == 200) {
@@ -413,20 +456,21 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
 
     NSUserDefaults *ud = [NSUserDefaults standardUserDefaults];
     NSString *localVer = [ud stringForKey:@"aether_live_ota_ver"] ?: @"";
-    if ([remoteVer isEqualToString:localVer]) return;
+    NSString *stagedVer = [ud stringForKey:@"aether_staged_ota_ver"] ?: @"";
+    if ([remoteVer isEqualToString:localVer] || [remoteVer isEqualToString:stagedVer]) return;
 
     NSFileManager *fm = [NSFileManager defaultManager];
     NSURL *appSup = [fm URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask].firstObject;
     if (!appSup) return;
     NSURL *liveDir = [appSup URLByAppendingPathComponent:@"AETHER_LiveWWW" isDirectory:YES];
+    NSURL *bundledWww = [[[NSBundle mainBundle] resourceURL] URLByAppendingPathComponent:@"www" isDirectory:YES];
+    NSURL *seedSource = [fm fileExistsAtPath:[liveDir path]] ? liveDir : bundledWww;
+    if (![fm fileExistsAtPath:[seedSource path]]) return;
+
     NSURL *stageDir = [appSup URLByAppendingPathComponent:@"AETHER_StageWWW" isDirectory:YES];
     [fm removeItemAtURL:stageDir error:nil];
-
-    if ([fm fileExistsAtPath:[liveDir path]]) {
-        if (![fm copyItemAtURL:liveDir toURL:stageDir error:nil]) return;
-    } else {
-        return;
-    }
+    if (![fm copyItemAtURL:seedSource toURL:stageDir error:nil]) return;
+    [self ensureWritablePermissionsInDirectory:stageDir];
 
     NSArray<NSString *> *coreFiles = @[
         @"index.html",
@@ -434,11 +478,12 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
         @"aether-kernel-v10.js",
         @"real-investment-guide.js",
         @"million-sim-app.js",
+        @"sw.js",
         @"manifest.json"
     ];
     for (NSString *fname in coreFiles) {
         NSData *fData = [self syncFetchUrlData:[NSURL URLWithString:[baseStr stringByAppendingString:fname]]];
-        if (!fData || fData.length < 100) {
+        if (!fData || fData.length < 80) {
             [fm removeItemAtURL:stageDir error:nil];
             return;
         }
@@ -449,11 +494,17 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
         }
     }
 
-    [fm removeItemAtURL:liveDir error:nil];
-    if ([fm moveItemAtURL:stageDir toURL:liveDir error:nil]) {
-        [ud setObject:remoteVer forKey:@"aether_live_ota_ver"];
-        [ud synchronize];
+    // Gömülü piyasa veri paketini de (varsa) sessizce tazele; ağ kesilirse mevcut paketi koru
+    NSData *bundleData = [self syncFetchUrlData:[NSURL URLWithString:[baseStr stringByAppendingString:@"aether-data-bundle.js"]]];
+    if (bundleData && bundleData.length > 4096) {
+        NSURL *bundleDest = [stageDir URLByAppendingPathComponent:@"aether-data-bundle.js"];
+        [bundleData writeToURL:bundleDest options:NSDataWritingAtomic error:nil];
     }
+
+    // Çalışan WKWebView altındaki AETHER_LiveWWW klasörüne DOKUNMA; bir sonraki açılışta atomik terfi için işaretle
+    [self ensureWritablePermissionsInDirectory:stageDir];
+    [ud setObject:remoteVer forKey:@"aether_staged_ota_ver"];
+    [ud synchronize];
 }
 
 - (void)webViewWebContentProcessDidTerminate:(WKWebView *)webView {

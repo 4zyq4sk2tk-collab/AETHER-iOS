@@ -311,7 +311,7 @@
 
     // TEFAS 13:30 Valör Saati
     const tefasCutoffMin = isHalfDay ? (11 * 60) : (13 * 60 + 30);
-    const tefasBeforeCutoff = isBizDay && m >= 9 * 60 && m < tefasCutoffMin;
+    const tefasBeforeCutoff = isBizDay && m < tefasCutoffMin;
     const minsToTefas = tefasBeforeCutoff ? (tefasCutoffMin - m) : 0;
     const tefasLabel = tefasBeforeCutoff
       ? `TEFAS Valör Açık (${isHalfDay ? '11:00' : '13:30'}'a ${minsToTefas} dk kaldı)`
@@ -798,11 +798,14 @@
       const descriptor = {
         key: inst.id,
         id: inst.id,
+        isCore: true,
         ticker: tUp || inst.id.toUpperCase(),
         symbol: sym,
         name: inst.name,
         categoryId: String(inst.categoryId || '1'),
         categoryName: inst.categoryName || '',
+        sector: bistRow?.sector || inst.subCategory || inst.categoryName || '',
+        navAnchor: inst.navAnchor || null,
         venue,
         subVenue,
         isRateInstrument: Boolean(inst.isRateInstrument),
@@ -914,11 +917,13 @@
       const desc = {
         key: 'bist-' + tUp.toLowerCase(),
         id: 'bist-' + tUp.toLowerCase(),
+        isCore: false,
         ticker: tUp,
         symbol: bistKey,
         name: row.name || tUp,
         categoryId: '3',
         categoryName: row.sector || 'Borsa İstanbul Şirketi',
+        sector: row.sector || 'Borsa İstanbul Şirketi',
         venue: 'BIST',
         subVenue: 'BIST_STOCK',
         isRateInstrument: false,
@@ -1370,7 +1375,7 @@
       : ('inv_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4));
     const me = createDeviceInvestor(deviceId, '', '1 Milyon ₺ Portföy Yöneticisi');
     return {
-      version: '16.0.0',
+      version: '16.1.0',
       roomCode: DEFAULT_ROOM_CODE,
       localDeviceId: deviceId,
       me,
@@ -1695,6 +1700,7 @@
 
   function mergeIncomingPeerPacket(pkt) {
     if (!pkt || !pkt.id || !pkt.name || pkt.profileRegistered === false) return false;
+    if (String(pkt.name).includes('[object') || pkt.id === 'inv_pmjrwvggu5sj') return false;
     if (state && pkt.id === state.me.id) return false;
     const prev = state.peers[pkt.id];
     const incRev = Number(pkt.rev) || 0;
@@ -1723,7 +1729,7 @@
     const seen = new Set((state.banterFeed || []).map((x) => x.id));
     let added = false;
     for (const item of items) {
-      if (item && item.id && !seen.has(item.id) && item.text) {
+      if (item && item.id && !seen.has(item.id) && item.text && !String(item.authorName || '').includes('[object') && !String(item.text || '').includes('[object')) {
         state.banterFeed.push(item);
         seen.add(item.id);
         added = true;
@@ -3323,9 +3329,24 @@
             door: 'BIST',
             note: `${clock.bistLabel}; ${sellQty} adet satış emri ${nextParts.ymd} ${aucInfo.sessionLabel} sırasına yazıldı.`
           });
+          const estSaleTL = +(sellQty * asset.priceTL).toFixed(2);
+          member.tradeHistory.unshift({
+            id: 'th_qs_' + Math.random().toString(36).slice(2, 8),
+            ts: nowMs,
+            side: 'SATIŞ SIRADA',
+            assetKey: asset.key,
+            name: asset.name,
+            amountTL: estSaleTL,
+            priceTL: asset.priceTL,
+            feeAndTaxTL: 0,
+            spreadLeakTL: 0,
+            note: `${sellQty} adet satış emri ${nextParts.ymd} ${aucInfo.sessionLabel} sırasına alındı.`
+          });
           member.updatedAt = nowMs;
           member.rev = (member.rev || 1) + 1;
-          saveState(true, true);
+          const qEv = broadcastTradeToLeague(member, 'Satış Sıraya Yazdı', `${asset.ticker} (${sellQty} lot)`, estSaleTL, '');
+          saveState(true, false);
+          publishMyInvestorToMesh(qEv);
           return {
             ok: true,
             status: 'QUEUED_BIST_OPEN',
@@ -3590,9 +3611,26 @@
     for (const s of spotItems) {
       const a = getAsset(s.assetKey);
       if (!a) { equityTL += s.netValTL; continue; }
-      if (a.categoryId === '2' || a.subVenue === 'DARPHANE_S1') metalTL += s.netValTL;
-      else if (a.venue === 'BIST') equityTL += s.netValTL;
-      else fxCryptoGlobalTL += s.netValTL;
+      if (
+        a.categoryId === '2' ||
+        a.subVenue === 'DARPHANE_S1' ||
+        a.id === 'tefas-kzl' ||
+        a.id === 'altin-fonu-zgold' ||
+        a.id === 'altin-fonu-gldtr' ||
+        a.id === 'fon-degisken-isglk' ||
+        a.id === 'gumus-fonu-gmstr'
+      ) {
+        metalTL += s.netValTL;
+      } else if (a.id === 'eurobond-usdtr' || a.id === 'eurobond-emb') {
+        fxCryptoGlobalTL += s.netValTL;
+      } else if (a.id === 'tefas-ipb') {
+        equityTL += s.netValTL * 0.5;
+        fixedTL += s.netValTL * 0.5;
+      } else if (a.venue === 'BIST' || a.id === 'tefas-mac' || a.id === 'tefas-iih' || a.id === 'tefas-ti2') {
+        equityTL += s.netValTL;
+      } else {
+        fxCryptoGlobalTL += s.netValTL;
+      }
     }
     const denom = Math.max(1, grossAssetsTL);
     const allocationBreakdown = {
@@ -4018,20 +4056,32 @@
   // --------------------------------------------------------------------------
   // 10. KİMLİK KAYDI, ODA DEĞİŞİMİ, SIFIRLAMA VE MEYDAN SOHBETİ
   // --------------------------------------------------------------------------
-  function completeOnboarding(name, roleLabel) {
-    const cleanName = String(name || '').trim().slice(0, 28);
-    if (cleanName.length < 2) {
+  function completeOnboarding(nameOrOpts, roleLabel) {
+    let rawName = nameOrOpts;
+    let rawRole = roleLabel;
+    let optMonthlyExpense = null;
+    if (typeof nameOrOpts === 'object' && nameOrOpts !== null) {
+      rawName = nameOrOpts.name;
+      rawRole = rawRole || nameOrOpts.roleLabel;
+      if (Number(nameOrOpts.monthlyExpenseTL) > 0) optMonthlyExpense = Number(nameOrOpts.monthlyExpenseTL);
+    }
+    const cleanName = String(rawName || '').trim().slice(0, 28);
+    if (cleanName.length < 2 || cleanName.includes('[object')) {
       return { ok: false, reason: 'Lütfen ligde görünecek adını yaz (en az 2 harf).' };
     }
     const m = getActiveMember();
     const wasRegistered = Boolean(m.profileRegistered);
     m.name = cleanName;
-    if (roleLabel && String(roleLabel).trim()) {
-      m.roleLabel = String(roleLabel).trim().slice(0, 32);
+    if (rawRole && typeof rawRole === 'string' && rawRole.trim()) {
+      m.roleLabel = rawRole.trim().slice(0, 32);
+    }
+    if (optMonthlyExpense != null) {
+      m.monthlyExpenseTL = Math.max(5000, Math.round(optMonthlyExpense));
     }
     m.avatarColor = pickAvatarColor(m.id + cleanName);
     m.deviceLabel = detectDeviceLabel();
     m.profileRegistered = true;
+    m.onboardingDone = true;
     m.updatedAt = Date.now();
     m.rev = (Number(m.rev) || 1) + 1;
 
@@ -4434,13 +4484,13 @@
           else if (inst.id === 'kripto-btc' && glMap['BINANCE:BTCTRY']) { inst.currentPrice = Math.round(glMap['BINANCE:BTCTRY'].close); inst.change1D = +glMap['BINANCE:BTCTRY'].chg.toFixed(2); }
           else if (inst.id === 'kripto-eth' && glMap['BINANCE:ETHTRY']) { inst.currentPrice = Math.round(glMap['BINANCE:ETHTRY'].close); inst.change1D = +glMap['BINANCE:ETHTRY'].chg.toFixed(2); }
           else if (inst.id === 'kripto-sol' && glMap['BINANCE:SOLTRY']) { inst.currentPrice = +glMap['BINANCE:SOLTRY'].close.toFixed(2); inst.change1D = +glMap['BINANCE:SOLTRY'].chg.toFixed(2); }
-          else if (inst.id === 'tefas-mac' && glMap['BIST:XU100']) { inst.change1D = +(xu100Chg * 1.04).toFixed(2); }
-          else if (inst.id === 'tefas-iih' && glMap['BIST:XU030']) { inst.change1D = +(xu030Chg * 1.08).toFixed(2); }
-          else if (inst.id === 'tefas-ti2' && glMap['BIST:XU100']) { inst.change1D = +(xu100Chg * 0.98).toFixed(2); }
-          else if (inst.id === 'tefas-aft' && glMap['NASDAQ:QQQ']) { inst.change1D = qqqTlChg; }
-          else if (inst.id === 'tefas-afa' && glMap['AMEX:SPY']) { inst.change1D = spyTlChg; }
-          else if (inst.id === 'tefas-ipb') { inst.change1D = +(xu100Chg * 0.55 + goldTlChg * 0.25 + usdChg * 0.20).toFixed(2); }
-          else if (inst.id === 'tefas-kzl' && gramGoldCalc > 0) { inst.change1D = goldTlChg; }
+          else if (inst.id === 'tefas-mac' && glMap['BIST:XU100']) { inst.change1D = +(xu100Chg * 1.04).toFixed(2); if (inst.navAnchor > 0) inst.currentPrice = +(inst.navAnchor * (1 + inst.change1D / 100)).toFixed(4); }
+          else if (inst.id === 'tefas-iih' && glMap['BIST:XU030']) { inst.change1D = +(xu030Chg * 1.08).toFixed(2); if (inst.navAnchor > 0) inst.currentPrice = +(inst.navAnchor * (1 + inst.change1D / 100)).toFixed(4); }
+          else if (inst.id === 'tefas-ti2' && glMap['BIST:XU100']) { inst.change1D = +(xu100Chg * 0.98).toFixed(2); if (inst.navAnchor > 0) inst.currentPrice = +(inst.navAnchor * (1 + inst.change1D / 100)).toFixed(4); }
+          else if (inst.id === 'tefas-aft' && glMap['NASDAQ:QQQ']) { inst.change1D = qqqTlChg; if (inst.navAnchor > 0) inst.currentPrice = +(inst.navAnchor * (1 + inst.change1D / 100)).toFixed(4); }
+          else if (inst.id === 'tefas-afa' && glMap['AMEX:SPY']) { inst.change1D = spyTlChg; if (inst.navAnchor > 0) inst.currentPrice = +(inst.navAnchor * (1 + inst.change1D / 100)).toFixed(4); }
+          else if (inst.id === 'tefas-ipb') { inst.change1D = +(xu100Chg * 0.55 + goldTlChg * 0.25 + usdChg * 0.20).toFixed(2); if (inst.navAnchor > 0) inst.currentPrice = +(inst.navAnchor * (1 + inst.change1D / 100)).toFixed(4); }
+          else if (inst.id === 'tefas-kzl' && gramGoldCalc > 0) { inst.change1D = goldTlChg; if (inst.navAnchor > 0) inst.currentPrice = +(inst.navAnchor * (1 + inst.change1D / 100)).toFixed(4); }
           else if (glMap[inst.symbol]) {
             const isUsdAsset = FOREIGN_GVK80_IDS.has(inst.id) || /^(AMEX:|NASDAQ:|OTC:)/.test(inst.symbol);
             inst.currentPrice = +glMap[inst.symbol].close.toFixed(2);
@@ -4577,7 +4627,7 @@
       { id: 'aero', label: 'Havacılık', icon: '✈️', keys: ['bist-thyao', 'bist-pgsus', 'bist-tavhl', 'bist-clebi'] },
       { id: 'retail', label: 'Market & Gıda', icon: '🛒', keys: ['bist-bimas', 'bist-mgros', 'bist-sokm', 'bist-ccola', 'bist-aefes', 'bist-ulker'] },
       { id: 'auto', label: 'Otomotiv', icon: '🚗', keys: ['bist-froto', 'bist-toaso', 'bist-doas', 'bist-ttrak', 'bist-otkar', 'bist-brisa'] },
-      { id: 'energy', label: 'Enerji & Rafineri', icon: '⚡', keys: ['bist-tuprs', 'bist-enjsa', 'bist-aksen', 'bist-astor', 'bist-smart', 'bist-cwene'] },
+      { id: 'energy', label: 'Enerji & Rafineri', icon: '⚡', keys: ['bist-tuprs', 'bist-enjsa', 'bist-aksen', 'bist-astor', 'bist-smrtg', 'bist-cwene'] },
       { id: 'defense', label: 'Savunma & Tek', icon: '🛰️', keys: ['bist-asels', 'bist-sdttr', 'bist-miatk', 'bist-ardyz', 'bist-tcell', 'bist-ttkom'] },
       { id: 'reit', label: 'GYO & Çimento', icon: '🏗️', keys: ['bist-ekgyo', 'bist-rygyo', 'bist-isgyo', 'bist-trgyo', 'bist-oyakc', 'bist-cimsa'] },
       { id: 'shield', label: 'Altın & Döviz', icon: '🪙', keys: ['gram-altin-spot', 'gram-gumus-spot', 'doviz-usd', 'doviz-eur', 'tefas-kzl'] }
@@ -4680,22 +4730,30 @@
     }
     const map = {
       'gram-altin-spot': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', livePriceTL: asset.priceTL },
+      'altin-ons': { mode: 'USD_ASSET', usdSym: 'GC=F' },
       'ceyrek-altin': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', livePriceTL: asset.priceTL },
       'cumhuriyet-altini': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', livePriceTL: asset.priceTL },
       'bilezik-22-ayar': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', livePriceTL: asset.priceTL },
       'altin-sertifikasi': { mode: 'BIST_OR_FALLBACK', sym: 'ALTIN.IS', fallbackUsdSym: 'GC=F', livePriceTL: asset.priceTL },
-      'fon-altin-byf-zgold': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', livePriceTL: asset.priceTL },
+      'altin-fonu-zgold': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', livePriceTL: asset.priceTL },
+      'altin-fonu-gldtr': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', livePriceTL: asset.priceTL },
+      'fon-degisken-isglk': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', livePriceTL: asset.priceTL },
       'tefas-kzl': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', livePriceTL: asset.priceTL },
       'gram-gumus-spot': { mode: 'COMPOSITE_FX', usdSym: 'SI=F', livePriceTL: asset.priceTL },
-      'fon-gumus-byf-gmstr': { mode: 'COMPOSITE_FX', usdSym: 'SI=F', livePriceTL: asset.priceTL },
+      'gumus-ons': { mode: 'USD_ASSET', usdSym: 'SI=F' },
+      'gumus-fonu-gmstr': { mode: 'COMPOSITE_FX', usdSym: 'SI=F', livePriceTL: asset.priceTL },
+      'ons-platin': { mode: 'USD_ASSET', usdSym: 'PL=F' },
+      'ons-paladyum': { mode: 'USD_ASSET', usdSym: 'PA=F' },
       'doviz-usd': { mode: 'DIRECT_TL', sym: 'TRY=X', livePriceTL: asset.priceTL },
       'doviz-eur': { mode: 'DIRECT_TL', sym: 'EURTRY=X', livePriceTL: asset.priceTL },
       'doviz-gbp': { mode: 'DIRECT_TL', sym: 'GBPTRY=X', livePriceTL: asset.priceTL },
       'doviz-chf': { mode: 'DIRECT_TL', sym: 'CHFTRY=X', livePriceTL: asset.priceTL },
-      'fon-doviz-byf-usdtr': { mode: 'COMPOSITE_FX', usdSym: 'SHY', livePriceTL: asset.priceTL },
+      'eurobond-usdtr': { mode: 'BIST_OR_FALLBACK', sym: 'USDTR.IS', fallbackUsdSym: 'EMB', livePriceTL: asset.priceTL },
+      'eurobond-emb': { mode: 'USD_ASSET', usdSym: 'EMB' },
+      'gayrimenkul-konut-tcmb': { mode: 'ANCHOR_ONLY' },
       'abd-sp500-spy': { mode: 'USD_ASSET', usdSym: 'SPY' },
       'abd-nasdaq-qqq': { mode: 'USD_ASSET', usdSym: 'QQQ' },
-      'dunya-hisse-vt': { mode: 'USD_ASSET', usdSym: 'VT' },
+      'dunya-borsalari-vt': { mode: 'USD_ASSET', usdSym: 'VT' },
       'gelisen-ulkeler-eem': { mode: 'USD_ASSET', usdSym: 'EEM' },
       'abd-kisa-tahvil-shy': { mode: 'USD_ASSET', usdSym: 'SHY' },
       'abd-uzun-tahvil-tlt': { mode: 'USD_ASSET', usdSym: 'TLT' },
@@ -4801,8 +4859,8 @@
     const p1d = priceFromPerf(asset.change1D);
     const p1w = priceFromPerf(asset.perf1W);
     const p1m = priceFromPerf(asset.perf1M);
-    const p3m = priceFromPerf(asset.rawInst?.perf3M ?? (asset.perf1M != null ? asset.perf1M * 2.1 : null));
-    const p6m = priceFromPerf(asset.rawInst?.perf6M ?? (asset.perf1Y != null ? asset.perf1Y * 0.48 : null));
+    const p3m = priceFromPerf(asset.perf3M || (asset.perf1M != null ? asset.perf1M * 2.1 : null));
+    const p6m = priceFromPerf(asset.perf6M || (asset.perf1Y != null ? asset.perf1Y * 0.48 : null));
     const p1y = priceFromPerf(asset.perf1Y);
     const p3y = priceFromPerf(asset.perf3Y ?? (asset.perf1Y != null ? ((Math.pow(1 + Math.max(-0.5, asset.perf1Y / 100), 2.4) - 1) * 100) : 160));
     const p5y = priceFromPerf(asset.perf5Y ?? (asset.perf3Y != null ? (asset.perf3Y * 2.4) : 520));
@@ -4896,62 +4954,85 @@
     if (global.webkit?.messageHandlers?.aetherBridge && asset && !asset.isRateInstrument) {
       try {
         const spec = resolveClientYahooSpec(asset);
-        const rangeCfg = {
-          '1D': { yRange: '5d', yInt: '15m' },
-          '1W': { yRange: '1mo', yInt: '1h' },
-          '1M': { yRange: '1mo', yInt: '1d' },
-          '3M': { yRange: '3mo', yInt: '1d' },
-          '1Y': { yRange: '1y', yInt: '1d' },
-          '5Y': { yRange: '5y', yInt: '1wk' }
-        }[rk];
-        const targetSym = (spec.mode === 'COMPOSITE_FX' || spec.mode === 'USD_ASSET') ? spec.usdSym : spec.sym;
-        const [rawBarsInit, fxBars] = await Promise.all([
-          fetchYahooBarsViaNativeBridge(targetSym, rangeCfg.yRange, rangeCfg.yInt).catch(() => []),
-          fetchYahooBarsViaNativeBridge('TRY=X', rangeCfg.yRange, rk === '1D' ? '15m' : (rk === '5Y' ? '1wk' : '1d')).catch(() => [])
-        ]);
-        let rawBars = rawBarsInit;
-        let isUsdQuoted = spec.mode === 'COMPOSITE_FX' || spec.mode === 'USD_ASSET';
-        let scaleToLive = (spec.mode === 'COMPOSITE_FX' || spec.mode === 'BIST_SCALED') ? spec.livePriceTL : null;
+        if (spec.mode !== 'ANCHOR_ONLY') {
+          const rangeCfg = {
+            '1D': { yRange: '5d', yInt: '15m' },
+            '1W': { yRange: '1mo', yInt: '1h' },
+            '1M': { yRange: '1mo', yInt: '1d' },
+            '3M': { yRange: '3mo', yInt: '1d' },
+            '1Y': { yRange: '1y', yInt: '1d' },
+            '5Y': { yRange: '5y', yInt: '1wk' }
+          }[rk];
+          const targetSym = (spec.mode === 'COMPOSITE_FX' || spec.mode === 'USD_ASSET') ? spec.usdSym : spec.sym;
+          const [rawBarsInit, fxBars] = await Promise.all([
+            fetchYahooBarsViaNativeBridge(targetSym, rangeCfg.yRange, rangeCfg.yInt).catch(() => []),
+            fetchYahooBarsViaNativeBridge('TRY=X', rangeCfg.yRange, rk === '1D' ? '15m' : (rk === '5Y' ? '1wk' : '1d')).catch(() => [])
+          ]);
+          let rawBars = rawBarsInit;
+          let isUsdQuoted = spec.mode === 'COMPOSITE_FX' || spec.mode === 'USD_ASSET';
+          let scaleToLive = (spec.mode === 'COMPOSITE_FX' || spec.mode === 'BIST_SCALED') ? spec.livePriceTL : null;
 
-        if (rawBars.length < 6 && spec.mode === 'BIST_OR_FALLBACK' && spec.fallbackUsdSym) {
-          rawBars = await fetchYahooBarsViaNativeBridge(spec.fallbackUsdSym, rangeCfg.yRange, rangeCfg.yInt).catch(() => []);
-          isUsdQuoted = true;
-          scaleToLive = spec.livePriceTL;
-        }
-        if (rk === '1D' && rawBars.length > 34) rawBars = rawBars.slice(-34);
-        else if (rk === '1W' && rawBars.length > 42) rawBars = rawBars.slice(-42);
-
-        if (rawBars.length >= 2) {
-          const findFx = (tMs) => {
-            if (!fxBars.length) return estimateHistoricalUsdTryAt(tMs, now, usdTryNow);
-            let best = fxBars[0];
-            let bestDiff = Math.abs(best.t - tMs);
-            for (let i = 1; i < fxBars.length; i++) {
-              const df = Math.abs(fxBars[i].t - tMs);
-              if (df < bestDiff) { best = fxBars[i]; bestDiff = df; }
+          if (rawBars.length < 6 && spec.mode === 'BIST_OR_FALLBACK' && spec.fallbackUsdSym) {
+            rawBars = await fetchYahooBarsViaNativeBridge(spec.fallbackUsdSym, rangeCfg.yRange, rangeCfg.yInt).catch(() => []);
+            isUsdQuoted = true;
+            scaleToLive = spec.livePriceTL;
+          }
+          if (rawBars.length >= 2) {
+            const lastTs = rawBars[rawBars.length - 1].t;
+            if (rk === '1D') {
+              const lb36 = lastTs - 36 * 3600000;
+              let sIdx = -1;
+              for (let i = rawBars.length - 1; i >= 1; i--) {
+                if (rawBars[i].t < lb36) break;
+                if (rawBars[i].t - rawBars[i - 1].t > 5 * 3600000) { sIdx = i; break; }
+              }
+              if (sIdx > 0) {
+                const sb = rawBars.slice(sIdx);
+                rawBars = sb.length >= 2 ? sb : rawBars.slice(Math.max(0, sIdx - 1));
+              } else {
+                const db = rawBars.filter((b) => b.t >= lastTs - 24 * 3600000);
+                if (db.length >= 2) rawBars = db;
+              }
+            } else if (rk === '1W') {
+              const wb = rawBars.filter((b) => b.t >= lastTs - 7 * 86400000);
+              if (wb.length >= 2) rawBars = wb;
             }
-            return best.c || usdTryNow;
-          };
-          const prelim = rawBars.map((b) => {
-            const fx = findFx(b.t);
-            const tlRaw = isUsdQuoted ? (b.c * fx) : b.c;
-            return { t: b.t, tlRaw, fx };
-          });
-          const lastRaw = prelim[prelim.length - 1].tlRaw || 1;
-          const mult = (scaleToLive && scaleToLive > 0 && lastRaw > 0) ? (scaleToLive / lastRaw) : 1.0;
-          const points = prelim.map((p) => {
-            const tl = +(p.tlRaw * mult).toFixed(p.tlRaw * mult >= 100 ? 2 : 4);
-            const infMult = clientCumulativeCpiSince(p.t, now, cpiYoy);
-            return {
-              t: p.t,
-              tl,
-              realTl: +(tl * infMult).toFixed(tl >= 100 ? 2 : 4),
-              usd: +(tl / Math.max(0.1, p.fx)).toFixed(tl / p.fx >= 10 ? 2 : 4)
+          }
+
+          if (rawBars.length >= 2) {
+            const findFx = (tMs) => {
+              if (!fxBars.length) return estimateHistoricalUsdTryAt(tMs, now, usdTryNow);
+              let best = fxBars[0];
+              let bestDiff = Math.abs(best.t - tMs);
+              for (let i = 1; i < fxBars.length; i++) {
+                const df = Math.abs(fxBars[i].t - tMs);
+                if (df < bestDiff) { best = fxBars[i]; bestDiff = df; }
+              }
+              return best.c || usdTryNow;
             };
-          });
-          const payload = { key: cleanKey, range: rk, cpiYoy, usdTryNow, isRateCurve: false, points };
-          clientChartCache.set(cacheKey, { ts: now, payload });
-          return payload;
+            const prelim = rawBars.map((b) => {
+              const fx = findFx(b.t);
+              const tlRaw = isUsdQuoted ? (b.c * fx) : b.c;
+              return { t: b.t, tlRaw, usdRaw: isUsdQuoted ? b.c : (b.c / Math.max(0.1, fx)), fx };
+            });
+            const lastRaw = prelim[prelim.length - 1].tlRaw || 1;
+            const lastBarTs = prelim[prelim.length - 1].t || now;
+            const mult = (scaleToLive && scaleToLive > 0 && lastRaw > 0) ? (scaleToLive / lastRaw) : 1.0;
+            const points = prelim.map((p) => {
+              const tl = +(p.tlRaw * mult).toFixed(p.tlRaw * mult >= 100 ? 2 : 4);
+              const infMult = clientCumulativeCpiSince(p.t, lastBarTs, cpiYoy);
+              const uVal = (isUsdQuoted && mult === 1.0) ? p.usdRaw : (tl / Math.max(0.1, p.fx));
+              return {
+                t: p.t,
+                tl,
+                realTl: +(tl * infMult).toFixed(tl >= 100 ? 2 : 4),
+                usd: +uVal.toFixed(uVal >= 10 ? 2 : 4)
+              };
+            });
+            const payload = { key: cleanKey, range: rk, cpiYoy, usdTryNow, isRateCurve: false, points };
+            clientChartCache.set(cacheKey, { ts: now, payload });
+            return payload;
+          }
         }
       } catch (_) {}
     }

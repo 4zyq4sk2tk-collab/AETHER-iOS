@@ -1305,7 +1305,7 @@
       rawInputs: ['ABD S&P 500 Endeksi ($)', 'USD/TRY Kuru', '%17,5 Kaynakta Stopaj'],
       risesWhen: 'ABD şirket kârları büyürken Dolar/TL yükseldiğinde.',
       fallsWhen: 'Fed şahinleşip küresel borsalar düzeltmeye girdiğinde.',
-      relatedKeys: ['abd-sp500-spy', 'tefas-aft', 'dunya-hisse-vt']
+      relatedKeys: ['abd-sp500-spy', 'tefas-aft', 'dunya-borsalari-vt']
     },
     'tefas-ipb': {
       shortDesc: 'İstanbul Portföy Birinci Değişken Fon (IPB · %17,5 Stopaj · T+1/T+2 Valör). Piyasa mevsimine göre hisse, altın, döviz ve VİOP ağırlığını değiştiren esnek fon.',
@@ -1325,7 +1325,7 @@
       rawInputs: ['Ons Altın ($)', 'USD/TRY Kuru', '%17,5 Stopaj Kesintisi'],
       risesWhen: 'Ons altın ve Dolar/TL yükseldiğinde.',
       fallsWhen: 'Küresel reel faizler artıp altın gerilediğinde.',
-      relatedKeys: ['gram-altin-spot', 'altin-sertifikasi', 'fon-altin-byf-zgold']
+      relatedKeys: ['gram-altin-spot', 'altin-sertifikasi', 'altin-fonu-zgold']
     }
   };
 
@@ -4306,7 +4306,7 @@
         ],
         consequence100k: 'Tek parça uzun vadeli mevduata kilitlenen kişi ya 145.000 ₺ faizini yakmak ya da borsadaki tarihi fırsatı eli kolu bağlı izlemek zorunda kaldı.',
         proRule: 'Uzman Kuralı: Fırsat cephaneni asla tek uzun vadeye kilitleme; PPF (13:30 öncesi T+0) + %0 stopajlı Kamu Sukuk (T+1) her gün üstüne koyarak likit kalır.',
-        linkedKeys: ['mevduat-tl', 'kira-sertifikasi-sukuk', 'para-piyasasi-fonu']
+        linkedKeys: ['mevduat-ust', 'kira-sertifikasi-sukuk', 'para-piyasasi-fonu']
       },
       {
         id: 'case_21_bedelli_ruchan_expiry',
@@ -4467,7 +4467,7 @@
         streetSummary: 'Türkiye’de yatırımın kalbi üçlü bir tahterevallidir: Politika Faizi, Enflasyon (TÜFE) ve Döviz Kuru. Duyguyla "Ben hep dolarcıyım" veya "Ben hep faizciyim" diyen mevsim değiştiğinde ezilir.',
         proFormula: `Canlı Terazi: Bugün Dolar ${be32.usdNow} ₺, %0 vergili Sukuk yıllık %${be32.sukuk.annualGross}. 32 günlük Dolar Başabaş Kuru = ${be32.breakevenUsdBazaar} ₺! Reel Faiz = ((1 + Net Faiz) / (1 + Beklenen TÜFE)) − 1 (Fisher Denklemi). Reel faiz yüksek pozitifken TL sabit getiri dolar bazında bile servet büyütür; reel faiz negatife döndüğünde mal, altın ve ihracatçı korur.`,
         liveCheck: 'Pusula -> Mutfak -> "Başabaş Terazisi"nde tutar ve gün seçerek kendi başabaş kurunu test et.',
-        sampleKeys: ['kira-sertifikasi-sukuk', 'doviz-usd', 'mevduat-tl', 'dibs-tahvil']
+        sampleKeys: ['kira-sertifikasi-sukuk', 'doviz-usd', 'mevduat-ust', 'dibs-tahvil']
       },
       {
         id: 'mod_09_leading_data',
@@ -4573,29 +4573,40 @@
 
   const EXPORT_HEAVY_SECTORS = new Set([
     'Havacılık & Lojistik', 'Otomotiv & Yan Sanayi', 'Savunma & Havacılık Sanayi',
-    'Demir-Çelik & Metal', 'Beyaz Eşya & Mobilya', 'Madencilik & Altın', 'Tekstil, Giyim & Deri'
+    'Demir-Çelik & Metal', 'Beyaz Eşya & Mobilya', 'Madencilik & Altın', 'Tekstil & Hazır Giyim'
+  ]);
+  const EXPORT_FLAGSHIP_KEYS = new Set([
+    'bist-tuprs', 'bist-enkai', 'bist-doco', 'bist-sise', 'bist-astor', 'bist-ccola', 'bist-aefes', 'bist-tkfen'
   ]);
 
   function matchesSingleScreenerRule(asset, ruleId, infPct) {
     if (!asset || asset.venue === 'BENCHMARK_ONLY') return false;
     const r = asset.bistRow || {};
-    const inst = asset.rawInst || {};
-    const ocf = r.ocfMillionTL ?? (inst.ocf != null ? inst.ocf / 1e6 : null);
-    const fcf = r.fcfMillionTL ?? (inst.fcf != null ? inst.fcf / 1e6 : null);
-    const roic = r.roic ?? inst.roic ?? null;
-    const roe = r.roe ?? inst.roe ?? null;
-    const pb = asset.pb ?? r.pb ?? inst.pb ?? null;
-    const cmf = asset.cmf20 ?? r.cmf20 ?? inst.cmf20 ?? null;
-    const dd52 = asset.drawdown52WPct ?? r.drawdown52WPct ?? null;
+    const fn = asset.fundamentals || {};
+    const ocf = r.ocfMillionTL ?? (fn.ocf != null ? Number(fn.ocf) / 1e6 : null);
+    const fcf = r.fcfMillionTL ?? (fn.fcf != null ? Number(fn.fcf) / 1e6 : null);
+    const roic = r.roic ?? fn.roic ?? null;
+    const roe = r.roe ?? fn.roe ?? null;
+    const pb = r.pb ?? fn.pb ?? asset.pb ?? null;
+    const cmf = r.cmf20 ?? fn.cmf ?? asset.cmf20 ?? null;
+    const dd52 = r.drawdown52WPct ?? computeRange52W(asset)?.drawdownPct ?? null;
+    const divYld = Number(r.dividendYield ?? fn.divYield ?? asset.divYieldPct) || 0;
+    const secStr = String(r.sector || asset.sector || '');
 
     switch (ruleId) {
       case 'OCF_REAL_CASH':
         if (asset.isRateInstrument) return (asset.annualGrossRatePct * (1 - (asset.stopajPct || 0) / 100)) >= infPct * 0.85;
-        if (isFinancialEntityRow(r)) return roe != null && roe >= infPct * 0.85;
+        if (isFinancialEntityRow(r)) return roe != null && Number(roe) >= infPct * 0.85;
         return ocf != null && ocf > 0 && (fcf == null || fcf >= 0);
       case 'NET_CASH_VAULT':
-        if (asset.isRateInstrument || isPreciousMetalAsset(asset) || asset.venue === 'TEFAS' || asset.subVenue === 'BIST_ETF') return true;
-        return Boolean(asset.isNetCash || r.isNetCash || (r.netDebtMillionTL != null && Number(r.netDebtMillionTL) <= 0));
+        if (
+          asset.isRateInstrument ||
+          isPreciousMetalAsset(asset) ||
+          asset.venue === 'TEFAS' ||
+          asset.subVenue === 'BIST_EXEMPT_ETF' ||
+          asset.subVenue === 'BIST_TAXABLE_ETF'
+        ) return true;
+        return Boolean(r.isNetCash || asset.isNetCash || (r.netDebtMillionTL != null && Number(r.netDebtMillionTL) <= 0));
       case 'DEEP_BOOK_DISCOUNT':
         return pb != null && Number(pb) > 0.05 && Number(pb) <= 1.15;
       case 'HIGH_CAPITAL_RETURN':
@@ -4606,13 +4617,19 @@
       case 'SMART_MONEY_CMF':
         return cmf != null && Number(cmf) >= 0.08;
       case 'DIVIDEND_RIVER':
-        return Boolean(asset.isRateInstrument || (Number(asset.divYieldPct) || 0) >= 2.5 || (Number(r.dpsTL) > 0 && asset.priceTL > 0 && (r.dpsTL / asset.priceTL) * 100 >= 2.5));
+        return Boolean(
+          asset.isRateInstrument ||
+          asset.id === 'eurobond-usdtr' ||
+          asset.id === 'eurobond-emb' ||
+          divYld >= 2.5 ||
+          (Number(r.dpsTL) > 0 && asset.priceTL > 0 && (r.dpsTL / asset.priceTL) * 100 >= 2.5)
+        );
       case 'ZERO_TAX_SHIELD':
         return (Number(asset.stopajPct) || 0) === 0 && !asset.isForeignUsd;
       case 'CLEAN_GOVERNANCE':
         return !asset.isPatronSelling && !asset.isPumpAnomaly && !asset.isTms29Illusion && getQuickForensicScore(asset) >= 62;
       case 'FX_EXPORT_ARMOR':
-        return isFxLinkedShieldAsset(asset) || EXPORT_HEAVY_SECTORS.has(String(asset.sector || '')) || String(asset.key) === 'bist-tuprs' || String(asset.key) === 'bist-enkai' || String(asset.key) === 'bist-doco';
+        return isFxLinkedShieldAsset(asset) || Boolean(asset.fxFortressRecord) || EXPORT_HEAVY_SECTORS.has(secStr) || EXPORT_FLAGSHIP_KEYS.has(String(asset.key));
       default:
         return true;
     }
@@ -4620,7 +4637,7 @@
 
   function runCustomScreener(activeFilterIds = [], searchText = '') {
     const K = global.AetherKernelV10;
-    if (!K) return { activeFilterIds: [], totalUniverse: 0, matchedCount: 0, items: [] };
+    if (!K) return { defs: CUSTOM_SCREENER_DEFS, activeFilterIds: [], totalUniverse: 0, matchedCount: 0, items: [] };
     const infPct = K.getAnnualInflationPct ? K.getAnnualInflationPct() : 29.77;
     const validIds = Array.isArray(activeFilterIds)
       ? activeFilterIds.filter((id) => CUSTOM_SCREENER_DEFS.some((d) => d.id === id))
@@ -4630,8 +4647,10 @@
 
     const matched = [];
     for (const a of all) {
+      const r = a.bistRow || {};
+      const fn = a.fundamentals || {};
       if (q) {
-        const hay = `${a.ticker} ${a.name} ${a.sector || ''} ${a.categoryName || ''}`.toLocaleLowerCase('tr-TR');
+        const hay = `${a.ticker} ${a.name} ${r.sector || a.sector || ''} ${a.categoryName || ''}`.toLocaleLowerCase('tr-TR');
         if (!hay.includes(q)) continue;
       }
       let ok = true;
@@ -4644,10 +4663,16 @@
       if (!ok) continue;
       const fScore = getQuickForensicScore(a);
       const tags = [];
-      if (a.isNetCash) tags.push('Net Nakit');
-      if (a.pb != null && a.pb > 0) tags.push(`PD/DD ${Number(a.pb).toFixed(2)}x`);
-      if (a.drawdown52WPct != null && a.drawdown52WPct <= -15) tags.push(`52H ${Number(a.drawdown52WPct).toFixed(0)}%`);
-      if (a.cmf20 != null && a.cmf20 >= 0.08) tags.push(`CMF +${Number(a.cmf20).toFixed(2)}`);
+      const isNC = Boolean(r.isNetCash || a.isNetCash || (r.netDebtMillionTL != null && Number(r.netDebtMillionTL) < 0));
+      const pbV = r.pb ?? fn.pb ?? a.pb;
+      const ddV = r.drawdown52WPct ?? computeRange52W(a)?.drawdownPct;
+      const cmfV = r.cmf20 ?? fn.cmf ?? a.cmf20;
+      const divV = Number(r.dividendYield ?? fn.divYield) || 0;
+      if (isNC) tags.push('Net Nakit');
+      if (pbV != null && Number(pbV) > 0) tags.push(`PD/DD ${Number(pbV).toFixed(2)}x`);
+      if (ddV != null && Number(ddV) <= -15) tags.push(`52H ${Number(ddV).toFixed(0)}%`);
+      if (cmfV != null && Number(cmfV) >= 0.08) tags.push(`CMF +${Number(cmfV).toFixed(2)}`);
+      if (divV >= 2.5) tags.push(`Temettü %${divV.toFixed(1)}`);
       if ((a.stopajPct || 0) === 0 && !a.isForeignUsd) tags.push('%0 Stopaj');
       matched.push({ asset: a, forensicScore: fScore, tags: tags.slice(0, 3) });
     }
@@ -4690,17 +4715,25 @@
         const netRate = Number(x.annualGrossRatePct || 0) * (1 - (Number(x.stopajPct) || 0) / 100);
         return { val: Math.round(cap * (netRate / 100)), label: `+${Math.round(cap * (netRate / 100)).toLocaleString('tr-TR')} ₺ Net Getiri` };
       }
+      const fScale = computeFinancial100kScale(x, cap);
+      if (fScale && fScale.annualNetProfitTL != null) {
+        const v = Math.round(fScale.annualNetProfitTL);
+        return { val: v, label: `${v >= 0 ? '+' : ''}${v.toLocaleString('tr-TR')} ₺ Özkaynak Kârı` };
+      }
       const bScale = computeBakery100kScale(x, cap);
       if (bScale && bScale.annualOcfTL != null) {
         const v = Math.round(bScale.annualOcfTL);
         return { val: v, label: `${v >= 0 ? '+' : ''}${v.toLocaleString('tr-TR')} ₺ Kasa OCF` };
       }
-      const fScale = computeFinancial100kScale(x, cap);
-      if (fScale && fScale.annualNetProfitShareTL != null) {
-        const v = Math.round(fScale.annualNetProfitShareTL);
-        return { val: v, label: `${v >= 0 ? '+' : ''}${v.toLocaleString('tr-TR')} ₺ Özkaynak Kârı` };
+      if (bScale && bScale.annualNetProfitTL != null) {
+        const v = Math.round(bScale.annualNetProfitTL);
+        return { val: v, label: `${v >= 0 ? '+' : ''}${v.toLocaleString('tr-TR')} ₺ Net Kâr Payı` };
       }
-      const divPct = Number(x.divYieldPct) || 0;
+      if (x.id === 'eurobond-usdtr' || x.id === 'eurobond-emb') {
+        const v = Math.round(cap * 0.056);
+        return { val: v, label: `+${v.toLocaleString('tr-TR')} ₺ Kupon/Getiri` };
+      }
+      const divPct = Number(x.bistRow?.dividendYield ?? x.fundamentals?.divYield ?? x.divYieldPct) || 0;
       if (divPct > 0) {
         const v = Math.round(cap * (divPct / 100) * 0.85);
         return { val: v, label: `+${v.toLocaleString('tr-TR')} ₺ Net Temettü` };
@@ -4708,9 +4741,20 @@
       return { val: 0, label: 'Saf Değer Artışı (0 ₺ Akış)' };
     };
 
+    const dPremPct = K.getDarphanePremiumInfo ? Number(K.getDarphanePremiumInfo()?.premiumPct || 0) : 0;
+
     const calcFrictionPct = (x) => {
       const stopaj = Number(x.stopajPct) || 0;
       const mgmt = Number(x.mgmtFeePct) || 0;
+      if (x.subVenue === 'DARPHANE_S1') {
+        if (dPremPct > 2.0) {
+          return {
+            score: Math.max(25, Math.round(95 - dPremPct * 3.2)),
+            text: `+%${dPremPct.toFixed(1)} Darphane Primi · %0 Stopaj`
+          };
+        }
+        return { score: 96, text: '%0 Stopaj · Spot Altına Yakın' };
+      }
       if (x.venue === 'TWO_DOOR') return { score: 92, text: '%0,40 Çarşı Makası · %0 Stopaj' };
       if (x.isForeignUsd) return { score: 78, text: 'Yİ-ÜFE ≥%10 Beyan Kalkanı' };
       if (stopaj === 0) return { score: mgmt > 1 ? 90 : 97, text: `%0 Stopaj${mgmt > 0 ? ` · %${mgmt} Yön.Ücr.` : ''}` };
@@ -4718,13 +4762,56 @@
     };
 
     const calcLiquidity = (x) => {
-      if (x.venue === 'CRYPTO') return { score: 96, text: '7/24 Anında Nakit (T+0)' };
+      if (x.venue === 'CRYPTO_24_7' || x.venue === 'CRYPTO') return { score: 96, text: '7/24 Anında Nakit (T+0)' };
       if (x.subVenue === 'TEFAS_PPF') return { score: 94, text: '13:30 Öncesi T+0 Nakit' };
       if (x.venue === 'TWO_DOOR') return { score: 90, text: 'Gündüz Çarşı Anında Nakit' };
       if (x.venue === 'BIST') return { score: x.isBrutTakas ? 58 : 84, text: x.isBrutTakas ? 'VBTS Brüt Takas (T+2 Kilitli)' : 'Anında Eşleşme · T+2 Çekim' };
+      if (x.venue === 'GLOBAL_USD') return { score: 82, text: 'ABD Seansı Anında · T+1 Takas' };
       if (x.venue === 'TEFAS') return { score: 74 - ((x.sellValorDays || 1) - 1) * 6, text: `13:30 Valör · T+${x.sellValorDays || 1} Bozum` };
       if (x.subVenue === 'TERM_DEPOSIT') return { score: 48, text: 'Vadeli Kilit (Erken Bozumda Faiz Yanar)' };
-      return { score: 80, text: 'Borsa Seansında Likit' };
+      return { score: 80, text: 'Seans İçinde Likit' };
+    };
+
+    const calcValuationMetric = (x, qX) => {
+      if (x.isRateInstrument) {
+        const netPct = +(Number(x.annualGrossRatePct || 0) * (1 - (Number(x.stopajPct) || 0) / 100)).toFixed(1);
+        return { label: `Net %${netPct} / Yıl`, score: Math.max(40, Math.min(92, Math.round(62 + (netPct - infPct) * 2.2))) };
+      }
+      if (x.subVenue === 'DARPHANE_S1') {
+        return {
+          label: dPremPct >= 0 ? `Spot Altına +%${dPremPct.toFixed(1)} Primli` : `Spot Altına %${dPremPct.toFixed(1)} İskontolu`,
+          score: Math.max(25, Math.min(95, Math.round(86 - dPremPct * 2.8)))
+        };
+      }
+      const pb = x.bistRow?.pb ?? x.fundamentals?.pb ?? x.pb ?? null;
+      const pe = x.bistRow?.pe ?? x.fundamentals?.pe ?? x.pe ?? null;
+      const r52 = computeRange52W(x);
+      if (pb != null && Number(pb) > 0) {
+        const pbN = Number(pb);
+        const peN = pe != null && Number(pe) > 0 ? Number(pe) : null;
+        const lbl = peN ? `PD/DD ${pbN.toFixed(2)}x · F/K ${peN.toFixed(1)}x` : `PD/DD ${pbN.toFixed(2)}x`;
+        let sc = 104 - pbN * 16;
+        if (peN != null) sc += (peN <= 7 ? 8 : (peN >= 25 ? -8 : 0));
+        if (qX?.marginOfSafetyPct != null) sc += Math.max(-10, Math.min(10, Number(qX.marginOfSafetyPct) * 0.2));
+        return { label: lbl, score: Math.max(22, Math.min(97, Math.round(sc))) };
+      }
+      if (pe != null && Number(pe) > 0) {
+        const peN = Number(pe);
+        return { label: `F/K ${peN.toFixed(1)}x`, score: Math.max(25, Math.min(94, Math.round(100 - peN * 2.4))) };
+      }
+      if (r52 && r52.pct != null) {
+        return {
+          label: `52H Bant %${r52.pct} (${r52.drawdownPct}%)`,
+          score: Math.max(35, Math.min(92, Math.round(88 - r52.pct * 0.35)))
+        };
+      }
+      return { label: 'Spot Piyasa Değeri', score: 72 };
+    };
+
+    const calcDrawdown52 = (x, qX) => {
+      if (x.isRateInstrument) return 0;
+      const raw = x.bistRow?.drawdown52WPct ?? computeRange52W(x)?.drawdownPct ?? (qX?.cvar95Pct != null ? -Math.abs(Number(qX.cvar95Pct)) : -12);
+      return Math.abs(Number(raw) || 0);
     };
 
     const r1A = calcReal1Y(a);
@@ -4739,13 +4826,14 @@
     const lqB = calcLiquidity(b);
     const qA = extractQuantitativePassport(a);
     const qB = extractQuantitativePassport(b);
-    const ddA = Math.abs(Number(a.drawdown52WPct ?? qA?.maxDrawdownPct ?? -12));
-    const ddB = Math.abs(Number(b.drawdown52WPct ?? qB?.maxDrawdownPct ?? -12));
-
-    const valA = a.pb != null ? `PD/DD ${Number(a.pb).toFixed(2)}x` : (a.isRateInstrument ? `Brüt %${a.annualGrossRatePct}` : (a.pe != null ? `F/K ${Number(a.pe).toFixed(1)}x` : 'Spot Değer'));
-    const valB = b.pb != null ? `PD/DD ${Number(b.pb).toFixed(2)}x` : (b.isRateInstrument ? `Brüt %${b.annualGrossRatePct}` : (b.pe != null ? `F/K ${Number(b.pe).toFixed(1)}x` : 'Spot Değer'));
-    const valScoreA = a.pb != null && a.pb > 0 ? Math.max(25, Math.min(96, Math.round(105 - a.pb * 18))) : 74;
-    const valScoreB = b.pb != null && b.pb > 0 ? Math.max(25, Math.min(96, Math.round(105 - b.pb * 18))) : 74;
+    const ddA = calcDrawdown52(a, qA);
+    const ddB = calcDrawdown52(b, qB);
+    const vmA = calcValuationMetric(a, qA);
+    const vmB = calcValuationMetric(b, qB);
+    const valA = vmA.label;
+    const valB = vmB.label;
+    const valScoreA = vmA.score;
+    const valScoreB = vmB.score;
 
     const rounds = [
       {
@@ -4900,7 +4988,7 @@
           key: asset.key,
           ticker: asset.ticker,
           name: asset.name,
-          sector: asset.sector,
+          sector: r.sector || asset.sector || asset.categoryName || 'Borsa İstanbul',
           priceTL: asset.priceTL,
           perf1Y: asset.perf1Y,
           forensicScore: getQuickForensicScore(asset)
