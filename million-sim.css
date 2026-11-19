@@ -157,12 +157,15 @@ button {
   overflow: hidden;
 }
 
-/* Dynamic Island Canlı Bildirim Kapsülü (Üst Bar Düğmelerini Asla Örtmez) */
+/* Native Snackbar Bildirim Kapsülü (Üst Bar & Sekme Çubuğunu ASLA Örtmez) */
 .ae-island-toast {
   position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + 86px);
+  top: auto !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 78px);
   left: 50%;
-  transform: translate(-50%, -180%) scale(0.92);
+  height: auto;
+  max-height: 52px;
+  transform: translate(-50%, 140%) scale(0.94);
   opacity: 0;
   pointer-events: none;
   z-index: 950;
@@ -170,10 +173,10 @@ button {
   width: max-content;
   background: rgba(9, 14, 26, 0.96);
   color: #f8fafc;
-  border: 1px solid rgba(245, 158, 11, 0.42);
+  border: 1px solid rgba(245, 158, 11, 0.45);
   border-radius: 999px;
   padding: 9px 16px;
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   font-size: 12.5px;
@@ -181,7 +184,7 @@ button {
   display: flex;
   align-items: center;
   gap: 9px;
-  transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease;
 }
 
 .ae-island-toast.show {
@@ -2063,7 +2066,7 @@ button {
 }
 
 /* ==========================================================================
-   v17.0.0 — FERAH, MODERN 2026 TASARIM & "YAŞLI NİNE" RAHAT OKUMA SİSTEMİ
+   v19.0.0 — FERAH, MODERN 2026 TASARIM & YÜKSEK ERİŞİLEBİLİRLİK SİSTEMİ
    ========================================================================== */
 
 /* Üst Bar Aa+ Rahat Okuma Düğmesi */
@@ -2183,7 +2186,7 @@ button {
   box-shadow: 0 8px 22px rgba(16, 185, 129, 0.28);
 }
 
-/* 4 Büyük Yaşlı-Nine Dostu Ana Kapı */
+/* 4 Büyük Hedef Odaklı Yatırım Kapısı */
 .ae-section-title {
   display: flex;
   justify-content: space-between;
@@ -2563,7 +2566,7 @@ button {
 }
 
 /* ==========================================================================
-   RAHATLIKLA OKUMA MODU (Aa+ YAŞLI NİNE & YÜKSEK KONTRAST MODU)
+   RAHATLIKLA OKUMA MODU (Aa+ YÜKSEK KONTRAST & BÜYÜK YAZI MODU)
    ========================================================================== */
 html[data-font-scale="large"] body {
   font-size: 17px;
@@ -2657,5 +2660,282 @@ html[data-font-scale="large"] .ae-v17-desc {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* ==========================================================================
+   v19.0.0 — 5 KADEME TAHTA, 5 SORUDA RÖNTGEN, KARAR TATBİKATI & İZLEME LİSTESİ
+   ========================================================================== */
+.ae-balance-figure,
+.ae-v17-price,
+.ae-trio-cell strong,
+.ms-kpi-box strong,
+.ae-ob-price {
+  font-variant-numeric: tabular-nums;
+}
+
+.ae-watch-btn {
+  appearance: none;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-2);
+  color: var(--ink-200);
+  border-radius: 10px;
+  padding: 5px 10px;
+  font-size: 11.8px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+
+.ae-watch-btn.active {
+  background: var(--gold-soft);
+  border-color: var(--gold);
+  color: var(--gold-bright);
+}
+
+.ae-watch-btn:active {
+  transform: scale(0.95);
+}
+
+/* 5 Kademe Tahta Derinliği */
+.ae-ob-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ae-ob-col {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ae-ob-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.6px;
+  font-weight: 800;
+  color: var(--ink-400);
+  padding: 0 4px 2px;
+}
+
+.ae-ob-row {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 7px;
+  border-radius: 8px;
+  background: var(--surface-1);
+  overflow: hidden;
+  font-size: 11.4px;
+  font-weight: 800;
+}
+
+.ae-ob-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+.ae-ob-bar.bid {
+  right: 0;
+  background: #10b981;
+}
+
+.ae-ob-bar.ask {
+  left: 0;
+  background: #f43f5e;
+}
+
+.ae-ob-price {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.ae-ob-lots {
+  position: relative;
+  z-index: 1;
+  font-size: 10.6px;
+  color: var(--ink-400);
+  font-weight: 700;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 5 Soruda Şirket Röntgeni */
+.ae-q5-list {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.ae-q5-row {
+  background: var(--surface-2);
+  border: 1px solid var(--line-subtle);
+  border-radius: 13px;
+  padding: 10px 12px;
+}
+
+.ae-q5-row.good { border-left: 3.5px solid #10b981; }
+.ae-q5-row.amber { border-left: 3.5px solid #f59e0b; }
+.ae-q5-row.red { border-left: 3.5px solid #f43f5e; }
+
+.ae-q5-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.ae-q5-head strong {
+  font-size: 13px;
+  color: var(--ink-100);
+}
+
+.ae-q5-body {
+  font-size: 12px;
+  color: var(--ink-200);
+  line-height: 1.44;
+}
+
+/* Çok Aşamalı Karar Tatbikatı Stepper */
+.ae-drill-stepper {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 10px 0 12px;
+}
+
+.ae-drill-step {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-subtle);
+}
+
+.ae-drill-step.done {
+  background: #10b981;
+  border-color: #10b981;
+}
+
+.ae-drill-step.active {
+  background: var(--gold-bright);
+  border-color: var(--gold-bright);
+}
+
+/* Kompakt Ana Sayfa Açılır Kartı */
+.ae-home-acc {
+  background: var(--surface-1);
+  border: 1px solid var(--line-subtle);
+  border-radius: 18px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.ae-home-acc > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 13px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.ae-home-acc > summary::-webkit-details-marker {
+  display: none;
+}
+
+.ae-home-acc-body {
+  padding: 0 15px 15px;
+  border-top: 1px solid var(--line-subtle);
+  padding-top: 12px;
+}
+
+.ae-alert-strip {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: 15px;
+  padding: 10px 13px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ae-journey-node {
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.15s ease;
+}
+
+.ae-journey-node:active {
+  transform: scale(0.96);
+}
+
+/* v19.0.0 Bileşenleri için Aa+ (Büyük Yazı) ve Küçük Ekran (320px) Uyumluluğu */
+html[data-font-scale="large"] .ae-q5-head strong {
+  font-size: 15.5px;
+  line-height: 1.35;
+}
+
+html[data-font-scale="large"] .ae-q5-body {
+  font-size: 14.8px;
+  line-height: 1.54;
+}
+
+html[data-font-scale="large"] .ae-ob-head {
+  font-size: 12px;
+}
+
+html[data-font-scale="large"] .ae-ob-row {
+  font-size: 12.8px;
+  padding: 6px 7px;
+}
+
+html[data-font-scale="large"] .ae-ob-lots {
+  font-size: 11.8px;
+}
+
+html[data-font-scale="large"] .ae-watch-btn {
+  font-size: 13.4px;
+  min-height: 36px;
+  padding: 6px 11px;
+}
+
+html[data-font-scale="large"] .ae-alert-strip {
+  font-size: 14.5px;
+}
+
+@media (max-width: 359px) {
+  html[data-font-scale="large"] .ae-seg-btn {
+    font-size: 12px !important;
+    padding: 7px 3px;
+    white-space: normal;
+    line-height: 1.18;
+    min-height: 44px;
+  }
+  html[data-font-scale="large"] .ae-ob-row {
+    font-size: 11.8px;
+    padding: 5px 5px;
+  }
+  html[data-font-scale="large"] .ae-ob-lots {
+    font-size: 10.8px;
+  }
+}
+
 
 

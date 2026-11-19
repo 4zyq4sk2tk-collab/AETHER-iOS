@@ -1,6 +1,6 @@
 // ============================================================================
-// AETHER v18.0.0 — GERÇEK TÜRKİYE PİYASA FİZİĞİ, 2026 VERGİ MEVZUATI (GVK 80,
-// 11444 KARAR, EUROBOND BEYAN), CİHAZ BAZLI KİMLİK & CANLI LİG ÇEKİRDEĞİ
+// AETHER v19.0.0 — GERÇEK TÜRKİYE PİYASA FİZİĞİ, 2026 VERGİ MEVZUATI (GVK 80,
+// 10811 BES, 11444 SUKUK, TEMETTÜ & EUROBOND), KOŞULLU EMİRLER & CANLI LİG ÇEKİRDEĞİ
 // ============================================================================
 (function (global) {
   'use strict';
@@ -1351,6 +1351,9 @@
       ghostHoldPortfolio: null,
       settlementQueue: [],
       pendingOrders: [],
+      conditionalOrders: [],
+      watchlist: [],
+      completedDrills: {},
       rateTranches: [],
       positions: {},
       ipoRequests: [],
@@ -1376,7 +1379,8 @@
         inspectedCashScale: false,
         wroteInvestmentThesis: false,
         studiedNightDisclosure: false,
-        completedFieldCase: false
+        completedFieldCase: false,
+        usedLimitOrStop: false
       }
     };
   }
@@ -1388,7 +1392,7 @@
       : ('inv_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4));
     const me = createDeviceInvestor(deviceId, '', '1 Milyon ₺ Portföy Yöneticisi');
     return {
-      version: '17.0.0',
+      version: '19.0.0',
       roomCode: DEFAULT_ROOM_CODE,
       localDeviceId: deviceId,
       me,
@@ -1418,6 +1422,9 @@
     me.rateTranches = Array.isArray(me.rateTranches) ? me.rateTranches : [];
     me.settlementQueue = Array.isArray(me.settlementQueue) ? me.settlementQueue : [];
     me.pendingOrders = Array.isArray(me.pendingOrders) ? me.pendingOrders : [];
+    me.conditionalOrders = Array.isArray(me.conditionalOrders) ? me.conditionalOrders : [];
+    me.watchlist = Array.isArray(me.watchlist) ? me.watchlist : [];
+    me.completedDrills = me.completedDrills && typeof me.completedDrills === 'object' ? me.completedDrills : {};
     me.tradeHistory = Array.isArray(me.tradeHistory) ? me.tradeHistory : [];
     me.footprints = Array.isArray(me.footprints) ? me.footprints : [];
     me.equityCurve = Array.isArray(me.equityCurve) && me.equityCurve.length > 0
@@ -2127,6 +2134,140 @@
     }
     member.pendingOrders = stillPending;
 
+    // 2B) Koşullu Emirler: Hedef Limit Alım, Zarar Kes (Stop-Loss) & Kâr Al (Take-Profit)
+    if (Array.isArray(member.conditionalOrders) && member.conditionalOrders.length > 0) {
+      const stillCond = [];
+      for (const co of member.conditionalOrders) {
+        const asset = getAsset(co.assetKey);
+        if (!asset || !(asset.priceTL > 0)) {
+          stillCond.push(co);
+          continue;
+        }
+        if ((co.kind === 'STOP_LOSS' || co.kind === 'TAKE_PROFIT') && (!member.positions?.[asset.key] || member.positions[asset.key].qty <= 0)) {
+          changed = true;
+          continue;
+        }
+        const micro = inspectBoardMicrostructure(asset);
+        const venueOpen = asset.venue === 'BIST'
+          ? (clock.bistCanMatchNow && !micro.isCircuitBreaker)
+          : (asset.venue === 'VIOP'
+            ? clock.viopOpen
+            : (asset.venue === 'GLOBAL_USD' ? !clock.isWeekend : true));
+
+        if (!venueOpen) {
+          stillCond.push(co);
+          continue;
+        }
+
+        const liveP = Number(asset.priceTL);
+        const trigP = Number(co.triggerPriceTL);
+
+        if (co.kind === 'LIMIT_BUY' && liveP <= trigP && !micro.isTavanLocked) {
+          const execPrice = asset.subVenue === 'BIST_STOCK' ? snapToBistTick(Math.min(liveP, trigP)) : liveP;
+          const feeRate = asset.venue === 'BIST' ? 0.00084 : (asset.venue === 'GLOBAL_USD' ? 0.0015 : (asset.venue === 'TWO_DOOR' ? (clock.bankSpreadPct / 200 + 0.002) : 0.001));
+          const reserved = Number(co.reservedTL) || 0;
+          const feeTL = +(reserved * feeRate).toFixed(2);
+          const netInvestTL = Math.max(0, reserved - feeTL);
+          const qty = asset.subVenue === 'BIST_STOCK' ? Math.floor(netInvestTL / execPrice) : +(netInvestTL / execPrice).toFixed(6);
+          if (qty > 0) {
+            const spentTL = +(qty * execPrice + feeTL).toFixed(2);
+            const refundTL = Math.max(0, +(reserved - spentTL).toFixed(2));
+            if (refundTL > 0) {
+              const unsettledChunks = Array.isArray(co.reservedSettlementChunks)
+                ? co.reservedSettlementChunks.filter((ch) => Number(ch.settlesAtMs) > nowMs && Number(ch.grossTL) > 0)
+                : [];
+              const cashBackedTL = Array.isArray(co.reservedSettlementChunks) && co.reservedSettlementChunks.length > 0
+                ? Math.max(0, +(Number(co.reservedCashTL) || 0).toFixed(2))
+                : refundTL;
+              if (unsettledChunks.length > 0 && refundTL > cashBackedTL) {
+                const cashRefund = Math.max(0, +(Math.min(refundTL, cashBackedTL)).toFixed(2));
+                const settleRefund = +(refundTL - cashRefund).toFixed(2);
+                if (cashRefund > 0) member.cashTL = +(member.cashTL + cashRefund).toFixed(2);
+                if (settleRefund > 0) {
+                  if (!Array.isArray(member.settlementQueue)) member.settlementQueue = [];
+                  const latestSettleMs = Math.max(...unsettledChunks.map((ch) => Number(ch.settlesAtMs) || 0));
+                  member.settlementQueue.push({
+                    id: 'sq_' + Math.random().toString(36).slice(2, 9),
+                    assetKey: asset.key,
+                    name: asset.name,
+                    grossTL: settleRefund,
+                    settlesAtMs: latestSettleMs,
+                    usableForBist: true,
+                    note: 'Limit alım lot yuvarlama artığı (T+2 takas)'
+                  });
+                }
+              } else {
+                member.cashTL = +(member.cashTL + refundTL).toFixed(2);
+              }
+            }
+            member.totalFrictionBurnedTL = +((member.totalFrictionBurnedTL || 0) + feeTL).toFixed(2);
+            mergeSpotPosition(member, asset, qty, execPrice, clock.ymd, co.door || asset.venue, co.thesisTag || 'RESEARCH_FUNDAMENTAL', co.thesisNote || `Limit emir (${trigP} ₺)`);
+            member.livedMilestones.executedRealOrder = true;
+            member.livedMilestones.usedLimitOrStop = true;
+            member.tradeHistory.unshift({
+              id: 'th_lim_' + Math.random().toString(36).slice(2, 8),
+              ts: nowMs,
+              side: 'LİMİT ALIM',
+              assetKey: asset.key,
+              ticker: asset.ticker,
+              name: asset.name,
+              amountTL: spentTL,
+              priceTL: execPrice,
+              thesisTag: co.thesisTag || 'RESEARCH_FUNDAMENTAL',
+              thesisNote: co.thesisNote || '',
+              feeAndTaxTL: feeTL,
+              spreadLeakTL: 0,
+              note: `Hedef limit fiyat (${trigP.toLocaleString('tr-TR')} ₺) gerçekleşti: ${qty} adet ${execPrice.toLocaleString('tr-TR')} ₺'den alındı.`
+            });
+            maybeSnapshotGhostHoldPortfolio(member);
+            checkConcentrationFootprint(member);
+            changed = true;
+          } else {
+            stillCond.push(co);
+          }
+        } else if ((co.kind === 'STOP_LOSS' && liveP <= trigP) || (co.kind === 'TAKE_PROFIT' && liveP >= trigP)) {
+          const pos = member.positions[asset.key];
+          if (!pos || pos.qty <= 0) {
+            changed = true;
+            continue;
+          }
+          if (asset.venue === 'BIST' && (micro.isTabanLocked || (micro.isBrutTakas && pos.lastBuyDayYmd === clock.ymd))) {
+            stillCond.push(co);
+            continue;
+          }
+          const targetQty = Math.min(pos.qty, Number(co.qty) || pos.qty);
+          const sellQty = asset.subVenue === 'BIST_STOCK' ? Math.floor(targetQty) : +targetQty.toFixed(6);
+          if (sellQty > 0) {
+            const res = settleSpotSale(member, asset, sellQty, liveP, nowMs, co.door || 'BANK', false);
+            if (member.tradeHistory[0]) {
+              member.tradeHistory[0].side = co.kind === 'STOP_LOSS' ? 'ZARAR KES' : 'KÂR AL';
+              member.tradeHistory[0].note = `${co.kind === 'STOP_LOSS' ? 'Zarar kes' : 'Hedef kâr al'} tetiklendi (${trigP.toLocaleString('tr-TR')} ₺ -> canlı ${liveP.toLocaleString('tr-TR')} ₺): Net ${res.netAfterFeeAndStopajTL.toLocaleString('tr-TR')} ₺.`;
+            }
+            member.livedMilestones.usedLimitOrStop = true;
+            changed = true;
+          }
+        } else {
+          stillCond.push(co);
+        }
+      }
+      member.conditionalOrders = stillCond;
+    }
+
+    // 2C) İzleme Listesi & Hedef Fiyat Alarmı Kontrolü
+    if (Array.isArray(member.watchlist) && member.watchlist.length > 0) {
+      for (const w of member.watchlist) {
+        if (!w || !w.targetPriceTL || w.targetPriceTL <= 0 || w.triggeredAtMs) continue;
+        const a = getAsset(w.assetKey);
+        if (!a || !(a.priceTL > 0)) continue;
+        const hit = w.direction === 'ABOVE' ? a.priceTL >= w.targetPriceTL : a.priceTL <= w.targetPriceTL;
+        if (hit) {
+          w.triggeredAtMs = nowMs;
+          w.triggeredPriceTL = a.priceTL;
+          changed = true;
+        }
+      }
+    }
+
     // 3) SPK Halka Arz Dağıtım Günü Geldiğinde Kişi Başına Lot Dağıtımı & Nakit İadesi
     const stillIpos = [];
     for (const req of (member.ipoRequests || [])) {
@@ -2445,6 +2586,139 @@
     };
   }
 
+  // 2026 Temettü Beyan Hesaplayıcı (GVK Md. 22 %50 İstisna · %15 Stopaj Mahsubu · 400.000 ₺ 2. Dilim Sınırı)
+  const TR_DIVIDEND_DECLARE_LIMIT_2026 = 400000;
+  const TR_BES_STATE_RATE_2026 = 0.20; // 10811 Sayılı Karar (7 Ocak 2026 RG): 1 Ocak 2026 itibarıyla %20
+  const TR_BES_ANNUAL_CAP_CONTRIB_2026 = 396360; // 2026 yıllık brüt asgari ücret (33.030 ₺ x 12)
+  const TR_BES_MAX_STATE_CONTRIB_2026 = 79272; // 396.360 ₺ x %20
+
+  function computeDividendTax2026(params = {}) {
+    const grossDividendTL = Math.max(0, Number(params.grossDividendTL) || 0);
+    const withholdingPaidTL = +(grossDividendTL * 0.15).toFixed(2);
+    const netReceivedAtSourceTL = +(grossDividendTL - withholdingPaidTL).toFixed(2);
+    const exemptHalfTL = +(grossDividendTL * 0.50).toFixed(2);
+    const taxableHalfTL = +(grossDividendTL * 0.50).toFixed(2);
+    const mustDeclare = taxableHalfTL > TR_DIVIDEND_DECLARE_LIMIT_2026;
+    const grossTaxFreeCeilingTL = TR_DIVIDEND_DECLARE_LIMIT_2026 * 2; // 800.000 ₺ brüt (680.000 ₺ net)
+    let calculatedTaxTL = 0;
+    let extraTaxOrRefundTL = 0; // + ek ödenecek, - vergi iadesi
+    let topBracketPct = 15;
+    if (mustDeclare) {
+      const prog = computeProgressiveGvk80Tax2026(taxableHalfTL, 0);
+      calculatedTaxTL = prog.taxTL;
+      topBracketPct = prog.topBracketPct;
+      // Stopajın TAMAMI hesaplanan vergiden mahsup edilir!
+      extraTaxOrRefundTL = +(calculatedTaxTL - withholdingPaidTL).toFixed(2);
+    }
+    const finalNetCashTL = +(netReceivedAtSourceTL - extraTaxOrRefundTL).toFixed(2);
+    const effectiveTaxPct = grossDividendTL > 0 ? +(((grossDividendTL - finalNetCashTL) / grossDividendTL) * 100).toFixed(2) : 0;
+    return {
+      grossDividendTL,
+      withholdingPaidTL,
+      netReceivedAtSourceTL,
+      exemptHalfTL,
+      taxableHalfTL,
+      declareLimit2026TL: TR_DIVIDEND_DECLARE_LIMIT_2026,
+      grossTaxFreeCeilingTL,
+      netTaxFreeCeilingTL: Math.round(grossTaxFreeCeilingTL * 0.85),
+      mustDeclare,
+      calculatedTaxTL,
+      extraTaxOrRefundTL,
+      isTaxRefund: extraTaxOrRefundTL < 0,
+      finalNetCashTL,
+      effectiveTaxPct,
+      topBracketPct
+    };
+  }
+
+  function computeBes2026Simulation(params = {}) {
+    const monthlyContribTL = Math.max(500, Number(params.monthlyContribTL) || 10000);
+    const years = Math.max(1, Math.min(30, Number(params.years) || 10));
+    const ageAtStart = Math.max(18, Math.min(60, Number(params.ageAtStart) || 32));
+    const rawReal = params.fundRealAnnualPct != null && Number.isFinite(Number(params.fundRealAnnualPct)) ? Number(params.fundRealAnnualPct) : 9;
+    const fundRealAnnualPct = Math.max(-5, Math.min(25, rawReal));
+    const endAge = ageAtStart + years;
+
+    // Hak ediş oranı (BES Kanunu)
+    let vestingPct = 0;
+    let exitStopajPct = 15;
+    let exitStageLabel = '3 Yıldan Önce Erken Çıkış (%0 Hak Ediş)';
+    if (years >= 10 && endAge >= 56) {
+      vestingPct = 100;
+      exitStopajPct = 5;
+      exitStageLabel = 'Emeklilik Hakkı (10+ Yıl & 56+ Yaş · %100 Hak Ediş)';
+    } else if (years >= 10) {
+      vestingPct = 60;
+      exitStopajPct = 10;
+      exitStageLabel = '10+ Yıl (56 Yaş Öncesi · %60 Hak Ediş)';
+    } else if (years >= 6) {
+      vestingPct = 35;
+      exitStopajPct = 15;
+      exitStageLabel = '6–10 Yıl Arası (%35 Hak Ediş)';
+    } else if (years >= 3) {
+      vestingPct = 15;
+      exitStopajPct = 15;
+      exitStageLabel = '3–6 Yıl Arası (%15 Hak Ediş)';
+    }
+
+    const annualContribTL = monthlyContribTL * 12;
+    const annualEligibleTL = Math.min(annualContribTL, TR_BES_ANNUAL_CAP_CONTRIB_2026);
+    const annualStateContribTL = +(annualEligibleTL * TR_BES_STATE_RATE_2026).toFixed(0);
+    const monthlyStateTL = annualStateContribTL / 12;
+    const overCapAnnualTL = Math.max(0, annualContribTL - TR_BES_ANNUAL_CAP_CONTRIB_2026);
+
+    const rFund = Math.pow(1 + fundRealAnnualPct / 100, 1 / 12) - 1;
+    const rState = Math.pow(1 + 0.03, 1 / 12) - 1; // Devlet katkısı fonu reel ~%3 muhafazakâr varsayım
+    const rStandard = Math.pow(1 + 0.015, 1 / 12) - 1; // Unutulan standart BES fonu reel ~%1,5
+
+    let ownVault = 0, stateVault = 0, stdVault = 0;
+    let totalOwnPaid = 0, totalStatePaid = 0;
+    const totalMonths = years * 12;
+    for (let m = 0; m < totalMonths; m++) {
+      ownVault = (ownVault + monthlyContribTL) * (1 + rFund);
+      stateVault = (stateVault + monthlyStateTL) * (1 + rState);
+      stdVault = (stdVault + monthlyContribTL) * (1 + rStandard);
+      totalOwnPaid += monthlyContribTL;
+      totalStatePaid += monthlyStateTL;
+    }
+
+    const ownGain = Math.max(0, ownVault - totalOwnPaid);
+    const ownExitTax = ownGain * (exitStopajPct / 100);
+    const netOwnVault = Math.round(ownVault - ownExitTax);
+
+    const vestedStateGross = stateVault * (vestingPct / 100);
+    const stateGain = Math.max(0, vestedStateGross - totalStatePaid * (vestingPct / 100));
+    const netStateVault = Math.round(vestedStateGross - stateGain * (exitStopajPct / 100));
+
+    const totalNetRealTL = netOwnVault + netStateVault;
+    const stdGain = Math.max(0, stdVault - totalOwnPaid);
+    const netStdTotalTL = Math.round(stdVault - stdGain * (exitStopajPct / 100)) + netStateVault;
+    const befasAdvantageTL = Math.max(0, totalNetRealTL - netStdTotalTL);
+
+    return {
+      monthlyContribTL,
+      years,
+      ageAtStart,
+      endAge,
+      fundRealAnnualPct,
+      stateRatePct2026: 20,
+      annualCapContrib2026TL: TR_BES_ANNUAL_CAP_CONTRIB_2026,
+      maxAnnualState2026TL: TR_BES_MAX_STATE_CONTRIB_2026,
+      annualStateContribTL,
+      overCapAnnualTL,
+      vestingPct,
+      exitStopajPct,
+      exitStageLabel,
+      totalOwnPaidTL: Math.round(totalOwnPaid),
+      netOwnVaultTL: netOwnVault,
+      netStateVaultTL: netStateVault,
+      totalNetRealTL,
+      netStdTotalTL,
+      befasAdvantageTL,
+      monthlyPensionReal4PctTL: Math.round((totalNetRealTL * 0.04) / 12)
+    };
+  }
+
   function computePositionTaxOnGain(asset, pos, sellUnitTL, sellQty, currentYiUfeOverride, priorAnnualGainTL = 0) {
     const grossProceedsTL = +(sellQty * sellUnitTL).toFixed(2);
     const costBasisTL = +(sellQty * (pos.avgCostTL || sellUnitTL)).toFixed(2);
@@ -2673,6 +2947,205 @@
         releasedTL: curReserved,
         remainingTL: 0,
         message: `${ord.name} için bekleyen ${ord.side === 'BUY' ? 'alım' : 'satış'} emri iptal edildi${curReserved > 0 ? ` ve ${curReserved.toLocaleString('tr-TR')} ₺ nakde iade edildi` : ''}.`
+      };
+    }
+
+    // --- KOŞULLU EMİR (LİMİT ALIM / ZARAR KES / KÂR AL) İPTALİ ---
+    if (side === 'CANCEL_CONDITIONAL') {
+      const idx = (member.conditionalOrders || []).findIndex((c) => c.id === params.orderId);
+      if (idx < 0) return { ok: false, reason: 'İptal edilecek koşullu emir bulunamadı.' };
+      const ord = member.conditionalOrders[idx];
+      member.conditionalOrders.splice(idx, 1);
+      const refund = +(Number(ord.reservedTL) || 0).toFixed(2);
+      let returnedCashTL = 0;
+      let returnedSettlementTL = 0;
+      if (Array.isArray(ord.reservedSettlementChunks) && ord.reservedSettlementChunks.length > 0) {
+        const cashPart = Math.min(refund, Math.max(0, +(Number(ord.reservedCashTL) || 0).toFixed(2)));
+        if (cashPart > 0) {
+          member.cashTL = +(member.cashTL + cashPart).toFixed(2);
+          returnedCashTL = +(returnedCashTL + cashPart).toFixed(2);
+        }
+        for (const ch of ord.reservedSettlementChunks) {
+          const chAmt = +(Number(ch.grossTL) || 0).toFixed(2);
+          if (chAmt <= 0) continue;
+          if (Number(ch.settlesAtMs) > nowMs) {
+            if (!Array.isArray(member.settlementQueue)) member.settlementQueue = [];
+            member.settlementQueue.push({
+              id: 'sq_' + Math.random().toString(36).slice(2, 9),
+              assetKey: ch.assetKey || ord.assetKey,
+              name: ch.name || ord.name,
+              grossTL: chAmt,
+              settlesAtMs: ch.settlesAtMs,
+              usableForBist: true,
+              note: ch.note || 'İptal edilen Limit Alımdan dönen BIST T+2 takas tutarı'
+            });
+            returnedSettlementTL = +(returnedSettlementTL + chAmt).toFixed(2);
+          } else {
+            member.cashTL = +(member.cashTL + chAmt).toFixed(2);
+            returnedCashTL = +(returnedCashTL + chAmt).toFixed(2);
+          }
+        }
+      } else if (refund > 0) {
+        member.cashTL = +(member.cashTL + refund).toFixed(2);
+        returnedCashTL = refund;
+      }
+      member.updatedAt = nowMs;
+      member.rev = (member.rev || 1) + 1;
+      saveState(true, true);
+      const refundDetail = refund > 0
+        ? (returnedSettlementTL > 0
+          ? ` (${returnedCashTL > 0 ? `${returnedCashTL.toLocaleString('tr-TR')} ₺ nakde, ` : ''}${returnedSettlementTL.toLocaleString('tr-TR')} ₺ T+2 takasa döndü)`
+          : ` (${returnedCashTL.toLocaleString('tr-TR')} ₺ nakde döndü)`)
+        : '';
+      return {
+        ok: true,
+        status: 'CONDITIONAL_CANCELLED',
+        releasedTL: refund,
+        returnedCashTL,
+        returnedSettlementTL,
+        message: `${ord.name} için ${ord.kind === 'LIMIT_BUY' ? 'Limit Alım' : (ord.kind === 'STOP_LOSS' ? 'Zarar Kes' : 'Kâr Al')} emri iptal edildi${refundDetail}.`
+      };
+    }
+
+    // --- YENİ KOŞULLU EMİR: HEDEF FİYATTAN LİMİT ALIM ---
+    if (side === 'PLACE_LIMIT_BUY') {
+      const asset = getAsset(params.assetKey);
+      if (!asset || asset.isRateInstrument || asset.venue === 'BENCHMARK_ONLY' || asset.venue === 'TEFAS') {
+        return { ok: false, reason: 'Limit fiyatlı alım emri yalnızca tahtada işlem gören hisse, altın, döviz, ABD veya kripto varlıklarında geçerlidir.' };
+      }
+      const amountTL = +(Number(params.amountTL) || 0).toFixed(2);
+      const rawTrig = Number(params.triggerPriceTL) || 0;
+      const trigPrice = asset.subVenue === 'BIST_STOCK' ? snapToBistTick(rawTrig) : +rawTrig.toFixed(4);
+      if (amountTL < 100) return { ok: false, reason: 'Limit alım emri için en az 100 ₺ girmelisin.' };
+      const micro = inspectBoardMicrostructure(asset);
+      const unsettledUsableForBist = (asset.venue === 'BIST' && !micro.isBrutTakas)
+        ? (member.settlementQueue || []).filter((x) => x.usableForBist !== false).reduce((s, x) => s + Number(x.grossTL || 0), 0)
+        : 0;
+      const maxLimitCashPower = +(member.cashTL + unsettledUsableForBist).toFixed(2);
+      if (amountTL > maxLimitCashPower) {
+        if (micro.isBrutTakas && (member.settlementQueue || []).length > 0) {
+          return {
+            ok: false,
+            reason: `VBTS Brüt Takas kuralı gereği T+2 takasta bekleyen satış tutarıyla ${asset.ticker} için Limit Alım kurulamaz; yalnızca çekilebilir nakit (${member.cashTL.toLocaleString('tr-TR')} ₺) kullanılabilir!`
+          };
+        }
+        if (asset.venue !== 'BIST' && (member.settlementQueue || []).length > 0) {
+          return {
+            ok: false,
+            reason: `Çekilebilir nakdin ${member.cashTL.toLocaleString('tr-TR')} ₺. Borsa satışından gelen T+2 takas tutarıyla BIST dışı varlıkta Limit Alım kurulamaz!`
+          };
+        }
+        return { ok: false, reason: `Limit alım için kullanılabilir alım gücün yetersiz (Mevcut: ${maxLimitCashPower.toLocaleString('tr-TR')} ₺).` };
+      }
+      if (trigPrice <= 0 || trigPrice >= asset.priceTL) {
+        return { ok: false, reason: `Limit alım hedefi güncel fiyatın (${asset.priceTL.toLocaleString('tr-TR')} ₺) altında olmalıdır; bu fiyattan anında almak için Piyasa Emrini kullan.` };
+      }
+      if (asset.subVenue === 'BIST_STOCK' && amountTL < +(trigPrice * 1.001).toFixed(2)) {
+        return { ok: false, reason: `Girilen tutar (${amountTL.toLocaleString('tr-TR')} ₺) hedef fiyattan komisyon dahil 1 lot (${(trigPrice * 1.001).toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ₺) almaya yetmiyor.` };
+      }
+      let reservedCashTL = 0;
+      const reservedSettlementChunks = [];
+      if (member.cashTL >= amountTL) {
+        member.cashTL = +(member.cashTL - amountTL).toFixed(2);
+        reservedCashTL = amountTL;
+      } else {
+        reservedCashTL = +(member.cashTL).toFixed(2);
+        let rem = +(amountTL - member.cashTL).toFixed(2);
+        member.cashTL = 0;
+        if (asset.venue === 'BIST' && !micro.isBrutTakas) {
+          for (const q of (member.settlementQueue || [])) {
+            if (rem <= 0) break;
+            if (q.usableForBist === false) continue;
+            const take = Math.min(Number(q.grossTL) || 0, rem);
+            if (take <= 0) continue;
+            q.grossTL = +(q.grossTL - take).toFixed(2);
+            rem = +(rem - take).toFixed(2);
+            reservedSettlementChunks.push({
+              assetKey: q.assetKey,
+              name: q.name,
+              grossTL: +take.toFixed(2),
+              settlesAtMs: q.settlesAtMs,
+              usableForBist: true,
+              note: q.note || 'BIST T+2 Takas'
+            });
+          }
+          member.settlementQueue = (member.settlementQueue || []).filter((q) => Number(q.grossTL) > 0.01);
+        }
+      }
+      const co = {
+        id: 'co_' + Math.random().toString(36).slice(2, 9),
+        kind: 'LIMIT_BUY',
+        assetKey: asset.key,
+        ticker: asset.ticker,
+        name: asset.name,
+        triggerPriceTL: trigPrice,
+        reservedTL: amountTL,
+        reservedCashTL,
+        reservedSettlementChunks,
+        qty: 0,
+        door: params.door || asset.venue,
+        thesisTag: String(params.thesisTag || 'RESEARCH_FUNDAMENTAL'),
+        thesisNote: String(params.thesisNote || '').trim().slice(0, 140),
+        createdAtMs: nowMs
+      };
+      if (!Array.isArray(member.conditionalOrders)) member.conditionalOrders = [];
+      member.conditionalOrders.push(co);
+      member.livedMilestones.usedLimitOrStop = true;
+      member.updatedAt = nowMs;
+      member.rev = (member.rev || 1) + 1;
+      saveState(true, true);
+      return {
+        ok: true,
+        status: 'LIMIT_BUY_PLACED',
+        order: co,
+        message: `${asset.ticker} için ${trigPrice.toLocaleString('tr-TR')} ₺ hedef fiyatlı Limit Alım (${amountTL.toLocaleString('tr-TR')} ₺) kuruldu. Fiyat hedefe inince otomatik alınacak.`
+      };
+    }
+
+    // --- YENİ KOŞULLU EMİR: ZARAR KES (STOP-LOSS) & KÂR AL (TAKE-PROFIT) ---
+    if (side === 'PLACE_STOP_LOSS' || side === 'PLACE_TAKE_PROFIT') {
+      const asset = getAsset(params.assetKey);
+      if (!asset) return { ok: false, reason: 'Varlık bulunamadı.' };
+      const pos = member.positions[asset.key];
+      if (!pos || pos.qty <= 0) return { ok: false, reason: 'Bu varlıktan portföyünde bulunmuyor.' };
+      const isStop = side === 'PLACE_STOP_LOSS';
+      const rawTrig = Number(params.triggerPriceTL) || 0;
+      const trigPrice = asset.subVenue === 'BIST_STOCK' ? snapToBistTick(rawTrig) : +rawTrig.toFixed(4);
+      if (trigPrice <= 0) return { ok: false, reason: 'Geçerli bir tetik fiyatı girmelisin.' };
+      if (isStop && trigPrice >= asset.priceTL) {
+        return { ok: false, reason: `Zarar Kes (Stop-Loss) fiyatı güncel fiyatın (${asset.priceTL.toLocaleString('tr-TR')} ₺) altında olmalıdır.` };
+      }
+      if (!isStop && trigPrice <= asset.priceTL) {
+        return { ok: false, reason: `Hedef Kâr Al fiyatı güncel fiyatın (${asset.priceTL.toLocaleString('tr-TR')} ₺) üstünde olmalıdır.` };
+      }
+      const ratio = Math.min(1, Math.max(0.05, Number(params.sellRatio) || 1));
+      const qty = asset.subVenue === 'BIST_STOCK'
+        ? Math.min(Math.floor(pos.qty), Math.max(1, Math.floor(pos.qty * ratio)))
+        : +(pos.qty * ratio).toFixed(6);
+      if (qty <= 0) return { ok: false, reason: 'Satış emri miktarı geçersiz.' };
+      const co = {
+        id: 'co_' + Math.random().toString(36).slice(2, 9),
+        kind: isStop ? 'STOP_LOSS' : 'TAKE_PROFIT',
+        assetKey: asset.key,
+        ticker: asset.ticker,
+        name: asset.name,
+        triggerPriceTL: trigPrice,
+        reservedTL: 0,
+        qty,
+        door: params.door || 'BANK',
+        createdAtMs: nowMs
+      };
+      if (!Array.isArray(member.conditionalOrders)) member.conditionalOrders = [];
+      member.conditionalOrders.push(co);
+      member.livedMilestones.usedLimitOrStop = true;
+      member.updatedAt = nowMs;
+      member.rev = (member.rev || 1) + 1;
+      saveState(true, true);
+      return {
+        ok: true,
+        status: isStop ? 'STOP_LOSS_PLACED' : 'TAKE_PROFIT_PLACED',
+        order: co,
+        message: `${asset.ticker} (${qty} adet) için ${trigPrice.toLocaleString('tr-TR')} ₺ seviyesine ${isStop ? 'Zarar Kes kalkanı' : 'Kâr Al hedefi'} kuruldu.`
       };
     }
 
@@ -3622,7 +4095,8 @@
     const marginDebtTL = +(Number(m.marginDebtTL) || 0).toFixed(2);
     const gvk80TaxPayableTL = +(Number(m.gvk80TaxPayableTL) || 0).toFixed(2);
     const unsettledTL = +((m.settlementQueue || []).reduce((s, q) => s + Number(q.grossTL || 0), 0)).toFixed(2);
-    const pendingOrderTL = +((m.pendingOrders || []).reduce((s, o) => s + Number(o.reservedTL || 0), 0)).toFixed(2);
+    const conditionalReservedTL = +((m.conditionalOrders || []).reduce((s, o) => s + Number(o.reservedTL || 0), 0)).toFixed(2);
+    const pendingOrderTL = +((m.pendingOrders || []).reduce((s, o) => s + Number(o.reservedTL || 0), 0) + conditionalReservedTL).toFixed(2);
     const ipoBlockedTL = +((m.ipoRequests || []).reduce((s, r) => s + Number(r.blockedCashTL || 0), 0)).toFixed(2);
 
     const tranches = (m.rateTranches || []).map((t) => evaluateRateTranche(t, nowMs));
@@ -3778,6 +4252,7 @@
       marginStatus,
       unsettledTL,
       pendingOrderTL,
+      conditionalReservedTL,
       ipoBlockedTL,
       tranches,
       tranchesNetTL,
@@ -3809,12 +4284,21 @@
     const m = member || getActiveMember();
     const snap = snapOverride || evaluateMemberPortfolio(m);
 
-    // 1) Kasa & Varlık Kalitesi (0–100)
-    let qualityScore = 65;
-    if (snap.spotItems.length > 0 || snap.tranches.length > 0) {
+    const activeHoldingsCount = snap.spotItems.length + snap.tranches.length;
+    const queuedCapitalTL = (Number(snap.pendingOrderTL) || 0) + (Number(snap.ipoBlockedTL) || 0);
+    const hasDeployed = activeHoldingsCount > 0 || queuedCapitalTL >= 50000;
+    const condCount = (m.conditionalOrders || []).length;
+    const drillDoneCount = Object.keys(m.completedDrills || {}).length;
+    const drillAvgScore = drillDoneCount > 0
+      ? Math.round(Object.values(m.completedDrills).reduce((s, d) => s + (Number(d?.scorePct) || 0), 0) / drillDoneCount)
+      : 0;
+
+    // 1) Kasa & Varlık Kalitesi (0–100 — Gerçekten Kazanılır!)
+    let qualityScore = 10 + (m.livedMilestones?.inspectedCashScale ? 12 : 0) + Math.min(20, (Number(m.detectiveStats?.wins) || 0) * 5);
+    if (activeHoldingsCount > 0) {
       let weightedQ = 0, totalW = 0;
       for (const tr of snap.tranches) {
-        const q = tr.stopajPct === 0 ? 92 : 82;
+        const q = tr.stopajPct === 0 ? 94 : 82;
         weightedQ += q * tr.accruedNetValueTL;
         totalW += tr.accruedNetValueTL;
       }
@@ -3824,42 +4308,65 @@
         if (a?.bistRow) {
           const isFin = a.bistRow.entityKind === 'bank' || a.bistRow.entityKind === 'insurance' || a.bistRow.entityKind === 'fin_other';
           if (isFin) {
-            if ((a.bistRow.netIncomeMillionTL || 0) > 0 && (a.bistRow.roe || 0) >= 20) q = 89;
+            if ((a.bistRow.netIncomeMillionTL || 0) > 0 && (a.bistRow.roe || 0) >= 20) q = 90;
             else if ((a.bistRow.netIncomeMillionTL || 0) > 0) q = 80;
-            else q = 48;
-          } else if ((a.bistRow.ocfMillionTL || 0) > 0 && (a.bistRow.cashMillionTL || 0) >= (a.bistRow.totalDebtMillionTL || 0) * 0.5) q = 94;
+            else q = 45;
+          } else if ((a.bistRow.ocfMillionTL || 0) > 0 && (a.bistRow.cashMillionTL || 0) >= (a.bistRow.totalDebtMillionTL || 0) * 0.5) q = 95;
           else if ((a.bistRow.ocfMillionTL || 0) > 0) q = 84;
-          else if (a.isTms29Illusion || a.distributionTrap || a.isPumpAnomaly) q = 28;
-          else q = 52;
+          else if (a.isTms29Illusion || a.distributionTrap || a.isPumpAnomaly) q = 26;
+          else q = 50;
         } else if (a?.subVenue === 'DARPHANE_S1' && getDarphanePremiumInfo().premiumPct > 8) {
-          q = 42;
-        } else if (a?.id === 'gram-altin-spot' || a?.id === 'abd-sp500-spy') {
-          q = 86;
+          q = 38;
+        } else if (a?.id === 'gram-altin-spot' || a?.id === 'abd-sp500-spy' || a?.id === 'tefas-mac' || a?.id === 'tefas-iih') {
+          q = 88;
         }
         weightedQ += q * it.netValTL;
         totalW += it.netValTL;
       }
       if (totalW > 0) qualityScore = Math.round(weightedQ / totalW);
+    } else if (queuedCapitalTL >= 50000) {
+      qualityScore = Math.max(qualityScore, 55);
     }
 
-    // 2) Sepet Dengesi & Risk Kontrolü
-    let balanceScore = 85;
-    if (snap.allocationBreakdown.cashPct > 92) balanceScore = 45;
-    else if (snap.largestSingleSharePct > 75) balanceScore = 32;
-    else if (snap.largestSingleSharePct > 55) balanceScore = 58;
-    else if ((snap.spotItems.length + snap.tranches.length) >= 3) balanceScore = 94;
-    if (snap.marginDebtTL > snap.totalNetWorthTL * 0.35) balanceScore = Math.max(20, balanceScore - 28);
+    // 2) Sepet Dengesi & Risk Kontrolü (0–100)
+    const ab0 = snap.allocationBreakdown;
+    const activePillars = [ab0.equityPct >= 8, ab0.metalPct >= 8, ab0.fixedPct >= 8, ab0.globalFxCryptoPct >= 8].filter(Boolean).length;
+    let balanceScore = 10;
+    if (!hasDeployed) {
+      balanceScore = 10 + (condCount > 0 ? 15 : 0);
+    } else if (snap.largestSingleSharePct > 75) {
+      balanceScore = 30;
+    } else if (snap.largestSingleSharePct > 55) {
+      balanceScore = 54;
+    } else if (activePillars >= 3) {
+      balanceScore = 92;
+    } else if (activePillars === 2 || activeHoldingsCount >= 2) {
+      balanceScore = 76;
+    } else {
+      balanceScore = 58;
+    }
+    if (m.livedMilestones?.usedLimitOrStop || condCount > 0) balanceScore = Math.min(100, balanceScore + 8);
+    if (snap.marginDebtTL > snap.totalNetWorthTL * 0.35) balanceScore = Math.max(15, balanceScore - 30);
 
-    // 3) Maliyet, Makas & Vergi Ustalığı
+    // 3) Maliyet, Makas & Vergi Ustalığı (0–100)
+    const realOrdersCount = (m.tradeHistory || []).filter((t) => t.side && t.side !== 'BAŞLANGIÇ').length;
     const frictionRatioPct = (snap.totalFrictionBurnedTL / Math.max(1, snap.baselineTL)) * 100;
-    const costScore = Math.max(20, Math.min(98, Math.round(96 - frictionRatioPct * 22)));
+    const localSolvedCount = Object.values(m.completedFieldCases || {}).filter((c) => c && c.isOptimal).length;
+    const solvedFieldCaseCount = localSolvedCount > 0 ? localSolvedCount : (Number(m.solvedCasesCount) || 0);
+    let costScore = 15 + Math.min(25, solvedFieldCaseCount * 3);
+    if (realOrdersCount > 0 || hasDeployed) {
+      costScore = Math.max(18, Math.min(98, Math.round(88 - frictionRatioPct * 24 + (snap.tranches.some((t) => t.stopajPct === 0) ? 8 : 0))));
+    }
 
-    // 4) Sabır & Soğukkanlılık
+    // 4) Sabır & Soğukkanlılık (0–100)
     const sellTrades = (m.tradeHistory || []).filter((t) => t.side === 'SATIŞ' || t.side === 'ERKEN BOZUM').length;
-    const panicCount = (m.footprints || []).filter((f) => f.code === 'PANIC_RED_DAY_SALE' || f.code === 'EARLY_DEPOSIT_BREAK').length;
-    const patienceScore = Math.max(20, Math.min(98, 92 - sellTrades * 4 - panicCount * 18));
+    const panicCount = (m.footprints || []).filter((f) => f.code === 'PANIC_RED_DAY_SALE' || f.code === 'EARLY_DEPOSIT_BREAK' || f.code === 'FOMO_HERD_BUY').length;
+    let patienceScore = 15 + Math.min(35, drillDoneCount * 10) + (m.livedMilestones?.waitedSettlementOrValor ? 18 : 0);
+    if (hasDeployed || realOrdersCount > 0) {
+      patienceScore = Math.max(18, Math.min(98, 72 + Math.min(22, drillDoneCount * 6) + (m.livedMilestones?.usedLimitOrStop ? 8 : 0) - sellTrades * 4 - panicCount * 18));
+    }
 
-    // 5) Araştırma vs Dedikodu Disiplini
+    // 5) Araştırma vs Dedikodu Disiplini (0–100)
     let resSum = 0, resCnt = 0, rumSum = 0, rumCnt = 0;
     for (const it of snap.spotItems) {
       if (it.thesisTag === 'RUMOR_IMPULSE') { rumSum += it.pnlNetPct; rumCnt++; }
@@ -3874,63 +4381,66 @@
     const thesisWrittenCount = Object.values(m.positions || {}).filter((p) => p.thesisNote && p.thesisNote.length >= 4).length;
     const localStudiedCount = Object.keys(m.studiedDisclosures || {}).length;
     const studiedCount = localStudiedCount > 0 ? localStudiedCount : (Number(m.studiedCount) || 0);
-    const localSolvedCount = Object.values(m.completedFieldCases || {}).filter((c) => c && c.isOptimal).length;
-    const solvedFieldCaseCount = localSolvedCount > 0 ? localSolvedCount : (Number(m.solvedCasesCount) || 0);
     const detectiveWins = Number(m.detectiveStats?.wins) || 0;
     const academyReadCount = Array.isArray(m.studiedAcademyIds) ? m.studiedAcademyIds.length : 0;
     const disciplineScore = Math.max(
-      25,
+      8,
       Math.min(
-        99,
-        72 +
-          thesisWrittenCount * 6 +
-          Math.min(10, studiedCount * 3) +
-          Math.min(12, solvedFieldCaseCount * 1.5) +
-          Math.min(8, detectiveWins * 1.5) +
-          Math.min(6, academyReadCount * 1.2) -
-          rumCnt * 14 +
-          (m.livedMilestones?.inspectedCashScale ? 5 : 0)
+        100,
+        Math.round(
+          10 +
+          Math.min(18, thesisWrittenCount * 6) +
+          Math.min(16, studiedCount * 4) +
+          Math.min(24, solvedFieldCaseCount * 2.5) +
+          Math.min(16, detectiveWins * 3) +
+          Math.min(16, academyReadCount * 2) +
+          Math.min(15, drillDoneCount * 5) +
+          (m.livedMilestones?.inspectedCashScale ? 6 : 0) -
+          rumCnt * 14
+        )
       )
     );
 
-    // 6) Enflasyon Kalkanı & Nakit Çarkı
-    let shieldScore = 60;
-    if (snap.allocationBreakdown.cashPct <= 25 && snap.monthlyPassiveIncomeTL > 0) shieldScore = 90;
-    else if (snap.allocationBreakdown.cashPct <= 40) shieldScore = 78;
-    else if (snap.allocationBreakdown.cashPct > 80) shieldScore = 38;
+    // 6) Enflasyon Kalkanı & Nakit Çarkı (0–100)
+    let shieldScore = 10;
+    if (snap.allocationBreakdown.cashPct <= 25 && snap.monthlyPassiveIncomeTL > 0) shieldScore = 94;
+    else if (snap.allocationBreakdown.cashPct <= 45 && (snap.monthlyPassiveIncomeTL > 0 || ab0.metalPct >= 15)) shieldScore = 80;
+    else if (snap.allocationBreakdown.cashPct <= 70) shieldScore = 62;
+    else if (snap.autoOvernightRepo) shieldScore = 44;
+    else if (queuedCapitalTL >= 100000) shieldScore = 36;
 
     const overallScore = Math.round(
-      qualityScore * 0.24 +
+      qualityScore * 0.22 +
       balanceScore * 0.18 +
       costScore * 0.16 +
-      patienceScore * 0.18 +
-      disciplineScore * 0.14 +
+      patienceScore * 0.16 +
+      disciplineScore * 0.18 +
       shieldScore * 0.10
     );
 
-    let rankTitle = 'Gözlemci Çırak';
-    if (overallScore >= 90 && solvedFieldCaseCount >= 6) rankTitle = 'Saha Görmüş Baş Stratejist';
-    else if (overallScore >= 85) rankTitle = 'Keskin Gözlü Kasa Ustası';
-    else if (overallScore >= 74) rankTitle = 'Soğukkanlı Stratejist';
-    else if (overallScore >= 62) rankTitle = 'Pazar Sezgisi Açık Yatırımcı';
+    let rankTitle = 'Yeni Başlayan · İlk Adım';
+    if (overallScore >= 88 && solvedFieldCaseCount >= 10 && drillDoneCount >= 2) rankTitle = 'Saha Görmüş Baş Stratejist';
+    else if (overallScore >= 76) rankTitle = 'Keskin Gözlü Kasa Ustası';
+    else if (overallScore >= 58) rankTitle = 'Soğukkanlı Stratejist';
+    else if (overallScore >= 36) rankTitle = 'Bilinçli Yatırımcı';
+    else if (overallScore >= 20) rankTitle = 'Pazar Sezgisi Açık Çırak';
 
     // Görmüş Geçirmiş Dostun Kişisel Yorumu
     let mentorVoice = '';
-    const queuedCapitalTL = (Number(snap.pendingOrderTL) || 0) + (Number(snap.ipoBlockedTL) || 0);
     if (queuedCapitalTL >= snap.totalNetWorthTL * 0.12 && snap.spotItems.length === 0 && snap.tranches.length === 0) {
-      mentorVoice = 'Emirlerin (' + Math.round(queuedCapitalTL).toLocaleString('tr-TR') + ' ₺) gerçek Borsa İstanbul açılış / TEFAS valör sırasına girdi dostum. Gerçek piyasada seans kapalıyken verilen emir sabah zilini bekler; kalan nakdini de acele etmeden farklı mevsim varlıklarıyla dengeleyebilirsin.';
+      mentorVoice = 'Emirlerin (' + Math.round(queuedCapitalTL).toLocaleString('tr-TR') + ' ₺) gerçek Borsa İstanbul açılış / TEFAS valör / limit sırasına girdi dostum. Gerçek piyasada sabırla doğru fiyattan beklemek acelenin panzehiridir; kalan nakdini de farklı mevsim varlıklarıyla dengeleyebilirsin.';
     } else if (snap.allocationBreakdown.cashPct > 85) {
-      mentorVoice = 'Paranın neredeyse tamamı hâlâ boş nakitte bekliyor dostum. Enflasyonun %' + getAnnualInflationPct().toFixed(1) + ' olduğu yerde hareketsiz beklemek de bir karardır ama her gün sessizce alım gücünden yer. Hiç değilse bir kısmını %0 stopajlı Kira Sertifikası veya sağlam kasalı gerçek varlıklarla çalıştırmaya başla.';
+      mentorVoice = 'Paranın neredeyse tamamı hâlâ boş nakitte bekliyor dostum. Enflasyonun %' + getAnnualInflationPct().toFixed(1) + ' olduğu yerde hareketsiz beklemek her gün sessizce alım gücünden yer. En azından otomatik gecelik nemayı aç veya ilk dengeli sepet adımını at.';
     } else if (snap.marginStatus?.isWarning) {
       mentorVoice = 'Sırtında ' + Math.round(snap.marginDebtTL).toLocaleString('tr-TR') + ' ₺ aracı kurum kredisi taşıyorsun ve her gece faiz işliyor. Borç parayla alınan mal, piyasa biraz sallandığında insanın uykusunu kaçırır ve en dipte zorla sattırır. Özsermayeni rahatlat.';
     } else if (snap.largestSingleSharePct >= 68) {
       mentorVoice = '1 milyon liranın %' + snap.largestSingleSharePct + ' kadarını tek bir sepete yüklemişsin. Haklı çıkarsan yüzün güler ama o tek dal kırılırsa içini cız ettirir; yanına farklı mevsimde çalışan bir denge ayağı ekle.';
     } else if (rumCnt > 0) {
       mentorVoice = 'Portföyünde bilanço bakmadan veya sert yükseliş heyecanıyla atladığın hamleler var. Ay sonunda kasa yalan söylemez: İşin mutfağını kurcalayarak aldıklarınla gaza gelip aldıklarının farkını aşağıda net göreceksin.';
-    } else if (overallScore >= 80) {
+    } else if (overallScore >= 76) {
       mentorVoice = 'Kurduğun denge sağlam görünüyor dostum: Hem nakit üreten kaliteli kasalar seçmişsin hem de gişe makaslarına yem olmamışsın. Şimdi en zor ama en kazançlı kısım başlıyor: Ekran başında her dakika kurcalamadan sabırla işine gücüne bakmak.';
     } else {
-      mentorVoice = 'Adımlarını atmaya başladın. Bir şirkete ortak olurken sadece hisse fiyatına değil, mahalle fırını gibi kasasına gerçek nakit girip girmediğine ve borç yüküne bakmayı alışkanlık haline getir.';
+      mentorVoice = 'Adımlarını atmaya başladın. Bir şirkete ortak olurken sadece hisse fiyatına değil, mahalle fırını gibi kasasına gerçek nakit girip girmediğine, Limit/Zarar Kes disiplinine ve 2026 vergi avantajlarına bakmayı alışkanlık haline getir.';
     }
 
     // Kendi Yoğurt Yiyişin — Hamlelerden Doğan Yatırımcı Karakter Arketipi
@@ -4000,6 +4510,8 @@
       studiedDisclosureCount: studiedCount,
       solvedFieldCaseCount,
       academyReadCount,
+      completedDrillCount: drillDoneCount,
+      drillAvgScore,
       detectiveStats: m.detectiveStats || { played: 0, wins: 0, streak: 0, bestStreak: 0 },
       axes: [
         { label: 'Kasa & Nakit Kalitesi', score: qualityScore },
@@ -4184,6 +4696,79 @@
     return Array.isArray(m?.customScreenerFilters) ? m.customScreenerFilters : [];
   }
 
+  function toggleWatchlistAsset(assetKey, targetPriceTL = 0, direction = 'BELOW', note = '') {
+    const m = getActiveMember();
+    const a = getAsset(assetKey);
+    if (!a) return { ok: false, reason: 'Varlık bulunamadı.' };
+    if (!Array.isArray(m.watchlist)) m.watchlist = [];
+    const idx = m.watchlist.findIndex((w) => w.assetKey === a.key);
+    if (idx >= 0 && !(Number(targetPriceTL) > 0)) {
+      m.watchlist.splice(idx, 1);
+      m.updatedAt = Date.now();
+      m.rev = (Number(m.rev) || 1) + 1;
+      saveState(true, false);
+      return { ok: true, watching: false, message: `${a.ticker} izleme listenden çıkarıldı.` };
+    }
+    const cleanTarget = Number(targetPriceTL) > 0
+      ? (a.subVenue === 'BIST_STOCK' ? snapToBistTick(Number(targetPriceTL)) : +Number(targetPriceTL).toFixed(4))
+      : 0;
+    const entry = {
+      assetKey: a.key,
+      ticker: a.ticker,
+      name: a.name,
+      targetPriceTL: cleanTarget,
+      direction: direction === 'ABOVE' ? 'ABOVE' : 'BELOW',
+      note: String(note || '').trim().slice(0, 100),
+      createdAtMs: Date.now(),
+      triggeredAtMs: 0,
+      triggeredPriceTL: 0
+    };
+    if (idx >= 0) m.watchlist[idx] = entry;
+    else m.watchlist.unshift(entry);
+    if (m.watchlist.length > 40) m.watchlist.length = 40;
+    m.updatedAt = Date.now();
+    m.rev = (Number(m.rev) || 1) + 1;
+    saveState(true, false);
+    return {
+      ok: true,
+      watching: true,
+      entry,
+      message: cleanTarget > 0
+        ? `${a.ticker} için ${cleanTarget.toLocaleString('tr-TR')} ₺ fiyat alarmı kuruldu.`
+        : `${a.ticker} izleme listene eklendi.`
+    };
+  }
+
+  function dismissWatchlistAlert(assetKey) {
+    const m = getActiveMember();
+    const item = (m.watchlist || []).find((w) => w.assetKey === assetKey);
+    if (!item) return { ok: false };
+    item.triggeredAtMs = 0;
+    item.targetPriceTL = 0;
+    m.updatedAt = Date.now();
+    saveState(true, false);
+    return { ok: true };
+  }
+
+  function recordDrillCompletion(drillId, scorePct, finalCapitalTL) {
+    const m = getActiveMember();
+    if (!drillId) return { ok: false };
+    if (!m.completedDrills || typeof m.completedDrills !== 'object') m.completedDrills = {};
+    const cleanScore = Math.max(0, Math.min(100, Math.round(Number(scorePct) || 0)));
+    const prev = m.completedDrills[drillId];
+    m.completedDrills[drillId] = {
+      scorePct: Math.max(cleanScore, Number(prev?.scorePct) || 0),
+      lastScorePct: cleanScore,
+      finalCapitalTL: Math.round(Number(finalCapitalTL) || 1000000),
+      plays: (Number(prev?.plays) || 0) + 1,
+      ts: Date.now()
+    };
+    m.updatedAt = Date.now();
+    m.rev = (Number(m.rev) || 1) + 1;
+    saveState(true, true);
+    return { ok: true, record: m.completedDrills[drillId] };
+  }
+
   function checkConcentrationFootprint(member) {
     const snap = evaluateMemberPortfolio(member);
     if (snap.largestSingleSharePct >= 68 && snap.spotItems.length > 0) {
@@ -4262,6 +4847,7 @@
     target.rateTranches = [];
     target.settlementQueue = [];
     target.pendingOrders = [];
+    target.conditionalOrders = [];
     target.ipoRequests = [];
     target.creditedDividends = {};
     target.tradeHistory = [{
@@ -5372,10 +5958,19 @@
     recordFieldCaseAttempt,
     recordDetectiveAttempt,
     recordDailyChallenge,
+    recordDrillCompletion,
+    toggleWatchlistAsset,
+    dismissWatchlistAlert,
     computeGvk80Simulation,
     computeProgressiveGvk80Tax2026,
     computeEurobondTax2026,
+    computeDividendTax2026,
+    computeBes2026Simulation,
     TR_EUROBOND_COUPON_LIMIT_2026,
+    TR_DIVIDEND_DECLARE_LIMIT_2026,
+    TR_BES_STATE_RATE_2026,
+    TR_BES_ANNUAL_CAP_CONTRIB_2026,
+    TR_BES_MAX_STATE_CONTRIB_2026,
     toggleAcademyModuleStudied,
     saveCustomScreenerFilters,
     getCustomScreenerFilters,

@@ -1,8 +1,8 @@
 // ============================================================================
-// AETHER v18.0.0 — HERKESİN (YAŞLI NİNENİN BİLE) KULLANABİLECEĞİ MODERN VE
-// 100/100 UZMANLIK DERİNLİKLİ GERÇEK TÜRKİYE YATIRIM MEYDANI UYGULAMASI
-// Ana Sayfa Kokpiti · Sesli Dost Anlatımı · Canlı Sepet Terazisi · Aa+ Rahat
-// Okuma · 7 Canlı İnteraktif Laboratuvar · 40 Saha Vakası · 20 Akademi Modülü
+// AETHER v19.0.0 — HERKESİN ANLAYABİLECEĞİ MODERN, FERAH VE 100/100
+// UZMANLIK DERİNLİKLİ GERÇEK 2026 TÜRKİYE YATIRIM MEYDANI UYGULAMASI
+// Limit/Stop/Kâr Al · 5 Kademe Tahta · 5 Soruda Röntgen · 6 Çok Aşamalı Tatbikat
+// 9 Canlı Laboratuvar (2026 Vergi & BES) · 48 Saha Vakası · 24 Akademi Modülü · 84 Terim
 // ============================================================================
 (function (global) {
   'use strict';
@@ -37,7 +37,7 @@
   let compassSubTab = 'BRIEF'; // BRIEF | CHAINS | CRISIS | KITCHEN_CAL
   let walletSubTab = 'HOLDINGS'; // HOLDINGS | QUEUES | LEDGER (geriye uyumluluk)
   let masterySubTab = 'MIRROR'; // MIRROR | LABS | CASES | MANUAL
-  let labToolId = 'DETECTIVE'; // DETECTIVE | BAKERY | BREAKEVEN | GVK80 | BASKET | FREEDOM
+  let labToolId = 'DRILL'; // DRILL | DETECTIVE | BAKERY | KAP_READER | BREAKEVEN | GVK80 | BES2026 | BASKET | FREEDOM
   let marketViewMode = 'LIST'; // LIST | BENTO
   let marketSortBy = 'DEFAULT'; // DEFAULT | FORENSIC_SCORE | CHANGE_DESC | CHANGE_ASC | DISCOUNT_52W
   let marketShowProTools = false;
@@ -57,6 +57,28 @@
   let detectiveSeed = (Math.floor(Date.now() / 1000) % 89999) + 101;
   let detectivePickedSide = null; // null | 'LEFT' | 'RIGHT'
   let dailyPickedChoiceId = null;
+  let activeDrillId = 'drill_tcmb_thursday';
+  let drillStageIdx = 0;
+  let drillCapitalTL = 1000000;
+  let drillScore = 0;
+  let drillPickedChoice = null;
+  let drillHistory = [];
+  let labTaxSub = 'GVK80'; // GVK80 | DIVIDEND | EUROBOND
+  let labDivGrossTL = 850000;
+  let labEbCouponTL = 420000;
+  let labBesMonthlyTL = 15000;
+  let labBesYears = 10;
+  let labBesStartAge = 35;
+  let labBesRealPct = 10;
+  let compassNewsVisible = 5;
+  let compassNewsFilter = 'ALL';
+  let casesVisibleLimit = 10;
+  let academyStageFilter = 'ALL';
+  let homeBasketOpen = false;
+  let homeDailyOpen = false;
+  let drawerBuyMode = 'MARKET'; // MARKET | LIMIT
+  let drawerSellMode = 'MARKET'; // MARKET | STOP_LOSS | TAKE_PROFIT
+  let draftTriggerPriceTL = 0;
   let fwMonthlyAddTL = 15000;
   let fwRealReturnPct = 10;
   let fwMonthlyExpTL = 45000;
@@ -198,13 +220,7 @@
     toast(text, tone = 'info', onTap = null) {
       const el = document.getElementById('aeIslandToast');
       if (!el || !text) return;
-      try {
-        const hdr = document.getElementById('msHeader');
-        if (hdr) {
-          const hb = hdr.getBoundingClientRect().bottom;
-          if (hb > 20) el.style.top = `${Math.round(hb + 8)}px`;
-        }
-      } catch (_) {}
+      el.style.top = 'auto';
       const dotColor = tone === 'ok' ? '#10b981' : (tone === 'err' ? '#f43f5e' : '#fbbf24');
       el.innerHTML = `<span class="ae-island-dot" style="background:${dotColor};box-shadow:0 0 10px ${dotColor}"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80vw">${esc(text)}</span>`;
       el.onclick = () => {
@@ -330,6 +346,10 @@
 
   function fmtTL(n) {
     return TR_INT.format(Math.round(Number(n) || 0)) + ' ₺';
+  }
+
+  function fmtInt(n) {
+    return TR_INT.format(Math.round(Number(n) || 0));
   }
 
   function fmtCompactTL(n) {
@@ -527,7 +547,7 @@
   }
 
   // --------------------------------------------------------------------------
-  // 2.5 HER YERDEN TEK DOKUNUŞ TERİM AÇIKLAYICI KATMANI ("YAŞLI NİNE" DOSTU)
+  // 2.5 HER YERDEN TEK DOKUNUŞ TERİM AÇIKLAYICI KATMANI (10 SANİYEDE NET ÖZET)
   // --------------------------------------------------------------------------
   function closeTermPopover() {
     AetherNative.stopSpeak();
@@ -761,7 +781,10 @@
         (a.bistRow?.sector || a.sector || '').toLocaleUpperCase('tr-TR').includes(q)
       );
     } else if (activeCategory !== 'ALL') {
-      if (activeCategory === 'SAFE_HAVEN') {
+      if (activeCategory === 'WATCHLIST') {
+        const wList = K.getActiveMember()?.watchlist || [];
+        list = wList.map((w) => K.getAsset(w.assetKey)).filter(Boolean);
+      } else if (activeCategory === 'SAFE_HAVEN') {
         const safeIds = ['gram-altin-spot', 'kira-sertifikasi-sukuk', 'para-piyasasi-fonu', 'mevduat-ust', 'dibs-tahvil', 'doviz-usd', 'doviz-eur', 'gram-gumus-spot'];
         list = safeIds.map((k) => K.getAsset(k)).filter(Boolean);
       } else if (activeCategory === 'GOLD_FX') {
@@ -1083,7 +1106,7 @@
     return `
       <div class="ae-asset-list-v17">
         ${assets.map((a) => {
-          const gv = G.getGrandmaVerdict ? G.getGrandmaVerdict(a, 100000) : null;
+          const gv = G.getPlainAssetVerdict ? G.getPlainAssetVerdict(a, 100000) : null;
           const sig = G.getCardQuickSignal(a);
           const fScore = G.getQuickForensicScore ? G.getQuickForensicScore(a) : 0;
           const micro = K.inspectBoardMicrostructure(a);
@@ -1091,6 +1114,7 @@
           const heldSpot = snap.spotItems.find((x) => x.assetKey === a.key);
           const heldTr = snap.tranches.find((t) => t.assetKey === a.key);
           const isOwned = Boolean(heldSpot || heldTr);
+          const isWatched = Boolean((K.getActiveMember()?.watchlist || []).some((w) => w.assetKey === a.key));
           const flash = K.getPriceFlash(a.key);
 
           const priceLabel = a.isRateInstrument
@@ -1117,6 +1141,7 @@
                 <div class="ae-row-top">
                   <span class="ae-traffic-dot ${esc(traffic)}" title="${esc(gv?.simpleLabel || '')}"></span>
                   <span class="ae-ticker-badge">${esc(a.ticker)}</span>
+                  ${isWatched ? `<span style="color:var(--gold-bright);font-size:12px" title="İzleme Listende">★</span>` : ''}
                   ${isOwned ? `<span class="ae-owned-tag">Bende: ${esc(ownedVal)}</span>` : (fScore > 0 ? `<span class="ae-fscore-tag ${fScore >= 76 ? 'good' : (fScore >= 52 ? 'mid' : 'low')}">${fScore}/100</span>` : '')}
                   ${microBadge}
                 </div>
@@ -1169,9 +1194,14 @@
   // --------------------------------------------------------------------------
   // 4A. SEKME 1: ANA SAYFA (1M KOKPİT, 4 KOLAY KAPI, DOST SOHBETİ, CÜZDAN & GÜNLÜK SORU)
   // --------------------------------------------------------------------------
-  function buildHomeBasketLiveHtml(hb) {
+  function buildHomeBasketLiveHtml(hb, snap) {
     const K = global.AetherKernelV10;
+    const G = global.RealInvestmentGuide;
     if (!hb || !K) return '';
+    const drift = (snap && G?.computePortfolioDriftPlan)
+      ? G.computePortfolioDriftPlan(snap, { sukukPct: hb.wSukuk, goldPct: hb.wGold, equityPct: hb.wEquity })
+      : null;
+
     return `
       <div class="ae-kpi-2x2" style="margin-bottom:10px">
         <div class="ms-kpi-box" style="border-color:rgba(16,185,129,0.42)">
@@ -1195,6 +1225,31 @@
           <small>Hazır nakit: %${hb.wCash}</small>
         </div>
       </div>
+
+      ${drift ? `
+        <div style="background:var(--surface-2);border:1px solid var(--line-subtle);border-radius:13px;padding:10px 12px;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:7px;flex-wrap:wrap">
+            <strong style="font-size:12.6px;color:var(--gold-bright)">⚖️ Mevcut Portföyün vs Bu Hedef Plan</strong>
+            <span class="ms-sig-pill ${drift.needsRebalance ? 'warn' : 'good'}">${drift.needsRebalance ? `En fazla %${Math.round(drift.maxAbsDriftPct)} sapma` : 'Dengede'}</span>
+          </div>
+          <div style="display:grid;gap:5px">
+            ${drift.rows.map((dr) => `
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:11.8px">
+                <span style="min-width:0;color:var(--ink-200)">${dr.icon} ${esc(dr.label)}</span>
+                <span style="flex-shrink:0;font-weight:800" class="${Math.abs(dr.deltaPct) >= 10 ? (dr.deltaTL > 0 ? 'warn-txt' : 'pos') : ''}">
+                  %${Math.round(dr.curPct)} → %${dr.targetPct} ${dr.id !== 'CASH' && dr.deltaTL >= 15000 ? `(+${fmtCompactTL(dr.deltaTL)} eksik)` : ''}
+                </span>
+              </div>
+            `).join('')}
+          </div>
+          ${drift.nextAction ? `
+            <button type="button" class="ms-btn primary sm" style="width:100%;margin-top:9px" data-open-asset="${esc(drift.nextAction.actionKey)}" data-prefill-amt="${Math.min(Math.max(10000, drift.nextAction.deltaTL), Math.max(10000, Math.floor(snap?.cashTL || drift.nextAction.deltaTL)))}">
+              🎯 Eksik Ayağı Tamamla: ${esc(drift.nextAction.actionTicker)} (${fmtCompactTL(drift.nextAction.deltaTL)}) ›
+            </button>
+          ` : ''}
+        </div>
+      ` : ''}
+
       <div class="ms-alert ${hb.comfortTone === 'good' ? 'ok' : 'info'}" style="margin-bottom:10px">
         <strong>🧭 Dostun Terazi Yorumu:</strong> ${esc(hb.mentorAdvice)}
       </div>
@@ -1227,16 +1282,20 @@
     const repoNetAnnual = K.getOvernightRepoNetAnnualPct();
     const dailyPassive = Math.round(snap.monthlyPassiveIncomeTL / 30);
     const freedomPct = Math.min(100, Math.round(snap.passiveCoveragePct));
-    const queueCount = (member.settlementQueue || []).length + (member.pendingOrders || []).length + (member.ipoRequests || []).length;
+    const condOrders = Array.isArray(member.conditionalOrders) ? member.conditionalOrders : [];
+    const watchItems = Array.isArray(member.watchlist) ? member.watchlist : [];
+    const triggeredAlerts = watchItems.filter((w) => w.triggeredAtMs > 0);
+    const queueCount = (member.settlementQueue || []).length + (member.pendingOrders || []).length + condOrders.length + (member.ipoRequests || []).length;
     const holdingsCount = snap.spotItems.length + snap.tranches.length;
     const investedOrPendingTL = Math.max(0, Math.round(snap.totalNetWorthTL - snap.cashTL));
     const firstPendingBuy = (member.pendingOrders || []).find((o) => o.side === 'BUY' && (o.reservedTL || 0) >= 10000);
     const showInstallBanner = !isRunningAsInstalledApp();
 
     const step1Done = Boolean(member.livedMilestones?.inspectedCashScale);
-    const step2Done = Boolean(member.livedMilestones?.executedRealOrder || holdingsCount > 0 || (member.pendingOrders || []).length > 0);
-    const step3Done = Object.keys(member.completedFieldCases || {}).length > 0 || (member.detectiveStats?.played || 0) > 0;
-    const showStarterFlow = !starterGuideDismissed && !(step1Done && step2Done && step3Done);
+    const step2Done = Boolean(member.livedMilestones?.executedRealOrder || holdingsCount > 0 || (member.pendingOrders || []).length > 0 || condOrders.length > 0);
+    const step3Done = Object.keys(member.completedFieldCases || {}).length > 0 || (member.detectiveStats?.played || 0) > 0 || Object.keys(member.completedDrills || {}).length > 0;
+    const stepsDoneCount = [step1Done, step2Done, step3Done].filter(Boolean).length;
+    const showStarterFlow = !starterGuideDismissed && stepsDoneCount < 3;
 
     let subBodyHtml = '';
 
@@ -1246,45 +1305,46 @@
       const attempt = cs ? (member.completedFieldCases?.[cs.id] || (dailyPickedChoiceId ? { choiceId: dailyPickedChoiceId, isOptimal: cs.choices.find((x) => x.id === dailyPickedChoiceId)?.isOptimal } : null)) : null;
       const pickedObj = (cs && attempt) ? cs.choices.find((x) => x.id === attempt.choiceId) : null;
       const optimalObj = cs ? cs.choices.find((x) => x.isOptimal) : null;
+      const hbPreview = G.simulateBalancedBasketBuilder ? G.simulateBalancedBasketBuilder({
+        capitalTL: Math.max(100000, Math.round(snap.totalNetWorthTL || 1000000)),
+        sukukPct: hbSukukPct,
+        goldPct: hbGoldPct,
+        equityPct: hbEquityPct
+      }) : null;
+      const driftPreview = (hbPreview && G.computePortfolioDriftPlan)
+        ? G.computePortfolioDriftPlan(snap, { sukukPct: hbSukukPct, goldPct: hbGoldPct, equityPct: hbEquityPct })
+        : null;
+
+      const nextStepLabel = !step1Done
+        ? '1. Adım: TUPRS fırın kasasını ve 5 Soruda Röntgenini incele'
+        : (!step2Done
+          ? '2. Adım: İlk gerçek yatırım veya Limit Alım kararını ver'
+          : '3. Adım: Canlı Piyasa Karar Tatbikatı veya Kasa Dedektifi çöz');
+      const nextStepBtnId = !step1Done ? 'aeStep1GoBtn' : (!step2Done ? 'aeStep2GoBtn' : 'aeStep3GoBtn');
+      const nextStepBtnTxt = !step1Done ? 'İncele ›' : (!step2Done ? 'Yatırım Yap ›' : 'Başla ›');
 
       subBodyHtml = `
-        <!-- İLK 5 DAKİKA REHBERLİ BAŞLANGIÇ (YALNIZCA 3 ADIM TAMAMLANANA KADAR) -->
+        <!-- KOMPAKT 3 ADIMLI BAŞLANGIÇ ÇUBUĞU (EKRANI BOĞMAZ!) -->
         ${showStarterFlow ? `
-          <section class="ae-card" style="border-color:rgba(240,180,41,0.38)">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px">
-              <div>
-                <span class="ms-sig-pill warn">🌱 İlk 5 Dakika Yol Haritan</span>
-                <h3 style="margin:5px 0 0;font-size:15.8px;font-weight:900">Hiç Bilmeyen Biri Bile 3 Adımda Başlar</h3>
+          <section class="ae-card" style="border-color:rgba(240,180,41,0.36);padding:13px 14px">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:7px">
+              <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+                <span class="ms-sig-pill warn">🌱 İlk 5 Dakika (${stepsDoneCount}/3)</span>
+                <strong style="font-size:13.8px">3 Adımda Gerçek Piyasayı Tanı</strong>
               </div>
-              <button type="button" class="ae-clear-btn" id="aeDismissStarterHomeBtn" style="position:static;transform:none;width:28px;height:28px" aria-label="Kapat">×</button>
+              <button type="button" class="ae-clear-btn" id="aeDismissStarterHomeBtn" style="position:static;transform:none;width:26px;height:26px" aria-label="Kapat">×</button>
             </div>
-            <div style="display:grid;gap:8px">
-              <div class="ae-step-row ${step1Done ? 'done' : ''}">
-                <div style="min-width:0;flex:1">
-                  <strong style="font-size:13.8px;display:block">${step1Done ? '✅' : '1️⃣'} Bir şirketin "Mahalle Fırını" kasasına bak</strong>
-                  <span style="font-size:12.2px;color:var(--ink-400)">100.000 ₺ ortaklığa günde kaç TL nakit üretiyor gör.</span>
-                </div>
-                <button type="button" class="ms-btn ${step1Done ? '' : 'primary'} sm" id="aeStep1GoBtn">İncele</button>
-              </div>
-              <div class="ae-step-row ${step2Done ? 'done' : ''}">
-                <div style="min-width:0;flex:1">
-                  <strong style="font-size:13.8px;display:block">${step2Done ? '✅' : '2️⃣'} İlk küçük ama gerçek yatırım kararını ver</strong>
-                  <span style="font-size:12.2px;color:var(--ink-400)">Altın, %0 Vergili Sukuk veya sağlam bir hisse seç.</span>
-                </div>
-                <button type="button" class="ms-btn ${step2Done ? '' : 'primary'} sm" id="aeStep2GoBtn">Yatırım Yap</button>
-              </div>
-              <div class="ae-step-row ${step3Done ? 'done' : ''}">
-                <div style="min-width:0;flex:1">
-                  <strong style="font-size:13.8px;display:block">${step3Done ? '✅' : '3️⃣'} 1 dakikalık Kasa Dedektifi veya Saha Vakası çöz</strong>
-                  <span style="font-size:12.2px;color:var(--ink-400)">Gerçek piyasa tuzaklarını para kaybetmeden tanı.</span>
-                </div>
-                <button type="button" class="ms-btn ${step3Done ? '' : 'primary'} sm" id="aeStep3GoBtn">Dene</button>
-              </div>
+            <div class="ms-bar-track" style="height:6px;margin-bottom:9px">
+              <div class="ms-bar-fill green" style="width:${Math.round((stepsDoneCount / 3) * 100)}%"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+              <span style="font-size:12.6px;color:var(--ink-200);flex:1;min-width:170px">${esc(nextStepLabel)}</span>
+              <button type="button" class="ms-btn primary sm" id="${nextStepBtnId}">${nextStepBtnTxt}</button>
             </div>
           </section>
         ` : ''}
 
-        <!-- 1. "NE YAPMAK İSTİYORSUN?" — 4 DEV, HERKESİN ANLAYACAĞI KAPI -->
+        <!-- 1. "NE YAPMAK İSTİYORSUN?" — 4 HEDEF ODALI KAPI -->
         <div class="ae-section-title">
           <h2>Ne Yapmak İstiyorsun?</h2>
           <span style="font-size:12px;color:var(--ink-400);font-weight:700">1 dokunuşla başla</span>
@@ -1312,7 +1372,7 @@
           </button>
         </div>
 
-        <!-- 2. BUGÜNÜN 4 ANA PİYASA FİYATI (FERAH & BÜYÜK) -->
+        <!-- 2. BUGÜNÜN 4 ANA PİYASA NABZI -->
         ${homeBrief ? `
           <div class="ae-section-title">
             <h2>Canlı Piyasa Nabzı</h2>
@@ -1333,11 +1393,11 @@
             }).join('')}
           </div>
 
-          <!-- 3. GÖRMÜŞ GEÇİRMİŞ DOSTUN BUGÜNKÜ 30 SANİYELİK SOHBETİ -->
+          <!-- 3. DOSTUN BUGÜNKÜ 30 SANİYELİK ÖZETİ -->
           <div class="ae-section-title">
             <h2>Dostun Bugünkü Özeti</h2>
             <div style="display:flex;align-items:center;gap:6px">
-              ${AetherNative.canSpeak() ? `<button type="button" class="ae-term-pill" id="aeSpeakHomeBriefBtn" style="padding:4px 10px;font-size:11.6px">🔊 Sesli Dinle</button>` : `<span style="font-size:12px;color:var(--gold-bright);font-weight:800">Sade Türkçe</span>`}
+              ${AetherNative.canSpeak() ? `<button type="button" class="ae-term-pill" id="aeSpeakHomeBriefBtn" style="padding:4px 10px;font-size:11.6px">🔊 Sesli Dinle</button>` : `<span style="font-size:12px;color:var(--gold-bright);font-weight:800">Canlı Analiz</span>`}
             </div>
           </div>
           <div class="ae-brief-stack">
@@ -1349,107 +1409,113 @@
             `).join('')}
           </div>
 
-          <!-- HERKES İÇİN 10 SANİYELİK TERİM KISAYOLLARI -->
+          <!-- 10 SANİYELİK TERİM KISAYOLLARI -->
           <div style="margin-bottom:14px">
-            <div style="font-size:12.4px;font-weight:800;color:var(--ink-400);margin:0 2px 6px">💡 Bilmediğin kelimeye dokun, dost 10 saniyede anlatsın:</div>
+            <div style="font-size:12.2px;font-weight:800;color:var(--ink-400);margin:0 2px 6px">💡 Merak ettiğin terime dokun, 10 saniyede net özetini gör:</div>
             <div class="ae-hscroll">
               <button type="button" class="ae-term-pill" data-explain-term="Stopaj">Stopaj nedir?</button>
+              <button type="button" class="ae-term-pill" data-explain-term="Limit Emir">Limit Emir nedir?</button>
               <button type="button" class="ae-term-pill" data-explain-term="Hava Parası">Hava Parası nedir?</button>
               <button type="button" class="ae-term-pill" data-explain-term="T+2 Takas">T+2 Takas nedir?</button>
-              <button type="button" class="ae-term-pill" data-explain-term="TEFAS 13:30 Valörü">Valör nedir?</button>
               <button type="button" class="ae-term-pill" data-explain-term="Kamu Kira Sertifikası">Sukuk nedir?</button>
-              <button type="button" class="ae-term-pill" data-explain-term="Makas">Gece Makası nedir?</button>
+              <button type="button" class="ae-term-pill" data-explain-term="BES %20 Devlet Katkısı">2026 BES nedir?</button>
               <button type="button" class="ae-term-pill" data-explain-term="Eurobond">Eurobond nedir?</button>
-              <button type="button" class="ae-term-pill" data-explain-term="Enflasyon">Enflasyon nedir?</button>
+              <button type="button" class="ae-term-pill" data-explain-term="Zarar Kes">Zarar Kes nedir?</button>
             </div>
           </div>
 
-          <!-- 3.5 1 MİLYON ₺ CANLI SEPET TERAZİSİ (YAŞLI NİNE DOSTU & KENDİ YOĞURT YİYİŞİN) -->
-          ${G.simulateBalancedBasketBuilder ? (() => {
-            const hb = G.simulateBalancedBasketBuilder({
-              capitalTL: Math.max(100000, Math.round(snap.totalNetWorthTL || 1000000)),
-              sukukPct: hbSukukPct,
-              goldPct: hbGoldPct,
-              equityPct: hbEquityPct
-            });
-            return `
-              <section class="ae-card" style="border-color:rgba(240,180,41,0.34)">
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
-                  <span class="ms-sig-pill warn">🧺 Kendi Sepet Terazini Kur</span>
-                  <span style="font-size:11.8px;color:var(--ink-400);font-weight:700">Ezber yok, kendi dengen</span>
+          <!-- 4. AÇILIR-KAPANIR 1M SEPET PLANLAYICI & DENGE KAYMASI KOÇU (FERAH ANA SAYFA!) -->
+          ${hbPreview ? `
+            <details class="ae-home-acc" id="aeHomeBasketDetails" ${homeBasketOpen ? 'open' : ''} style="border-color:rgba(240,180,41,0.34)">
+              <summary>
+                <div style="min-width:0;flex:1">
+                  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px">
+                    <span class="ms-sig-pill warn">🧺 Sepet Planlayıcı & Denge Koçu</span>
+                    ${driftPreview ? `<span class="ms-sig-pill ${driftPreview.needsRebalance ? 'info' : 'good'}">${driftPreview.needsRebalance ? `Hedefe %${Math.round(driftPreview.maxAbsDriftPct)} fark` : 'Planla Uyumlu'}</span>` : ''}
+                  </div>
+                  <strong style="font-size:14.8px;display:block">1 Milyon ₺’yi Nasıl Bölersen Ne Kazanırsın?</strong>
+                  <span style="font-size:12px;color:var(--ink-400)">Tahmini +${fmtTL(hbPreview.monthlyCashDripTL)}/ay gelir · Aç ve portföyünle kıyasla</span>
                 </div>
-                <h3 style="margin:0 0 5px;font-size:16px;font-weight:900">1 Milyon ₺’yi Nasıl Bölersen Ne Kazanırsın?</h3>
-                <p style="margin:0 0 10px;font-size:12.8px;color:var(--ink-200);line-height:1.45">Hazır dengelerden birine dokun veya kolları kaydır; hem aylık gelirini hem de fırtına dayanıklılığını anında gör:</p>
-
+                <span style="color:var(--gold-bright);font-weight:900;font-size:14px">▾</span>
+              </summary>
+              <div class="ae-home-acc-body">
                 <div class="ae-hscroll" style="margin-bottom:10px">
-                  <button type="button" class="ae-chip ${hbPresetId === 'GRANDMA_SHIELD' ? 'active' : ''}" data-hb-preset="GRANDMA_SHIELD">🛡️ Huzurlu Kalkan</button>
+                  <button type="button" class="ae-chip ${hbPresetId === 'CALM_SHIELD' ? 'active' : ''}" data-hb-preset="CALM_SHIELD">🛡️ Huzurlu Kalkan</button>
                   <button type="button" class="ae-chip ${hbPresetId === 'FOUR_SEASON' ? 'active' : ''}" data-hb-preset="FOUR_SEASON">⚖️ 4 Mevsim Denge</button>
                   <button type="button" class="ae-chip ${hbPresetId === 'MONTHLY_INCOME' ? 'active' : ''}" data-hb-preset="MONTHLY_INCOME">💧 Aylık Maaş Çarkı</button>
                   <button type="button" class="ae-chip ${hbPresetId === 'GROWTH_FACTORY' ? 'active' : ''}" data-hb-preset="GROWTH_FACTORY">🏭 Üretim & Büyüme</button>
                 </div>
 
                 <div class="ae-lab-slider-row">
-                  <div class="ae-lab-slider-head"><span>🛡️ %0 Vergili Sabit Gelir (Sukuk)</span><strong id="aeHbSukukLbl">%${hb.wSukuk}</strong></div>
-                  <input type="range" class="ae-slider" id="aeHbSukukSl" min="0" max="80" step="5" value="${hb.wSukuk}" />
+                  <div class="ae-lab-slider-head"><span>🛡️ %0 Vergili Sabit Gelir (Sukuk)</span><strong id="aeHbSukukLbl">%${hbPreview.wSukuk}</strong></div>
+                  <input type="range" class="ae-slider" id="aeHbSukukSl" min="0" max="80" step="5" value="${hbPreview.wSukuk}" />
                 </div>
                 <div class="ae-lab-slider-row">
-                  <div class="ae-lab-slider-head"><span>🪙 Altın & Döviz Zırhı</span><strong id="aeHbGoldLbl">%${hb.wGold}</strong></div>
-                  <input type="range" class="ae-slider" id="aeHbGoldSl" min="0" max="75" step="5" value="${hb.wGold}" />
+                  <div class="ae-lab-slider-head"><span>🪙 Altın & Döviz Zırhı</span><strong id="aeHbGoldLbl">%${hbPreview.wGold}</strong></div>
+                  <input type="range" class="ae-slider" id="aeHbGoldSl" min="0" max="75" step="5" value="${hbPreview.wGold}" />
                 </div>
                 <div class="ae-lab-slider-row">
-                  <div class="ae-lab-slider-head"><span>🥖 Sağlam Şirket & Fon</span><strong id="aeHbEqLbl">%${hb.wEquity}</strong></div>
-                  <input type="range" class="ae-slider" id="aeHbEqSl" min="0" max="80" step="5" value="${hb.wEquity}" />
+                  <div class="ae-lab-slider-head"><span>🥖 Sağlam Şirket & Fon</span><strong id="aeHbEqLbl">%${hbPreview.wEquity}</strong></div>
+                  <input type="range" class="ae-slider" id="aeHbEqSl" min="0" max="80" step="5" value="${hbPreview.wEquity}" />
                 </div>
 
                 <div id="aeHomeBasketLiveOut">
-                  ${buildHomeBasketLiveHtml(hb)}
+                  ${buildHomeBasketLiveHtml(hbPreview, snap)}
                 </div>
-              </section>
-            `;
-          })() : ''}
+              </div>
+            </details>
+          ` : ''}
         ` : ''}
 
-        <!-- 4. GÜNÜN 1 DAKİKALIK USTA SORUSU -->
+        <!-- 5. AÇILIR-KAPANIR GÜNÜN 1 DAKİKALIK USTA SORUSU -->
         ${cs ? `
-          <section class="ae-card" style="border-color:rgba(56,189,248,0.35)">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-              <span class="ms-sig-pill info">🎯 Günün 1 Dakikalık Usta Sorusu</span>
-              <span class="ms-sig-pill warn">🔥 Seri: ${dcLog.streak} Gün · ${esc(cs.difficulty || 'Temel')}</span>
-            </div>
-            <h3 style="margin:0 0 7px;font-size:15.5px;font-weight:900;line-height:1.34">${esc(cs.title)}</h3>
-            <p style="margin:0 0 8px;font-size:13.4px;color:var(--ink-200);line-height:1.5">${esc(cs.situation)}</p>
-            <div style="font-size:13.4px;font-weight:800;color:var(--gold-bright);margin-bottom:4px">❓ ${esc(cs.question)}</div>
-            <div class="ae-choice-stack">
-              ${cs.choices.map((ch) => {
-                const isPicked = attempt && attempt.choiceId === ch.id;
-                const cls = isPicked ? (ch.isOptimal ? 'picked-right' : 'picked-wrong') : '';
-                return `
-                  <button type="button" class="ae-choice-btn ${cls}" data-daily-case="${esc(cs.id)}" data-daily-choice="${esc(ch.id)}" data-daily-opt="${ch.isOptimal ? '1' : '0'}">
-                    <span class="ae-choice-key">${esc(ch.id)}</span>
-                    <span>${esc(ch.label)}</span>
-                  </button>
-                `;
-              }).join('')}
-            </div>
-            ${attempt ? `
-              <div class="ms-alert ${attempt.isOptimal ? 'ok' : 'warn'}" style="margin-top:10px;margin-bottom:8px">
-                ${pickedObj?.why ? `<div style="margin-bottom:6px"><strong>${attempt.isOptimal ? '🎯 Aferin! Doğru Okudun:' : '💡 Dikkat — Neden Bu Tuzaktı:'}</strong> ${esc(pickedObj.why)}</div>` : ''}
-                ${!attempt.isOptimal && optimalObj?.why ? `<div style="margin-bottom:6px;color:var(--green-ink)"><strong>✓ En Sağlam Karar (${optimalObj.id}):</strong> ${esc(optimalObj.why)}</div>` : ''}
-                <div><strong>Gerçek Hayat Sonucu:</strong> ${esc(cs.consequence100k)}</div>
+          <details class="ae-home-acc" id="aeHomeDailyDetails" ${homeDailyOpen || attempt ? 'open' : ''} style="border-color:rgba(56,189,248,0.35)">
+            <summary>
+              <div style="min-width:0;flex:1">
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px">
+                  <span class="ms-sig-pill info">🎯 Günün 1 Dakikalık Sorusu</span>
+                  <span class="ms-sig-pill warn">🔥 Seri: ${dcLog.streak} Gün</span>
+                  ${attempt ? `<span class="ms-sig-pill ${attempt.isOptimal ? 'good' : 'warn'}">${attempt.isOptimal ? '✓ Çözüldü' : '↻ İncelendi'}</span>` : ''}
+                </div>
+                <strong style="font-size:14.4px;display:block;line-height:1.3">${esc(cs.title)}</strong>
               </div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button type="button" class="ms-btn primary sm" id="aeGoMoreCasesBtn">Diğer 39 Vakaya Geç ›</button>
-                <button type="button" class="ms-btn sm" id="aeGoLabsFromHomeBtn">🧪 Laboratuvara Gir</button>
+              <span style="color:var(--cyan);font-weight:900;font-size:14px">▾</span>
+            </summary>
+            <div class="ae-home-acc-body">
+              <p style="margin:0 0 8px;font-size:13.2px;color:var(--ink-200);line-height:1.5">${esc(cs.situation)}</p>
+              <div style="font-size:13.2px;font-weight:800;color:var(--gold-bright);margin-bottom:6px">❓ ${esc(cs.question)}</div>
+              <div class="ae-choice-stack">
+                ${cs.choices.map((ch) => {
+                  const isPicked = attempt && attempt.choiceId === ch.id;
+                  const cls = isPicked ? (ch.isOptimal ? 'picked-right' : 'picked-wrong') : '';
+                  return `
+                    <button type="button" class="ae-choice-btn ${cls}" data-daily-case="${esc(cs.id)}" data-daily-choice="${esc(ch.id)}" data-daily-opt="${ch.isOptimal ? '1' : '0'}">
+                      <span class="ae-choice-key">${esc(ch.id)}</span>
+                      <span>${esc(ch.label)}</span>
+                    </button>
+                  `;
+                }).join('')}
               </div>
-            ` : ''}
-          </section>
+              ${attempt ? `
+                <div class="ms-alert ${attempt.isOptimal ? 'ok' : 'warn'}" style="margin-top:10px;margin-bottom:8px">
+                  ${pickedObj?.why ? `<div style="margin-bottom:6px"><strong>${attempt.isOptimal ? '🎯 Aferin! Doğru Okudun:' : '💡 Dikkat — Neden Bu Tuzaktı:'}</strong> ${esc(pickedObj.why)}</div>` : ''}
+                  ${!attempt.isOptimal && optimalObj?.why ? `<div style="margin-bottom:6px;color:var(--green-ink)"><strong>✓ En Sağlam Karar (${optimalObj.id}):</strong> ${esc(optimalObj.why)}</div>` : ''}
+                  <div><strong>Gerçek Hayat Sonucu:</strong> ${esc(cs.consequence100k)}</div>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                  <button type="button" class="ms-btn primary sm" id="aeGoMoreCasesBtn">Tüm 48 Vakaya Geç ›</button>
+                  <button type="button" class="ms-btn sm" id="aeGoLabsFromHomeBtn">🎯 Karar Tatbikatı</button>
+                </div>
+              ` : ''}
+            </div>
+          </details>
         ` : ''}
 
         ${showInstallBanner ? `
           <section class="ae-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;border-color:rgba(240,180,41,0.35)">
             <div style="min-width:0;flex:1">
-              <strong style="font-size:14.2px;display:block">📲 Telefona Gerçek Uygulama Olarak Kur</strong>
-              <span style="font-size:12.4px;color:var(--ink-400)">Tarayıcı çubuğu olmadan tam ekran iPhone / Android uygulaması olarak kullan.</span>
+              <strong style="font-size:14px;display:block">📲 Telefona Gerçek Uygulama Olarak Kur</strong>
+              <span style="font-size:12.2px;color:var(--ink-400)">Tarayıcı çubuğu olmadan tam ekran iPhone / Android uygulaması olarak kullan.</span>
             </div>
             <button type="button" class="ms-btn primary sm" id="aeHomeInstallBtn">Kurulumu Aç</button>
           </section>
@@ -1521,7 +1587,7 @@
 
             ${snap.spotItems.map((it) => {
               const aObj = K.getAsset(it.assetKey);
-              const gv = aObj && G.getGrandmaVerdict ? G.getGrandmaVerdict(aObj) : null;
+              const gv = aObj && G.getPlainAssetVerdict ? G.getPlainAssetVerdict(aObj) : null;
               return `
                 <div class="ms-list-row">
                   <div style="min-width:0;flex:1;cursor:pointer" data-open-pos="${esc(it.assetKey)}">
@@ -1591,6 +1657,24 @@
           </div>
 
           <div class="ms-list">
+            ${(member.conditionalOrders || []).map((co) => {
+              const aObj = K.getAsset(co.assetKey);
+              const liveP = aObj?.priceTL || 0;
+              const diffPct = liveP > 0 ? +(((co.triggerPriceTL / liveP) - 1) * 100).toFixed(1) : 0;
+              const kindLbl = co.kind === 'LIMIT_BUY' ? '🎯 Limit Alım' : (co.kind === 'STOP_LOSS' ? '🛡️ Zarar Kes' : '🎯 Kâr Al');
+              const pillCls = co.kind === 'STOP_LOSS' ? 'danger' : (co.kind === 'TAKE_PROFIT' ? 'good' : 'info');
+              return `
+                <div class="ms-list-row" style="border-color:rgba(240,180,41,0.38)">
+                  <div style="min-width:0;flex:1">
+                    <span class="ms-sig-pill ${pillCls}">${kindLbl} · Hedef ${fmtUnitTL(co.triggerPriceTL)} (${diffPct >= 0 ? '+' : ''}%${diffPct})</span>
+                    <div style="font-size:14px;font-weight:800;margin-top:4px">${esc(co.ticker)} — ${co.kind === 'LIMIT_BUY' ? fmtTL(co.reservedTL) : co.qty + ' adet'}</div>
+                    <div style="font-size:12px;color:var(--ink-400)">Güncel: ${fmtUnitTL(liveP)} · Fiyat hedefe ulaşınca otomatik işler.</div>
+                  </div>
+                  <button type="button" class="ms-btn danger sm" data-cancel-cond="${esc(co.id)}">İptal Et</button>
+                </div>
+              `;
+            }).join('')}
+
             ${(member.settlementQueue || []).map((q) => `
               <div class="ms-list-row">
                 <div>
@@ -1625,6 +1709,42 @@
               <div style="font-size:13.2px;color:var(--ink-400);text-align:center;padding:12px">Şu an takasta veya valör kuyruğunda bekleyen işlemin yok.</div>
             ` : ''}
           </div>
+        </section>
+
+        <!-- ★ İZLEME LİSTEM & HEDEF FİYAT ALARMLARIM -->
+        <section class="ae-card" style="border-color:rgba(240,180,41,0.32)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <strong style="font-size:15.2px">★ İzleme Listem & Fiyat Alarmları (${watchItems.length})</strong>
+            <button type="button" class="ms-btn sm" id="aeGoMarketWatchBtn">+ Ekle</button>
+          </div>
+          ${watchItems.length > 0 ? `
+            <div class="ms-list">
+              ${watchItems.map((w) => {
+                const aObj = K.getAsset(w.assetKey);
+                const liveP = aObj?.priceTL || 0;
+                const distPct = (w.targetPriceTL > 0 && liveP > 0) ? +(((w.targetPriceTL / liveP) - 1) * 100).toFixed(1) : null;
+                return `
+                  <div class="ms-list-row" style="${w.triggeredAtMs ? 'border-color:rgba(16,185,129,0.55)' : ''}">
+                    <div style="min-width:0;flex:1;cursor:pointer" data-open-asset="${esc(w.assetKey)}">
+                      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                        <span class="ms-asset-code">${esc(w.ticker)}</span>
+                        <strong style="font-size:13.8px">${esc(aObj?.name || w.name)}</strong>
+                        ${w.triggeredAtMs ? `<span class="ms-sig-pill good">🔔 Alarm Çaldı!</span>` : ''}
+                      </div>
+                      <div style="font-size:12px;color:var(--ink-400);margin-top:3px">
+                        Canlı: <strong style="color:var(--ink-100)">${fmtUnitTL(liveP)}</strong>
+                        ${w.targetPriceTL > 0 ? ` · Hedef (${w.direction === 'ABOVE' ? '≥' : '≤'}): <strong style="color:var(--gold-bright)">${fmtUnitTL(w.targetPriceTL)}</strong> (${distPct >= 0 ? '+' : ''}%${distPct})` : ' · Alarm yok'}
+                      </div>
+                    </div>
+                    <div style="display:flex;gap:6px;flex-shrink:0">
+                      <button type="button" class="ms-btn primary sm" data-open-asset="${esc(w.assetKey)}">Aç</button>
+                      <button type="button" class="ms-btn sm" data-unwatch-key="${esc(w.assetKey)}">×</button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          ` : `<div style="font-size:12.8px;color:var(--ink-400)">Henüz takip ettiğin varlık yok. Herhangi bir hisse veya altını açıp <strong>☆ Takip</strong> tuşuna basarak fiyat alarmı kurabilirsin.</div>`}
         </section>
 
         <section class="ae-card">
@@ -1690,6 +1810,19 @@
         </div>
       </section>
 
+      <!-- TETİKLENEN FİYAT ALARMLARI BANDI -->
+      ${triggeredAlerts.length > 0 ? triggeredAlerts.slice(0, 2).map((al) => `
+        <div class="ae-alert-strip">
+          <div style="min-width:0;flex:1;font-size:12.8px">
+            🔔 <strong>${esc(al.ticker)} hedef fiyatına ulaştı!</strong> Hedef: ${fmtUnitTL(al.targetPriceTL)} · Canlı: <strong>${fmtUnitTL(K.getAsset(al.assetKey)?.priceTL || al.triggeredPriceTL)}</strong>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button type="button" class="ms-btn primary sm" data-open-asset="${esc(al.assetKey)}">İncele</button>
+            <button type="button" class="ms-btn sm" data-dismiss-alert="${esc(al.assetKey)}">Tamam</button>
+          </div>
+        </div>
+      `).join('') : ''}
+
       <!-- BEKLEYEN VALÖR / AÇILIŞ EMRİ KOLAY NAKİT ÇÖZÜCÜ -->
       ${firstPendingBuy && snap.cashTL < 25000 ? `
         <div class="ae-pending-unlock-box">
@@ -1706,7 +1839,7 @@
       <div class="ae-seg" role="tablist">
         <button type="button" class="ae-seg-btn ${homeSubTab === 'TODAY' ? 'active' : ''}" data-hsub="TODAY">Bugün</button>
         <button type="button" class="ae-seg-btn ${homeSubTab === 'HOLDINGS' ? 'active' : ''}" data-hsub="HOLDINGS">Varlıklar (${holdingsCount})</button>
-        <button type="button" class="ae-seg-btn ${homeSubTab === 'QUEUES' ? 'active' : ''}" data-hsub="QUEUES">Emirler</button>
+        <button type="button" class="ae-seg-btn ${homeSubTab === 'QUEUES' ? 'active' : ''}" data-hsub="QUEUES">Emir & Takip${queueCount + watchItems.length > 0 ? ` (${queueCount + watchItems.length})` : ''}</button>
       </div>
 
       ${subBodyHtml}
@@ -1748,8 +1881,42 @@
     });
     document.getElementById('aeStep3GoBtn')?.addEventListener('click', () => {
       masterySubTab = 'LABS';
-      labToolId = 'DETECTIVE';
+      labToolId = 'DRILL';
       switchTab('mastery');
+    });
+    document.getElementById('aeHomeBasketDetails')?.addEventListener('toggle', (e) => {
+      homeBasketOpen = Boolean(e.target.open);
+    });
+    document.getElementById('aeHomeDailyDetails')?.addEventListener('toggle', (e) => {
+      homeDailyOpen = Boolean(e.target.open);
+    });
+    document.getElementById('aeGoMarketWatchBtn')?.addEventListener('click', () => {
+      activeCategory = 'ALL';
+      activeLens = 'VITRIN';
+      switchTab('market');
+    });
+    host.querySelectorAll('[data-cancel-cond]').forEach((b) => {
+      b.addEventListener('click', () => {
+        const res = K.executeOrder({ side: 'CANCEL_CONDITIONAL', orderId: b.getAttribute('data-cancel-cond') });
+        AetherNative.haptic(res.ok ? 'success' : 'error');
+        AetherNative.toast(res.ok ? res.message : res.reason, res.ok ? 'ok' : 'err');
+        renderHeader();
+        renderHomeTab(host);
+      });
+    });
+    host.querySelectorAll('[data-unwatch-key]').forEach((b) => {
+      b.addEventListener('click', () => {
+        const res = K.toggleWatchlistAsset(b.getAttribute('data-unwatch-key'));
+        AetherNative.haptic('selection');
+        if (res.message) AetherNative.toast(res.message, 'info');
+        renderHomeTab(host);
+      });
+    });
+    host.querySelectorAll('[data-dismiss-alert]').forEach((b) => {
+      b.addEventListener('click', () => {
+        K.dismissWatchlistAlert(b.getAttribute('data-dismiss-alert'));
+        renderHomeTab(host);
+      });
     });
     document.getElementById('aeGoMoreCasesBtn')?.addEventListener('click', () => {
       masterySubTab = 'CASES';
@@ -1786,7 +1953,8 @@
         AetherNative.haptic('selection');
         const pid = b.getAttribute('data-hb-preset');
         hbPresetId = pid || 'FOUR_SEASON';
-        if (pid === 'GRANDMA_SHIELD') { hbSukukPct = 55; hbGoldPct = 30; hbEquityPct = 10; }
+        homeBasketOpen = true;
+        if (pid === 'CALM_SHIELD') { hbSukukPct = 55; hbGoldPct = 30; hbEquityPct = 10; }
         else if (pid === 'MONTHLY_INCOME') { hbSukukPct = 60; hbGoldPct = 15; hbEquityPct = 20; }
         else if (pid === 'GROWTH_FACTORY') { hbSukukPct = 20; hbGoldPct = 20; hbEquityPct = 50; }
         else { hbSukukPct = 40; hbGoldPct = 25; hbEquityPct = 25; }
@@ -1811,7 +1979,7 @@
       if (l3) l3.textContent = `%${hb.wEquity}`;
       const out = document.getElementById('aeHomeBasketLiveOut');
       if (out) {
-        out.innerHTML = buildHomeBasketLiveHtml(hb);
+        out.innerHTML = buildHomeBasketLiveHtml(hb, snap);
         bindAssetListClicks(out);
         bindPrefillAssetButtons(out);
       }
@@ -1959,9 +2127,10 @@
         </div>
       </div>
 
-      <!-- 2. 6 SADE, ANLAŞILIR ANA KATEGORİ -->
+      <!-- 2. 7 SADE, ANLAŞILIR ANA KATEGORİ (+ İZLEME LİSTESİ) -->
       <div class="ae-hscroll" id="aeCatScroll" style="margin-bottom:8px">
         <button type="button" class="ae-chip ${activeCategory === 'ALL' && activeLens === 'VITRIN' ? 'active' : ''}" data-lens="VITRIN">⭐ Öne Çıkanlar</button>
+        <button type="button" class="ae-chip ${activeCategory === 'WATCHLIST' ? 'active' : ''}" data-cat="WATCHLIST">★ Takip (${(me.watchlist || []).length})</button>
         <button type="button" class="ae-chip ${activeCategory === 'SAFE_HAVEN' ? 'active' : ''}" data-cat="SAFE_HAVEN">🛡️ Güvenli Liman</button>
         <button type="button" class="ae-chip ${activeCategory === 'GOLD_FX' ? 'active' : ''}" data-cat="GOLD_FX">🪙 Altın & Döviz</button>
         <button type="button" class="ae-chip ${activeCategory === 'RATE_SUKUK' ? 'active' : ''}" data-cat="RATE_SUKUK">💧 Faiz & Sukuk</button>
@@ -2741,7 +2910,7 @@
         </section>
 
         <section class="ae-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">
             <div>
               <h3 style="margin:0;font-size:15.5px;font-weight:800">Canlı KAP, Resmi Gazete & Gece Bilanço Masası</h3>
               <p style="margin:2px 0 0;font-size:11.8px;color:var(--ink-400)">
@@ -2750,37 +2919,61 @@
             </div>
           </div>
 
-          <div class="ms-list">
-            ${newsFeed.map((nw) => {
-              const studied = me.studiedDisclosures?.[nw.id];
-              return `
-                <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:7px">
-                  <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap">
-                    <span class="ms-sig-pill ${esc(nw.tone === 'danger' ? 'danger' : (nw.tone === 'good' ? 'good' : (nw.tone === 'warn' ? 'warn' : 'info')))}">${esc(nw.badge)} · ${esc(nw.source)}</span>
-                    ${studied ? `<span class="ms-sig-pill good">✓ Ders Çalışıldı (${esc(studied.stance)})</span>` : ''}
-                  </div>
-                  <strong style="font-size:13.6px;line-height:1.35">${esc(nw.title)}</strong>
-                  <div style="font-size:12px;color:var(--ink-200)">${esc(nw.streetImpact)}</div>
-                  ${nw.analystRule ? `<div style="font-size:11.3px;color:var(--cyan);background:var(--surface-1);padding:6px 9px;border-radius:9px">🎯 ${esc(nw.analystRule)}</div>` : ''}
-
-                  <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding-top:2px">
-                    ${(nw.linkedKeys || []).map((lk) => {
-                      const a = K.getAsset(lk);
-                      if (!a) return '';
-                      return `<button type="button" class="ms-btn sm" data-open-asset="${esc(a.key)}" style="padding:5px 9px;font-size:11.2px">${esc(a.ticker)} · ${a.isRateInstrument ? '%' + a.annualGrossRatePct : fmtUnitTL(a.priceTL)}</button>`;
-                    }).join('')}
-                  </div>
-
-                  <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:4px;border-top:1px solid var(--line-subtle)">
-                    <span style="font-size:11px;color:var(--ink-500);font-weight:700;align-self:center">Senin Yorumun:</span>
-                    <button type="button" class="ms-btn sm ${studied?.stance === 'Pozitif' ? 'buy-cta' : ''}" data-study-news="${esc(nw.id)}" data-stance="Pozitif" data-ntitle="${esc(nw.title)}" style="padding:4px 9px;font-size:11px">📈 Olumlu</button>
-                    <button type="button" class="ms-btn sm ${studied?.stance === 'Fiyatlanmış' ? 'primary' : ''}" data-study-news="${esc(nw.id)}" data-stance="Fiyatlanmış" data-ntitle="${esc(nw.title)}" style="padding:4px 9px;font-size:11px">⚖️ Fiyatlanmış</button>
-                    <button type="button" class="ms-btn sm ${studied?.stance === 'Tuzak/Risk' ? 'danger' : ''}" data-study-news="${esc(nw.id)}" data-stance="Tuzak/Risk" data-ntitle="${esc(nw.title)}" style="padding:4px 9px;font-size:11px">⚠️ Riskli</button>
-                  </div>
-                </div>
-              `;
-            }).join('')}
+          <div class="ae-hscroll" style="margin-bottom:10px">
+            <button type="button" class="ae-chip ${compassNewsFilter === 'ALL' ? 'active' : 'sub'}" data-cnflt="ALL">Tümü (${newsFeed.length})</button>
+            <button type="button" class="ae-chip ${compassNewsFilter === 'KAP' ? 'active' : 'sub'}" data-cnflt="KAP">🏛️ KAP & Şirket</button>
+            <button type="button" class="ae-chip ${compassNewsFilter === 'RG' ? 'active' : 'sub'}" data-cnflt="RG">📜 Resmi Gazete & Vergi</button>
+            <button type="button" class="ae-chip ${compassNewsFilter === 'MACRO' ? 'active' : 'sub'}" data-cnflt="MACRO">🌍 Makro & Merkez</button>
           </div>
+
+          ${(() => {
+            const filteredNews = newsFeed.filter((nw) => {
+              if (compassNewsFilter === 'ALL') return true;
+              const hay = ((nw.badge || '') + ' ' + (nw.source || '') + ' ' + (nw.title || '')).toLocaleUpperCase('tr-TR');
+              if (compassNewsFilter === 'KAP') return hay.includes('KAP') || hay.includes('BİLANÇO') || hay.includes('TEMETTÜ') || hay.includes('GERİ ALIM');
+              if (compassNewsFilter === 'RG') return hay.includes('RESMİ') || hay.includes('STOPAJ') || hay.includes('VERGİ') || hay.includes('KARAR');
+              return !hay.includes('KAP');
+            });
+            const visibleNews = filteredNews.slice(0, compassNewsVisible);
+            return `
+              <div class="ms-list">
+                ${visibleNews.map((nw) => {
+                  const studied = me.studiedDisclosures?.[nw.id];
+                  return `
+                    <div class="ms-list-row" style="flex-direction:column;align-items:stretch;gap:7px">
+                      <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap">
+                        <span class="ms-sig-pill ${esc(nw.tone === 'danger' ? 'danger' : (nw.tone === 'good' ? 'good' : (nw.tone === 'warn' ? 'warn' : 'info')))}">${esc(nw.badge)} · ${esc(nw.source)}</span>
+                        ${studied ? `<span class="ms-sig-pill good">✓ İncelendi (${esc(studied.stance)})</span>` : ''}
+                      </div>
+                      <strong style="font-size:13.6px;line-height:1.35">${esc(nw.title)}</strong>
+                      <div style="font-size:12px;color:var(--ink-200)">${esc(nw.streetImpact)}</div>
+                      ${nw.analystRule ? `<div style="font-size:11.3px;color:var(--cyan);background:var(--surface-1);padding:6px 9px;border-radius:9px">🎯 ${esc(nw.analystRule)}</div>` : ''}
+
+                      <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding-top:2px">
+                        ${(nw.linkedKeys || []).slice(0, 4).map((lk) => {
+                          const a = K.getAsset(lk);
+                          if (!a) return '';
+                          return `<button type="button" class="ms-btn sm" data-open-asset="${esc(a.key)}" style="padding:5px 9px;font-size:11.2px">${esc(a.ticker)} · ${a.isRateInstrument ? '%' + a.annualGrossRatePct : fmtUnitTL(a.priceTL)}</button>`;
+                        }).join('')}
+                      </div>
+
+                      <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:4px;border-top:1px solid var(--line-subtle)">
+                        <span style="font-size:11px;color:var(--ink-500);font-weight:700;align-self:center">Yorumun:</span>
+                        <button type="button" class="ms-btn sm ${studied?.stance === 'Pozitif' ? 'buy-cta' : ''}" data-study-news="${esc(nw.id)}" data-stance="Pozitif" data-ntitle="${esc(nw.title)}" style="padding:4px 9px;font-size:11px">📈 Olumlu</button>
+                        <button type="button" class="ms-btn sm ${studied?.stance === 'Fiyatlanmış' ? 'primary' : ''}" data-study-news="${esc(nw.id)}" data-stance="Fiyatlanmış" data-ntitle="${esc(nw.title)}" style="padding:4px 9px;font-size:11px">⚖️ Fiyatlanmış</button>
+                        <button type="button" class="ms-btn sm ${studied?.stance === 'Tuzak/Risk' ? 'danger' : ''}" data-study-news="${esc(nw.id)}" data-stance="Tuzak/Risk" data-ntitle="${esc(nw.title)}" style="padding:4px 9px;font-size:11px">⚠️ Riskli</button>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+              ${filteredNews.length > visibleNews.length ? `
+                <button type="button" class="ms-btn sm" style="width:100%;margin-top:10px" id="aeShowMoreNewsBtn">
+                  Daha Fazla Haber Göster (${visibleNews.length}/${filteredNews.length})
+                </button>
+              ` : ''}
+            `;
+          })()}
         </section>
       `;
     } else if (compassSubTab === 'KITCHEN') {
@@ -3156,6 +3349,20 @@
       });
     });
 
+    host.querySelectorAll('[data-cnflt]').forEach((b) => {
+      b.addEventListener('click', () => {
+        AetherNative.haptic('selection');
+        compassNewsFilter = b.getAttribute('data-cnflt') || 'ALL';
+        compassNewsVisible = 5;
+        renderCompassTab(host);
+      });
+    });
+    document.getElementById('aeShowMoreNewsBtn')?.addEventListener('click', () => {
+      AetherNative.haptic('selection');
+      compassNewsVisible += 8;
+      renderCompassTab(host);
+    });
+
     host.querySelectorAll('[data-study-news]').forEach((b) => {
       b.addEventListener('click', () => {
         const nid = b.getAttribute('data-study-news');
@@ -3313,6 +3520,24 @@
           </div>
 
           <div class="ms-list">
+            ${(member.conditionalOrders || []).map((co) => {
+              const aObj = K.getAsset(co.assetKey);
+              const liveP = aObj?.priceTL || 0;
+              const diffPct = liveP > 0 ? +(((co.triggerPriceTL / liveP) - 1) * 100).toFixed(1) : 0;
+              const kindLbl = co.kind === 'LIMIT_BUY' ? '🎯 Limit Alım' : (co.kind === 'STOP_LOSS' ? '🛡️ Zarar Kes' : '🎯 Kâr Al');
+              const pillCls = co.kind === 'STOP_LOSS' ? 'danger' : (co.kind === 'TAKE_PROFIT' ? 'good' : 'info');
+              return `
+                <div class="ms-list-row" style="border-color:rgba(240,180,41,0.38)">
+                  <div style="min-width:0;flex:1">
+                    <span class="ms-sig-pill ${pillCls}">${kindLbl} · Hedef ${fmtUnitTL(co.triggerPriceTL)} (${diffPct >= 0 ? '+' : ''}%${diffPct})</span>
+                    <div style="font-size:14px;font-weight:800;margin-top:4px">${esc(co.ticker)} — ${co.kind === 'LIMIT_BUY' ? fmtTL(co.reservedTL) : co.qty + ' adet'}</div>
+                    <div style="font-size:12px;color:var(--ink-400)">Güncel: ${fmtUnitTL(liveP)} · Fiyat hedefe ulaşınca otomatik işler.</div>
+                  </div>
+                  <button type="button" class="ms-btn danger sm" data-cancel-cond="${esc(co.id)}">İptal Et</button>
+                </div>
+              `;
+            }).join('')}
+
             ${(member.settlementQueue || []).map((q) => `
               <div class="ms-list-row">
                 <div>
@@ -3516,11 +3741,15 @@
     const lexicon = G.getStreetLexicon ? G.getStreetLexicon() : [];
     const q = manualSearchQuery.trim().toLocaleUpperCase('tr-TR');
 
+    const stageFilteredMods = (!q && academyStageFilter !== 'ALL')
+      ? modules.filter((m) => String(m.rankStage || '').startsWith(academyStageFilter))
+      : modules;
+
     const filteredMods = q
       ? modules.filter((m) =>
-          (m.title + ' ' + (m.rankStage || '') + ' ' + m.streetSummary + ' ' + m.proFormula).toLocaleUpperCase('tr-TR').includes(q)
+          (m.title + ' ' + (m.rankStage || '') + ' ' + (m.plainSummary20s || '') + ' ' + m.streetSummary + ' ' + m.proFormula).toLocaleUpperCase('tr-TR').includes(q)
         )
-      : modules;
+      : stageFilteredMods;
 
     const filteredLex = q
       ? lexicon.filter((lx) =>
@@ -3589,12 +3818,25 @@
         </section>
       ` : ''}
 
+      ${!q ? `
+        <div class="ae-hscroll" style="margin-bottom:8px">
+          <button type="button" class="ae-chip ${academyStageFilter === 'ALL' ? 'active' : 'sub'}" data-astage="ALL">Tümü (${modules.length})</button>
+          <button type="button" class="ae-chip ${academyStageFilter === '1. Kademe' ? 'active' : 'sub'}" data-astage="1. Kademe">1. Kasa Gözü</button>
+          <button type="button" class="ae-chip ${academyStageFilter === '2. Kademe' ? 'active' : 'sub'}" data-astage="2. Kademe">2. Terazi</button>
+          <button type="button" class="ae-chip ${academyStageFilter === '3. Kademe' ? 'active' : 'sub'}" data-astage="3. Kademe">3. Tahta</button>
+          <button type="button" class="ae-chip ${academyStageFilter === '4. Kademe' ? 'active' : 'sub'}" data-astage="4. Kademe">4. Fon & BES</button>
+          <button type="button" class="ae-chip ${academyStageFilter === '5. Kademe' ? 'active' : 'sub'}" data-astage="5. Kademe">5. İstihbarat</button>
+          <button type="button" class="ae-chip ${academyStageFilter === '6. Kademe' ? 'active' : 'sub'}" data-astage="6. Kademe">6. Strateji</button>
+        </div>
+      ` : ''}
+
       ${filteredMods.length > 0 ? `
         <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 2px 8px">
           <span style="font-size:12px;font-weight:800;color:var(--gold-bright)">📚 6 Kademeli Saha Akademisi (${studiedSet.size}/${modules.length} Özümsendi)</span>
         </div>
         ${filteredMods.map((m, idx) => {
           const isDone = studiedSet.has(m.id);
+          const quick20s = m.plainSummary20s || m.grandmaSummary || '';
           return `
             <details class="ae-guide-acc" ${idx === 0 || q ? 'open' : ''}>
               <summary>
@@ -3607,13 +3849,13 @@
                 </span>
               </summary>
               <div class="ae-guide-body">
-                ${m.grandmaSummary ? `
+                ${quick20s ? `
                   <div style="margin-top:10px;background:var(--gold-soft);border:1px solid rgba(240,180,41,0.34);border-radius:12px;padding:10px 12px;margin-bottom:8px;color:var(--ink-100)">
-                    <strong style="color:var(--gold-bright);display:block;font-size:12px;margin-bottom:3px">👵 20 Saniyede Herkes İçin Özü:</strong>
-                    ${esc(m.grandmaSummary)}
+                    <strong style="color:var(--gold-bright);display:block;font-size:12px;margin-bottom:3px">⚡ 20 Saniyede Net Özeti:</strong>
+                    ${esc(quick20s)}
                   </div>
                 ` : ''}
-                <div style="margin-top:${m.grandmaSummary ? '0' : '10px'};background:var(--surface-2);border-radius:11px;padding:10px 12px;margin-bottom:8px">
+                <div style="margin-top:${quick20s ? '0' : '10px'};background:var(--surface-2);border-radius:11px;padding:10px 12px;margin-bottom:8px">
                   <strong style="color:var(--gold-bright);display:block;font-size:11.8px;margin-bottom:3px">🥖 Sokak Türkçesiyle Derin Özü:</strong>
                   ${esc(m.streetSummary)}
                 </div>
@@ -3663,6 +3905,13 @@
   function bindManualAcademyEvents(root, host) {
     const K = global.AetherKernelV10;
     bindAssetListClicks(root);
+    root.querySelectorAll('[data-astage]').forEach((b) => {
+      b.addEventListener('click', () => {
+        AetherNative.haptic('selection');
+        academyStageFilter = b.getAttribute('data-astage') || 'ALL';
+        renderMasteryTab(host);
+      });
+    });
     root.querySelectorAll('[data-toggle-acad]').forEach((b) => {
       b.addEventListener('click', () => {
         const res = K.toggleAcademyModuleStudied(b.getAttribute('data-toggle-acad'));
@@ -3702,15 +3951,157 @@
 
     const toolBar = `
       <div class="ae-hscroll" id="aeLabToolsScroll" style="margin-bottom:10px">
+        <button type="button" class="ae-chip ${labToolId === 'DRILL' ? 'active' : ''}" data-lab-tool="DRILL">🎯 Karar Tatbikatı (6)</button>
         <button type="button" class="ae-chip ${labToolId === 'DETECTIVE' ? 'active' : ''}" data-lab-tool="DETECTIVE">⚔️ Kasa Dedektifi</button>
         <button type="button" class="ae-chip ${labToolId === 'BAKERY' ? 'active' : ''}" data-lab-tool="BAKERY">🥖 Mahalle Fırını (621)</button>
         <button type="button" class="ae-chip ${labToolId === 'KAP_READER' ? 'active' : ''}" data-lab-tool="KAP_READER">🔬 KAP Okuyucu</button>
         <button type="button" class="ae-chip ${labToolId === 'BREAKEVEN' ? 'active' : ''}" data-lab-tool="BREAKEVEN">⚖️ 4 Kapı Terazisi</button>
-        <button type="button" class="ae-chip ${labToolId === 'GVK80' ? 'active' : ''}" data-lab-tool="GVK80">🏛️ 2026 Vergi (GVK 80)</button>
+        <button type="button" class="ae-chip ${labToolId === 'GVK80' ? 'active' : ''}" data-lab-tool="GVK80">🏛️ 2026 Vergi Merkezi</button>
+        <button type="button" class="ae-chip ${labToolId === 'BES2026' ? 'active' : ''}" data-lab-tool="BES2026">🛡️ 2026 BES Motoru</button>
         <button type="button" class="ae-chip ${labToolId === 'BASKET' ? 'active' : ''}" data-lab-tool="BASKET">🥚 Tek Sepet Testi</button>
         <button type="button" class="ae-chip ${labToolId === 'FREEDOM' ? 'active' : ''}" data-lab-tool="FREEDOM">🌊 Özgürlük Çarkı</button>
       </div>
     `;
+
+    if (labToolId === 'DRILL') {
+      const drills = G.getInteractiveDecisionDrills ? G.getInteractiveDecisionDrills() : [];
+      const curDrill = drills.find((d) => d.id === activeDrillId) || drills[0];
+      const doneMap = member.completedDrills || {};
+      if (!curDrill) return `${toolBar}<div class="ae-card">Tatbikatlar yükleniyor...</div>`;
+      const totalStages = curDrill.stages.length;
+      const isFinished = drillStageIdx >= totalStages;
+      const curStage = !isFinished ? curDrill.stages[drillStageIdx] : null;
+      const deltaFrom1M = drillCapitalTL - curDrill.startCapitalTL;
+
+      return `
+        ${toolBar}
+        <section class="ae-lab-card" style="border-color:rgba(240,180,41,0.38)">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+            <span class="ms-sig-pill warn">🎯 Çok Aşamalı Gerçek Piyasa Karar Masası</span>
+            <span class="ms-sig-pill good">${Object.keys(doneMap).length}/${drills.length} Tamamlandı</span>
+          </div>
+          <h2 style="margin:4px 0 6px;font-size:17.2px;font-weight:900">1.000.000 ₺ Sanal Tatbikat Kasasıyla 4 Aşamada Karar Ver</h2>
+
+          <div class="ae-hscroll" style="margin-bottom:10px">
+            ${drills.map((dr) => {
+              const rec = doneMap[dr.id];
+              return `<button type="button" class="ae-chip ${curDrill.id === dr.id ? 'active' : 'sub'}" data-drill-pick="${esc(dr.id)}">${rec ? '✓ ' : ''}${esc(dr.badge)}</button>`;
+            }).join('')}
+          </div>
+
+          <div style="background:var(--surface-2);border:1px solid var(--line-subtle);border-radius:14px;padding:11px 13px;margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+              <div style="min-width:0;flex:1">
+                <strong style="font-size:14.4px;display:block">${esc(curDrill.title)}</strong>
+                <span style="font-size:12px;color:var(--ink-400)">${esc(curDrill.subtitle)}</span>
+              </div>
+              <div style="text-align:right;flex-shrink:0">
+                <strong style="font-size:15.5px;display:block" class="${deltaFrom1M >= 0 ? 'pos' : 'neg'}">${fmtTL(drillCapitalTL)}</strong>
+                <small style="font-size:11px;color:var(--ink-400)">${deltaFrom1M >= 0 ? '+' : ''}${fmtCompactTL(deltaFrom1M)} · ${drillScore}/100p</small>
+              </div>
+            </div>
+            <div class="ae-drill-stepper">
+              ${curDrill.stages.map((_, i) => `<div class="ae-drill-step ${i < drillStageIdx ? 'done' : (i === drillStageIdx ? 'active' : '')}"></div>`).join('')}
+            </div>
+          </div>
+
+          ${!isFinished && curStage ? `
+            <div style="margin-bottom:8px">
+              <span class="ms-sig-pill info">⏱️ Aşama ${drillStageIdx + 1}/${totalStages} · ${esc(curStage.clock)}</span>
+              <p style="margin:8px 0 10px;font-size:13.6px;color:var(--ink-100);line-height:1.52;font-weight:600">${esc(curStage.headline)}</p>
+              <div class="ae-choice-stack">
+                ${curStage.choices.map((ch) => {
+                  const isPicked = drillPickedChoice && drillPickedChoice.id === ch.id;
+                  const cls = drillPickedChoice
+                    ? (ch.score >= 20 ? 'picked-right' : (isPicked ? 'picked-wrong' : ''))
+                    : '';
+                  return `
+                    <button type="button" class="ae-choice-btn ${cls}" data-drill-choice="${esc(ch.id)}" ${drillPickedChoice ? 'disabled' : ''}>
+                      <span class="ae-choice-key">${esc(ch.id)}</span>
+                      <span>${esc(ch.label)}</span>
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+              ${drillPickedChoice ? `
+                <div class="ms-alert ${drillPickedChoice.score >= 20 ? 'ok' : (drillPickedChoice.score >= 10 ? 'info' : 'warn')}" style="margin-top:10px;margin-bottom:10px">
+                  <strong>${drillPickedChoice.deltaTL >= 0 ? `✅ +${fmtTL(drillPickedChoice.deltaTL)}` : `⚠️ ${fmtTL(drillPickedChoice.deltaTL)}`} (${drillPickedChoice.score}/25 puan):</strong>
+                  ${esc(drillPickedChoice.outcome)}
+                </div>
+                <button type="button" class="ae-big-btn gold" style="width:100%" id="aeDrillNextStageBtn">
+                  ${drillStageIdx + 1 < totalStages ? `Sonraki Aşamaya Geç (${drillStageIdx + 2}/${totalStages}) →` : 'Tatbikat Karnesini Gör →'}
+                </button>
+              ` : ''}
+            </div>
+          ` : `
+            <div class="ae-verdict-banner ${drillScore >= 75 ? 'green' : (drillScore >= 50 ? 'amber' : 'red')}">
+              <strong style="font-size:16px;display:block;margin-bottom:4px">
+                ${drillScore >= 85 ? '🏆 Usta Seviyesi Karar Yönetimi!' : (drillScore >= 60 ? '🧭 Sağlam Refleksler — Birkaç İnce Ayar Kaldı' : '⚠️ Piyasa Tuzakları Can Yaktı — Tekrar Dene!')}
+              </strong>
+              <div style="font-size:13.2px;color:var(--ink-100)">
+                Final Tatbikat Kasası: <strong>${fmtTL(drillCapitalTL)}</strong> (${deltaFrom1M >= 0 ? '+' : ''}${fmtTL(deltaFrom1M)}) · Ustalık Skoru: <strong>${drillScore}/100</strong>
+              </div>
+            </div>
+            <div class="ms-list" style="margin-bottom:10px">
+              ${drillHistory.map((h, i) => `
+                <div class="ms-list-row" style="padding:8px 10px;font-size:12px">
+                  <div style="min-width:0;flex:1"><strong>${i + 1}. ${esc(h.clock)}</strong><div style="color:var(--ink-400);margin-top:2px">${esc(h.outcome)}</div></div>
+                  <strong class="${h.deltaTL >= 0 ? 'pos' : 'neg'}" style="flex-shrink:0">${h.deltaTL >= 0 ? '+' : ''}${fmtCompactTL(h.deltaTL)}</strong>
+                </div>
+              `).join('')}
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button type="button" class="ms-btn primary" style="flex:1" id="aeDrillReplayBtn">↻ Bu Tatbikatı Tekrarla</button>
+              <button type="button" class="ms-btn" style="flex:1" id="aeDrillNextScenarioBtn">Sonraki Senaryo ›</button>
+            </div>
+          `}
+        </section>
+      `;
+    }
+
+    if (labToolId === 'BES2026') {
+      const bes = K.computeBes2026Simulation
+        ? K.computeBes2026Simulation({ monthlyContribTL: labBesMonthlyTL, years: labBesYears, ageAtStart: labBesStartAge, fundRealAnnualPct: labBesRealPct })
+        : null;
+      return `
+        ${toolBar}
+        ${bes ? `
+          <section class="ae-lab-card" style="border-color:rgba(16,185,129,0.4)">
+            <span class="ms-sig-pill good">🛡️ 2026 Güncel BES Motoru · 10811 Sayılı Karar (%20 Devlet Katkısı)</span>
+            <h2 style="margin:6px 0 4px;font-size:17.2px;font-weight:900">BES’te Standart Fon vs Aktif BEFAS Sepeti Farkı</h2>
+            <p style="margin:0 0 10px;font-size:12.8px;color:var(--ink-200)">1 Ocak 2026 itibarıyla devlet katkısı <strong>%20</strong> ve yıllık tavan <strong>396.360 ₺</strong> katkıya maks <strong>79.272 ₺</strong>. Kendi aylık katkı ve BEFAS fon getirinle bugünkü alım gücüyle gerçek sonucunu gör:</p>
+
+            <div class="ae-lab-slider-row">
+              <div class="ae-lab-slider-head"><span>Aylık Katkı Payın</span><strong id="aeBesMonLbl">${fmtTL(labBesMonthlyTL)}/ay</strong></div>
+              <input type="range" class="ae-slider" id="aeBesMonSl" min="2000" max="45000" step="1000" value="${labBesMonthlyTL}" />
+            </div>
+            <div class="ae-lab-slider-row">
+              <div class="ae-lab-slider-head"><span>Sistemde Kalma Süren (Başlangıç Yaşı: ${labBesStartAge})</span><strong id="aeBesYrLbl">${labBesYears} Yıl (Çıkış Yaşı: ${bes.endAge})</strong></div>
+              <input type="range" class="ae-slider" id="aeBesYrSl" min="2" max="25" step="1" value="${labBesYears}" />
+            </div>
+            <div class="ae-lab-slider-row">
+              <div class="ae-lab-slider-head"><span>BEFAS Fon Reel Getirisi (Enflasyon Üstü)</span><strong id="aeBesRealLbl" class="pos">Reel +%${labBesRealPct}/yıl</strong></div>
+              <input type="range" class="ae-slider" id="aeBesRealSl" min="2" max="16" step="1" value="${labBesRealPct}" />
+            </div>
+
+            <div id="aeBesLiveOut">
+              <div class="ae-kpi-2x2" style="margin-bottom:10px">
+                <div class="ms-kpi-box" style="border-color:rgba(16,185,129,0.48)"><span>Net Reel BES Havuzun</span><strong class="pos">${fmtCompactTL(bes.totalNetRealTL)}</strong><small>Yatırdığın: ${fmtCompactTL(bes.totalOwnPaidTL)}</small></div>
+                <div class="ms-kpi-box"><span>2026 Yıllık Devlet Katkısı</span><strong class="pos">+${fmtTL(bes.annualStateContribTL)}/yıl</strong><small>Hak Ediş: %${bes.vestingPct} · Stopaj: %${bes.exitStopajPct}</small></div>
+                <div class="ms-kpi-box" style="border-color:rgba(240,180,41,0.45)"><span>BEFAS Yönetimi Farkı</span><strong class="pos">+${fmtCompactTL(bes.befasAdvantageTL)}</strong><small>Standart fon (${fmtCompactTL(bes.netStdTotalTL)}) üstü</small></div>
+                <div class="ms-kpi-box"><span>Aylık Ömür Boyu Maaş (%4)</span><strong>+${fmtTL(bes.monthlyPensionReal4PctTL)}/ay</strong><small>Bugünkü alım gücüyle</small></div>
+              </div>
+              <div class="ms-alert ${bes.vestingPct >= 60 ? 'ok' : 'warn'}" style="margin-bottom:0">
+                <strong>📋 ${esc(bes.exitStageLabel)}:</strong>
+                ${bes.overCapAnnualTL > 0
+                  ? ` Yıllık katkın 2026 tavanı olan 396.360 ₺’yi ${fmtTL(bes.overCapAnnualTL)} aşıyor; aşan tutar 2027 yılı devlet katkısı hesabına devreder!`
+                  : ` Yıllık tavan (${fmtTL(bes.annualCapContrib2026TL)}) içindesin; devlet katkısının tamamından yararlanıyorsun.`}
+              </div>
+            </div>
+          </section>
+        ` : ''}
+      `;
+    }
 
     if (labToolId === 'KAP_READER') {
       const scenarios = G.getKapForensicReaderScenarios ? G.getKapForensicReaderScenarios() : [];
@@ -3775,7 +4166,7 @@
       const target = K.getAsset(labBakeryKey) || K.getAsset('bist-tuprs');
       const bk = target ? G.computeBakery100kScale(target, labBakeryAmt) : null;
       const fn = target ? G.computeFinancial100kScale(target, labBakeryAmt) : null;
-      const gv = target && G.getGrandmaVerdict ? G.getGrandmaVerdict(target, labBakeryAmt) : null;
+      const gv = target && G.getPlainAssetVerdict ? G.getPlainAssetVerdict(target, labBakeryAmt) : null;
       const paybackYears = bk && bk.annualOcfTL > 0 ? +(labBakeryAmt / bk.annualOcfTL).toFixed(1) : (fn && fn.annualNetProfitTL > 0 ? +(labBakeryAmt / fn.annualNetProfitTL).toFixed(1) : null);
 
       return `
@@ -3889,13 +4280,61 @@
       const sim = K.computeGvk80Simulation
         ? K.computeGvk80Simulation({ buyTL: labGvkBuy, sellTL: labGvkSell, yiUfePct: labGvkUfe, priorAnnualGainTL: 0 })
         : null;
+      const divSim = K.computeDividendTax2026 ? K.computeDividendTax2026({ grossDividendTL: labDivGrossTL }) : null;
+      const ebSim = K.computeEurobondTax2026 ? K.computeEurobondTax2026({ annualCouponTL: labEbCouponTL }) : null;
       return `
         ${toolBar}
-        ${sim ? `
-          <section class="ae-lab-card">
-            <span class="ms-sig-pill info">🏛️ 2026 Güncel Türkiye Yurt Dışı Hisse / ETF Vergi Simülatörü</span>
-            <h2 style="margin:6px 0 4px;font-size:17.5px;font-weight:900">GVK Mükerrer 80 & "%10 Yİ-ÜFE Sihirli Eşiği"</h2>
-            <p style="margin:0 0 10px;font-size:13px;color:var(--ink-200)">ABD hissesi (Apple, NVIDIA, S&P 500) sattığında enflasyon (Yİ-ÜFE) <strong>%10’u geçtiyse</strong> maliyetin enflasyonla büyür ve çok daha az vergi ödersin! Kaydırıcıyı <strong>%9 → %11</strong> oynat ve aradaki dev farkı gözünle gör:</p>
+        <section class="ae-lab-card">
+          <span class="ms-sig-pill info">🏛️ 2026 Türkiye Güncel Vergi Merkezi (GVK 80 · Temettü · Eurobond)</span>
+          <div class="ae-seg" style="margin:8px 0 10px">
+            <button type="button" class="ae-seg-btn ${labTaxSub === 'GVK80' ? 'active' : ''}" data-tax-sub="GVK80">ABD Hisse</button>
+            <button type="button" class="ae-seg-btn ${labTaxSub === 'DIVIDEND' ? 'active' : ''}" data-tax-sub="DIVIDEND">Temettü</button>
+            <button type="button" class="ae-seg-btn ${labTaxSub === 'EUROBOND' ? 'active' : ''}" data-tax-sub="EUROBOND">Eurobond</button>
+          </div>
+
+          ${labTaxSub === 'DIVIDEND' && divSim ? `
+            <h2 style="margin:2px 0 4px;font-size:17px;font-weight:900">2026 Temettü Beyanı (%50 İstisna & %15 Stopaj Mahsubu)</h2>
+            <p style="margin:0 0 10px;font-size:12.8px;color:var(--ink-200)">Brüt temettünün yarısı vergiden muaf, 2026 beyan sınırı <strong>400.000 ₺</strong> (yani <strong>800.000 ₺ brüt / 680.000 ₺ net</strong> altı 0 ₺ ek vergi). Sınırı hemen geçince devletten <strong>vergi iadesi</strong> çıktığını kaydırıp gör:</p>
+            <div class="ae-lab-slider-row">
+              <div class="ae-lab-slider-head"><span>Yıllık Brüt BIST Temettün</span><strong id="aeLabDivLbl" class="pos">${fmtTL(labDivGrossTL)}</strong></div>
+              <input type="range" class="ae-slider" id="aeLabDivSl" min="100000" max="8000000" step="50000" value="${labDivGrossTL}" />
+            </div>
+            <div id="aeLabDivLiveOut">
+              <div class="ae-kpi-2x2" style="margin-bottom:10px">
+                <div class="ms-kpi-box"><span>Kaynakta Kesilen %15 Stopaj</span><strong>-${fmtTL(divSim.withholdingPaidTL)}</strong><small>Net yatan: ${fmtTL(divSim.netReceivedAtSourceTL)}</small></div>
+                <div class="ms-kpi-box"><span>Beyana Tabi Yarı Matrah</span><strong>${fmtTL(divSim.taxableHalfTL)}</strong><small>2026 Sınırı: 400.000 ₺</small></div>
+                <div class="ms-kpi-box" style="border-color:${divSim.isTaxRefund ? 'rgba(16,185,129,0.5)' : 'rgba(240,180,41,0.45)'}"><span>${divSim.mustDeclare ? (divSim.isTaxRefund ? '🎉 Devletten Vergi İadesi!' : 'Ek Ödenecek Vergi') : 'Beyan Durumu'}</span><strong class="${divSim.isTaxRefund || !divSim.mustDeclare ? 'pos' : 'warn-txt'}">${divSim.mustDeclare ? (divSim.isTaxRefund ? '+' + fmtTL(Math.abs(divSim.extraTaxOrRefundTL)) : '-' + fmtTL(divSim.extraTaxOrRefundTL)) : 'Beyan Yok (0 ₺)'}</strong><small>Efektif vergi: %${divSim.effectiveTaxPct}</small></div>
+                <div class="ms-kpi-box"><span>Cebinde Kalan Final Net</span><strong class="pos">${fmtTL(divSim.finalNetCashTL)}</strong><small>%50 istisna + mahsup sonrası</small></div>
+              </div>
+              <div class="ms-alert ${!divSim.mustDeclare || divSim.isTaxRefund ? 'ok' : 'info'}" style="margin-bottom:0">
+                ${!divSim.mustDeclare
+                  ? `✅ <strong>Beyanname Gerekmez!</strong> Yarısı (${fmtTL(divSim.taxableHalfTL)}) 2026 sınırı olan 400.000 ₺’nin altında kaldığı için ek vergin 0 ₺.`
+                  : (divSim.isTaxRefund
+                    ? `🎉 <strong>Vergi İadesi Bölgesi!</strong> Hesaplanan gelir vergisi (${fmtTL(divSim.calculatedTaxTL)}), kaynağında kesilen %15 stopajdan (${fmtTL(divSim.withholdingPaidTL)}) küçük olduğu için Mart 2027 beyanıyla <strong>+${fmtTL(Math.abs(divSim.extraTaxOrRefundTL))}</strong> iade hakkın doğar!`
+                    : `📊 <strong>Kademeli Dilim (%${divSim.topBracketPct}):</strong> Hesaplanan ${fmtTL(divSim.calculatedTaxTL)} vergiden ödediğin ${fmtTL(divSim.withholdingPaidTL)} stopaj mahsup edilir; sadece fark (${fmtTL(divSim.extraTaxOrRefundTL)}) ödenir.`)}
+              </div>
+            </div>
+          ` : (labTaxSub === 'EUROBOND' && ebSim ? `
+            <h2 style="margin:2px 0 4px;font-size:17px;font-weight:900">2026 Eurobond Kupon Vergi Sınırı (400.000 ₺ Eşiği)</h2>
+            <p style="margin:0 0 10px;font-size:12.8px;color:var(--ink-200)">Eurobond kuponunda banka stopajı <strong>%0</strong>’dır. 2026 yıllık toplam brüt kuponun <strong>400.000 ₺</strong>’yi 1 TL bile aşarsa <strong>tamamı</strong> beyan edilir! Kaydırıcıyı 390B → 410B TL’ye çekip uçurumu gör:</p>
+            <div class="ae-lab-slider-row">
+              <div class="ae-lab-slider-head"><span>Yıllık Brüt Eurobond Kupon Gelirin</span><strong id="aeLabEbLbl" class="${ebSim.couponMustDeclare ? 'warn-txt' : 'pos'}">${fmtTL(labEbCouponTL)}</strong></div>
+              <input type="range" class="ae-slider" id="aeLabEbSl" min="100000" max="1500000" step="10000" value="${labEbCouponTL}" />
+            </div>
+            <div id="aeLabEbLiveOut">
+              <div class="ae-kpi-2x2" style="margin-bottom:10px">
+                <div class="ms-kpi-box"><span>2026 Beyan Sınırı</span><strong>400.000 ₺</strong><small>2. Gelir Vergisi Dilimi</small></div>
+                <div class="ms-kpi-box" style="border-color:${ebSim.couponMustDeclare ? 'rgba(244,63,94,0.45)' : 'rgba(16,185,129,0.45)'}"><span>2026 Beyanname Vergin</span><strong class="${ebSim.couponMustDeclare ? 'neg' : 'pos'}">${fmtTL(ebSim.totalTaxTL)}</strong><small>${ebSim.couponMustDeclare ? `Dilim %${ebSim.topBracketPct}` : '%0 Vergi!'}</small></div>
+              </div>
+              <div class="ms-alert ${ebSim.couponMustDeclare ? 'warn' : 'ok'}" style="margin-bottom:0">
+                ${ebSim.couponMustDeclare
+                  ? `⚠️ <strong>400.000 ₺ Uçurumunu Geçtin!</strong> Aşan kısım değil, ${fmtTL(ebSim.annualCouponTL)} kuponun TAMAMI beyana girdi ve ${fmtTL(ebSim.totalTaxTL)} vergi doğdu. İtfaya kadar tutulan Eurobond’da anapara kur farkı vergisi ise 0 ₺’dir!`
+                  : `🛡️ <strong>%0 Vergi Kalkanı!</strong> Yıllık kuponun 400.000 ₺ sınırının altında (başka beyan gelirin yoksa): 0 ₺ stopaj + 0 ₺ beyan vergisi!`}
+              </div>
+            </div>
+          ` : (sim ? `
+            <h2 style="margin:2px 0 4px;font-size:17px;font-weight:900">ABD Hisse / ETF: GVK Mükerrer 80 & "%10 Yİ-ÜFE Eşiği"</h2>
+            <p style="margin:0 0 10px;font-size:12.8px;color:var(--ink-200)">ABD hissesi sattığında üretici enflasyonu (Yİ-ÜFE) <strong>%10’u geçtiyse</strong> maliyetin enflasyonla büyür! Kaydırıcıyı <strong>%9 → %11</strong> oynat:</p>
 
             <div class="ae-lab-slider-row">
               <div class="ae-lab-slider-head"><span>Alış Maliyetin (TL Karşılığı)</span><strong id="aeLabGvkBuyLbl">${fmtTL(labGvkBuy)}</strong></div>
@@ -3925,8 +4364,8 @@
               </div>
             </div>
             <div style="font-size:12px;color:var(--ink-400)">2026 Kademeli Tarife: 190 Bin’e kadar %15 · 400 Bin’e kadar %20 · 1 Mn’ye kadar %27 · 5,3 Mn’ye kadar %35 · Üstü %40.</div>
-          </section>
-        ` : ''}
+          ` : ''))}
+        </section>
       `;
     }
 
@@ -4181,7 +4620,7 @@
 
         ${shownCases.length === 0 ? `<div class="ae-card" style="text-align:center;color:var(--ink-400)">Bu seviye ve konu birleşiminde vaka yok; "Tümü" seçeneğine dokunabilirsin.</div>` : ''}
 
-        ${shownCases.map((cs) => {
+        ${shownCases.slice(0, casesVisibleLimit).map((cs) => {
           const attempt = member.completedFieldCases?.[cs.id] || null;
           const pickedObj = attempt ? cs.choices.find((x) => x.id === attempt.choiceId) : null;
           const optimalObj = cs.choices.find((x) => x.isOptimal);
@@ -4231,6 +4670,11 @@
             </article>
           `;
         }).join('')}
+        ${shownCases.length > casesVisibleLimit ? `
+          <button type="button" class="ms-btn primary sm" style="width:100%;margin-top:8px" id="aeShowMoreCasesBtn">
+            Sonraki Vakaları Göster (${Math.min(casesVisibleLimit, shownCases.length)} / ${shownCases.length})
+          </button>
+        ` : ''}
       `;
     } else if (masterySubTab === 'MANUAL') {
       subBodyHtml = `
@@ -4254,13 +4698,14 @@
       const doc = G.evaluatePortfolioDoctor ? G.evaluatePortfolioDoctor(member, snap) : null;
       const imp = K.evaluateImpatienceLedger ? K.evaluateImpatienceLedger(member) : { missedUpsideTotalTL: 0, savedDownsideTotalTL: 0, decisions: [] };
 
+      const drillDone = Object.keys(member.completedDrills || {}).length;
       const journeySteps = [
-        { n: 1, name: 'Pazar Sezgisi', done: Boolean(member.livedMilestones?.inspectedCashScale || solvedCount >= 1) },
-        { n: 2, name: 'Vergi & Gişe', done: Boolean(member.livedMilestones?.executedRealOrder || studiedModCount >= 2) },
-        { n: 3, name: 'Fırın Kasası', done: detStats.wins >= 2 || solvedCount >= 4 },
-        { n: 4, name: 'Fırtına Kalkanı', done: solvedCount >= 8 || studiedModCount >= 6 },
-        { n: 5, name: 'Adli & Makro', done: solvedCount >= 15 || studiedModCount >= 10 },
-        { n: 6, name: 'Özgür Yatırımcı', done: solvedCount >= 24 && studiedModCount >= 12 }
+        { n: 1, name: 'Pazar Sezgisi', done: Boolean(member.livedMilestones?.inspectedCashScale || solvedCount >= 1), hint: '1 şirketin Kasa Röntgenini incele veya ilk vakayı çöz.' },
+        { n: 2, name: 'Vergi & Emir', done: Boolean(member.livedMilestones?.executedRealOrder || member.livedMilestones?.usedLimitOrStop || studiedModCount >= 2), hint: 'İlk gerçek yatırım/Limit emrini ver veya 2 akademi modülü tamamla.' },
+        { n: 3, name: 'Fırın Kasası', done: detStats.wins >= 2 || solvedCount >= 5, hint: 'Kasa Dedektifinde 2 isabet yap veya 5 saha vakası çöz.' },
+        { n: 4, name: 'Fırtına Tatbikatı', done: drillDone >= 1 || solvedCount >= 10 || studiedModCount >= 6, hint: 'Atölyede 1 Çok Aşamalı Karar Tatbikatı tamamla veya 10 vaka çöz.' },
+        { n: 5, name: 'Adli & Makro', done: drillDone >= 3 || solvedCount >= 18 || studiedModCount >= 12, hint: '3 Karar Tatbikatı tamamla veya 18 vaka / 12 akademi modülü bitir.' },
+        { n: 6, name: 'Özgür Yatırımcı', done: drillDone >= 4 && solvedCount >= 25 && studiedModCount >= 14, hint: '4 Tatbikat + 25 Saha Vakası + 14 Akademi Modülü ile tam ustalık!' }
       ];
       let foundCurrent = false;
       const renderedJourney = journeySteps.map((st) => {
@@ -4268,10 +4713,10 @@
         if (st.done) cls = 'done';
         else if (!foundCurrent) { cls = 'current'; foundCurrent = true; }
         return `
-          <div class="ae-journey-node ${cls}">
+          <button type="button" class="ae-journey-node ${cls}" data-jstep-hint="${esc(st.name + ': ' + st.hint)}">
             <div style="font-size:15px">${st.done ? '✅' : (cls === 'current' ? '🎯' : '🔒')}</div>
             <strong style="display:block;font-size:11.6px;margin-top:2px;color:var(--ink-100)">${st.n}. ${esc(st.name)}</strong>
-          </div>
+          </button>
         `;
       }).join('');
 
@@ -4494,6 +4939,163 @@
     });
 
     // Laboratuvar etkileşimleri
+    host.querySelectorAll('[data-jstep-hint]').forEach((b) => {
+      b.addEventListener('click', () => {
+        AetherNative.haptic('selection');
+        AetherNative.toast(b.getAttribute('data-jstep-hint'), 'info');
+      });
+    });
+    document.getElementById('aeShowMoreCasesBtn')?.addEventListener('click', () => {
+      AetherNative.haptic('selection');
+      casesVisibleLimit += 12;
+      renderMasteryTab(host);
+    });
+    host.querySelectorAll('[data-drill-pick]').forEach((b) => {
+      b.addEventListener('click', () => {
+        AetherNative.haptic('selection');
+        activeDrillId = b.getAttribute('data-drill-pick') || 'drill_tcmb_thursday';
+        drillStageIdx = 0;
+        drillCapitalTL = 1000000;
+        drillScore = 0;
+        drillPickedChoice = null;
+        drillHistory = [];
+        renderMasteryTab(host);
+      });
+    });
+    host.querySelectorAll('[data-drill-choice]').forEach((b) => {
+      b.addEventListener('click', () => {
+        if (drillPickedChoice) return;
+        const drills = G.getInteractiveDecisionDrills ? G.getInteractiveDecisionDrills() : [];
+        const curDrill = drills.find((d) => d.id === activeDrillId) || drills[0];
+        const stg = curDrill?.stages?.[drillStageIdx];
+        const ch = stg?.choices?.find((x) => x.id === b.getAttribute('data-drill-choice'));
+        if (!ch) return;
+        drillPickedChoice = ch;
+        drillCapitalTL = Math.max(100000, drillCapitalTL + (Number(ch.deltaTL) || 0));
+        drillScore = Math.min(100, drillScore + (Number(ch.score) || 0));
+        drillHistory.push({ clock: stg.clock, choiceId: ch.id, deltaTL: ch.deltaTL, score: ch.score, outcome: ch.outcome });
+        AetherNative.haptic(ch.score >= 20 ? 'success' : 'warning');
+        renderMasteryTab(host);
+      });
+    });
+    document.getElementById('aeDrillNextStageBtn')?.addEventListener('click', () => {
+      const drills = G.getInteractiveDecisionDrills ? G.getInteractiveDecisionDrills() : [];
+      const curDrill = drills.find((d) => d.id === activeDrillId) || drills[0];
+      drillStageIdx++;
+      drillPickedChoice = null;
+      if (curDrill && drillStageIdx >= curDrill.stages.length && K.recordDrillCompletion) {
+        K.recordDrillCompletion(curDrill.id, drillScore, drillCapitalTL);
+        AetherNative.haptic('success');
+        AetherNative.toast(`Tatbikat tamamlandı! Skor: ${drillScore}/100`, 'ok');
+        renderHeader();
+      }
+      renderMasteryTab(host);
+    });
+    document.getElementById('aeDrillReplayBtn')?.addEventListener('click', () => {
+      AetherNative.haptic('light');
+      drillStageIdx = 0;
+      drillCapitalTL = 1000000;
+      drillScore = 0;
+      drillPickedChoice = null;
+      drillHistory = [];
+      renderMasteryTab(host);
+    });
+    document.getElementById('aeDrillNextScenarioBtn')?.addEventListener('click', () => {
+      const drills = G.getInteractiveDecisionDrills ? G.getInteractiveDecisionDrills() : [];
+      const curIdx = drills.findIndex((d) => d.id === activeDrillId);
+      const next = drills[(curIdx + 1) % Math.max(1, drills.length)];
+      if (next) activeDrillId = next.id;
+      drillStageIdx = 0;
+      drillCapitalTL = 1000000;
+      drillScore = 0;
+      drillPickedChoice = null;
+      drillHistory = [];
+      renderMasteryTab(host);
+    });
+    host.querySelectorAll('[data-tax-sub]').forEach((b) => {
+      b.addEventListener('click', () => {
+        AetherNative.haptic('selection');
+        labTaxSub = b.getAttribute('data-tax-sub') || 'GVK80';
+        renderMasteryTab(host);
+      });
+    });
+    document.getElementById('aeLabDivSl')?.addEventListener('input', (e) => {
+      labDivGrossTL = Number(e.target.value) || 850000;
+      const d = K.computeDividendTax2026 ? K.computeDividendTax2026({ grossDividendTL: labDivGrossTL }) : null;
+      const lbl = document.getElementById('aeLabDivLbl');
+      if (lbl) lbl.textContent = fmtTL(labDivGrossTL);
+      const out = document.getElementById('aeLabDivLiveOut');
+      if (out && d) {
+        out.innerHTML = `
+          <div class="ae-kpi-2x2" style="margin-bottom:10px">
+            <div class="ms-kpi-box"><span>Kaynakta Kesilen %15 Stopaj</span><strong>-${fmtTL(d.withholdingPaidTL)}</strong><small>Net yatan: ${fmtTL(d.netReceivedAtSourceTL)}</small></div>
+            <div class="ms-kpi-box"><span>Beyana Tabi Yarı Matrah</span><strong>${fmtTL(d.taxableHalfTL)}</strong><small>2026 Sınırı: 400.000 ₺</small></div>
+            <div class="ms-kpi-box" style="border-color:${d.isTaxRefund ? 'rgba(16,185,129,0.5)' : 'rgba(240,180,41,0.45)'}"><span>${d.mustDeclare ? (d.isTaxRefund ? '🎉 Devletten Vergi İadesi!' : 'Ek Ödenecek Vergi') : 'Beyan Durumu'}</span><strong class="${d.isTaxRefund || !d.mustDeclare ? 'pos' : 'warn-txt'}">${d.mustDeclare ? (d.isTaxRefund ? '+' + fmtTL(Math.abs(d.extraTaxOrRefundTL)) : '-' + fmtTL(d.extraTaxOrRefundTL)) : 'Beyan Yok (0 ₺)'}</strong><small>Efektif vergi: %${d.effectiveTaxPct}</small></div>
+            <div class="ms-kpi-box"><span>Cebinde Kalan Final Net</span><strong class="pos">${fmtTL(d.finalNetCashTL)}</strong><small>%50 istisna + mahsup sonrası</small></div>
+          </div>
+          <div class="ms-alert ${!d.mustDeclare || d.isTaxRefund ? 'ok' : 'info'}" style="margin-bottom:0">
+            ${!d.mustDeclare
+              ? `✅ <strong>Beyanname Gerekmez!</strong> Yarısı (${fmtTL(d.taxableHalfTL)}) 2026 sınırı olan 400.000 ₺’nin altında kaldığı için ek vergin 0 ₺.`
+              : (d.isTaxRefund
+                ? `🎉 <strong>Vergi İadesi Bölgesi!</strong> Hesaplanan gelir vergisi (${fmtTL(d.calculatedTaxTL)}), kaynağında kesilen %15 stopajdan (${fmtTL(d.withholdingPaidTL)}) küçük olduğu için Mart 2027 beyanıyla <strong>+${fmtTL(Math.abs(d.extraTaxOrRefundTL))}</strong> iade hakkın doğar!`
+                : `📊 <strong>Kademeli Dilim (%${d.topBracketPct}):</strong> Hesaplanan ${fmtTL(d.calculatedTaxTL)} vergiden ödediğin ${fmtTL(d.withholdingPaidTL)} stopaj mahsup edilir; sadece fark (${fmtTL(d.extraTaxOrRefundTL)}) ödenir.`)}
+          </div>
+        `;
+      }
+    });
+    document.getElementById('aeLabEbSl')?.addEventListener('input', (e) => {
+      labEbCouponTL = Number(e.target.value) || 420000;
+      const eb = K.computeEurobondTax2026 ? K.computeEurobondTax2026({ annualCouponTL: labEbCouponTL }) : null;
+      const lbl = document.getElementById('aeLabEbLbl');
+      if (lbl && eb) { lbl.textContent = fmtTL(labEbCouponTL); lbl.className = eb.couponMustDeclare ? 'warn-txt' : 'pos'; }
+      const out = document.getElementById('aeLabEbLiveOut');
+      if (out && eb) {
+        out.innerHTML = `
+          <div class="ae-kpi-2x2" style="margin-bottom:10px">
+            <div class="ms-kpi-box"><span>2026 Beyan Sınırı</span><strong>400.000 ₺</strong><small>2. Gelir Vergisi Dilimi</small></div>
+            <div class="ms-kpi-box" style="border-color:${eb.couponMustDeclare ? 'rgba(244,63,94,0.45)' : 'rgba(16,185,129,0.45)'}"><span>2026 Beyanname Vergin</span><strong class="${eb.couponMustDeclare ? 'neg' : 'pos'}">${fmtTL(eb.totalTaxTL)}</strong><small>${eb.couponMustDeclare ? `Dilim %${eb.topBracketPct}` : '%0 Vergi!'}</small></div>
+          </div>
+          <div class="ms-alert ${eb.couponMustDeclare ? 'warn' : 'ok'}" style="margin-bottom:0">
+            ${eb.couponMustDeclare
+              ? `⚠️ <strong>400.000 ₺ Uçurumunu Geçtin!</strong> Aşan kısım değil, ${fmtTL(eb.annualCouponTL)} kuponun TAMAMI beyana girdi ve ${fmtTL(eb.totalTaxTL)} vergi doğdu. İtfaya kadar tutulan Eurobond’da anapara kur farkı vergisi ise 0 ₺’dir!`
+              : `🛡️ <strong>%0 Vergi Kalkanı!</strong> Yıllık kuponun 400.000 ₺ sınırının altında (başka beyan gelirin yoksa): 0 ₺ stopaj + 0 ₺ beyan vergisi!`}
+          </div>
+        `;
+      }
+    });
+    const updateBesLive = () => {
+      const bes = K.computeBes2026Simulation
+        ? K.computeBes2026Simulation({ monthlyContribTL: labBesMonthlyTL, years: labBesYears, ageAtStart: labBesStartAge, fundRealAnnualPct: labBesRealPct })
+        : null;
+      if (!bes) return;
+      const mLbl = document.getElementById('aeBesMonLbl');
+      const yLbl = document.getElementById('aeBesYrLbl');
+      const rLbl = document.getElementById('aeBesRealLbl');
+      if (mLbl) mLbl.textContent = `${fmtTL(labBesMonthlyTL)}/ay`;
+      if (yLbl) yLbl.textContent = `${labBesYears} Yıl (Çıkış Yaşı: ${bes.endAge})`;
+      if (rLbl) rLbl.textContent = `Reel +%${labBesRealPct}/yıl`;
+      const out = document.getElementById('aeBesLiveOut');
+      if (out) {
+        out.innerHTML = `
+          <div class="ae-kpi-2x2" style="margin-bottom:10px">
+            <div class="ms-kpi-box" style="border-color:rgba(16,185,129,0.48)"><span>Net Reel BES Havuzun</span><strong class="pos">${fmtCompactTL(bes.totalNetRealTL)}</strong><small>Yatırdığın: ${fmtCompactTL(bes.totalOwnPaidTL)}</small></div>
+            <div class="ms-kpi-box"><span>2026 Yıllık Devlet Katkısı</span><strong class="pos">+${fmtTL(bes.annualStateContribTL)}/yıl</strong><small>Hak Ediş: %${bes.vestingPct} · Stopaj: %${bes.exitStopajPct}</small></div>
+            <div class="ms-kpi-box" style="border-color:rgba(240,180,41,0.45)"><span>BEFAS Yönetimi Farkı</span><strong class="pos">+${fmtCompactTL(bes.befasAdvantageTL)}</strong><small>Standart fon (${fmtCompactTL(bes.netStdTotalTL)}) üstü</small></div>
+            <div class="ms-kpi-box"><span>Aylık Ömür Boyu Maaş (%4)</span><strong>+${fmtTL(bes.monthlyPensionReal4PctTL)}/ay</strong><small>Bugünkü alım gücüyle</small></div>
+          </div>
+          <div class="ms-alert ${bes.vestingPct >= 60 ? 'ok' : 'warn'}" style="margin-bottom:0">
+            <strong>📋 ${esc(bes.exitStageLabel)}:</strong>
+            ${bes.overCapAnnualTL > 0
+              ? ` Yıllık katkın 2026 tavanı olan 396.360 ₺’yi ${fmtTL(bes.overCapAnnualTL)} aşıyor; aşan tutar 2027 yılı devlet katkısı hesabına devreder!`
+              : ` Yıllık tavan (${fmtTL(bes.annualCapContrib2026TL)}) içindesin; devlet katkısının tamamından yararlanıyorsun.`}
+          </div>
+        `;
+      }
+    };
+    document.getElementById('aeBesMonSl')?.addEventListener('input', (e) => { labBesMonthlyTL = Number(e.target.value) || 15000; updateBesLive(); });
+    document.getElementById('aeBesYrSl')?.addEventListener('input', (e) => { labBesYears = Number(e.target.value) || 10; updateBesLive(); });
+    document.getElementById('aeBesRealSl')?.addEventListener('input', (e) => { labBesRealPct = Number(e.target.value) || 10; updateBesLive(); });
+
     host.querySelectorAll('[data-lab-tool]').forEach((b) => {
       b.addEventListener('click', () => {
         AetherNative.haptic('selection');
@@ -4546,7 +5148,7 @@
       if (!target || !out) return;
       const bk = G.computeBakery100kScale(target, labBakeryAmt);
       const fn = G.computeFinancial100kScale(target, labBakeryAmt);
-      const gv = G.getGrandmaVerdict ? G.getGrandmaVerdict(target, labBakeryAmt) : null;
+      const gv = G.getPlainAssetVerdict ? G.getPlainAssetVerdict(target, labBakeryAmt) : null;
       const paybackYears = bk && bk.annualOcfTL > 0 ? +(labBakeryAmt / bk.annualOcfTL).toFixed(1) : (fn && fn.annualNetProfitTL > 0 ? +(labBakeryAmt / fn.annualNetProfitTL).toFixed(1) : null);
       out.innerHTML = `
         <div class="ae-verdict-banner ${esc(gv?.trafficLight || 'amber')}">
@@ -5039,6 +5641,9 @@
     selectedThesisTag = asset.isRateInstrument ? 'INFLATION_SHIELD' : 'RESEARCH_FUNDAMENTAL';
     draftThesisNote = '';
     draftSellRatio = 1;
+    drawerBuyMode = 'MARKET';
+    drawerSellMode = 'MARKET';
+    draftTriggerPriceTL = 0;
     lastDrawerFeedback = null;
 
     if (asset.venue === 'TWO_DOOR') {
@@ -5535,9 +6140,43 @@
     `;
   }
 
-  function renderHealthVaultHtml(info) {
+  function renderHealthVaultHtml(info, assetObj) {
+    const K = global.AetherKernelV10;
+    const G = global.RealInvestmentGuide;
     const h = info?.health;
     const dx = info?.deepXray;
+    const q5 = (assetObj && G?.computeFiveQuestionCompanyXray) ? G.computeFiveQuestionCompanyXray(assetObj) : null;
+    let q5Html = '';
+    if (q5) {
+      q5Html = `
+        <div class="ae-card" style="background:var(--surface-2);border-color:rgba(240,180,41,0.34);margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+            <strong style="font-size:13.8px;color:var(--gold-bright)">🔎 5 Soruda ${esc(q5.ticker)} Şirket Röntgeni</strong>
+            <span class="ms-sig-pill ${q5.redCount === 0 && q5.greenCount >= 4 ? 'good' : (q5.redCount >= 2 ? 'danger' : 'warn')}">${q5.greenCount}/5 Yeşil</span>
+          </div>
+          <p style="margin:0 0 8px;font-size:12px;color:var(--ink-200)">${esc(q5.summaryLine)}</p>
+          <div class="ae-q5-list">
+            ${q5.questions.map((item) => `
+              <div class="ae-q5-row ${esc(item.tone)}">
+                <div class="ae-q5-head">
+                  <strong>${item.num}. ${esc(item.q)}</strong>
+                  <span class="ms-sig-pill ${item.tone === 'good' ? 'good' : (item.tone === 'red' ? 'danger' : 'warn')}">${esc(item.badge)}</span>
+                </div>
+                <div class="ae-q5-body">${esc(item.verdict)}</div>
+              </div>
+            `).join('')}
+          </div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap">
+            <button type="button" class="ms-btn primary sm" style="flex:1" data-vault-limit-price="${q5.suggestedLimitBuyTL}">
+              🎯 ${fmtUnitTL(q5.suggestedLimitBuyTL)}’den Limit Alım Kur
+            </button>
+            <button type="button" class="ms-btn sm" data-vault-alert-price="${q5.suggestedLimitBuyTL}">
+              🔔 Alarm Kur
+            </button>
+          </div>
+        </div>
+      `;
+    }
     let topVaultHtml = '';
 
     if (h?.kind === 'FINANCIAL') {
@@ -5726,7 +6365,7 @@
       `;
     }
 
-    return topVaultHtml + xrayHtml + quantHtml;
+    return q5Html + topVaultHtml + xrayHtml + quantHtml;
   }
 
   function buildPreTradeMentorBoxHtml(asset) {
@@ -5759,7 +6398,7 @@
     });
   }
 
-  function estimatePlainUnitPurchase(asset, amountTL) {
+  function estimatePlainUnitPurchase(asset, amountTL, overridePriceTL = 0) {
     const amt = Math.max(0, Number(amountTL) || 0);
     if (!asset || amt <= 0) return '';
     if (asset.isRateInstrument) {
@@ -5767,24 +6406,28 @@
       const m = Math.round((amt * (netR / 100)) / 12);
       return `Aylık net ~+${fmtTL(m)} gelir üretir`;
     }
-    const p = Number(asset.priceTL) || 0;
+    const p = Number(overridePriceTL) > 0 ? Number(overridePriceTL) : (Number(asset.priceTL) || 0);
     if (p <= 0) return '';
+    const atSuffix = Number(overridePriceTL) > 0 ? ` (${fmtUnitTL(p)} hedefinde)` : '';
     if (asset.subVenue === 'BIST_STOCK') {
-      const lots = Math.floor(amt / p);
-      return `Yaklaşık ${lots.toLocaleString('tr-TR')} adet (lot) hisse alırsın`;
+      const lots = Math.floor((amt * (1 - 0.00084)) / p);
+      return `Yaklaşık ${lots.toLocaleString('tr-TR')} adet (lot) hisse alırsın${atSuffix}`;
     }
     if (asset.id === 'gram-altin-spot' || asset.id === 'gram-gumus-spot') {
       const gr = +(amt / p).toFixed(2);
-      return `Yaklaşık ${gr.toLocaleString('tr-TR')} gram alırsın`;
+      return `Yaklaşık ${gr.toLocaleString('tr-TR')} gram alırsın${atSuffix}`;
     }
     const qty = +(amt / p).toFixed(p >= 100 ? 2 : 3);
-    return `Yaklaşık ${qty.toLocaleString('tr-TR')} birim alırsın`;
+    return `Yaklaşık ${qty.toLocaleString('tr-TR')} birim alırsın${atSuffix}`;
   }
 
   function updateLiveRippleBoxInSheet(asset) {
     const unitEl = document.getElementById('aeEstUnitsLine');
     if (unitEl && asset) {
-      unitEl.textContent = estimatePlainUnitPurchase(asset, draftOrderAmount);
+      const trigOverride = (drawerOrderSide === 'BUY' && drawerBuyMode === 'LIMIT')
+        ? (Number(document.getElementById('aeCondTriggerInp')?.value) || draftTriggerPriceTL || 0)
+        : 0;
+      unitEl.textContent = estimatePlainUnitPurchase(asset, draftOrderAmount, trigOverride);
     }
     const box = document.getElementById('aeLiveRippleBox');
     if (box && asset) {
@@ -5800,6 +6443,13 @@
     if (mBox && asset) {
       mBox.innerHTML = buildPreTradeMentorBoxHtml(asset);
       bindMentorJumpButtons(mBox);
+    }
+    const obLine = document.getElementById('aeOrderBookSlipLine');
+    if (obLine && asset && global.RealInvestmentGuide?.computeOrderBookDepth) {
+      const ob = global.RealInvestmentGuide.computeOrderBookDepth(asset, draftOrderAmount);
+      if (ob) {
+        obLine.innerHTML = `Günlük Hacim: <strong>${fmtInt(ob.turnoverMillionTL)} Mn ₺</strong> · Adım: <strong>${ob.tick} ₺</strong> · ${fmtCompactTL(ob.orderAmountTL)} Piyasa Emri Kayması: <strong class="${ob.slippagePct >= 0.35 ? 'neg' : 'pos'}">~%${ob.slippagePct} (${ob.slippageTL > 0 ? '-' + fmtTL(ob.slippageTL) : '0 ₺'})</strong>`;
+      }
     }
   }
 
@@ -5819,6 +6469,12 @@
     const existingSpotSnap = snap.spotItems.find((s) => s.assetKey === asset.key) || null;
     const existingTranches = snap.tranches.filter((t) => t.assetKey === asset.key);
     const existingPending = (member.pendingOrders || []).filter((o) => o.assetKey === asset.key);
+    const existingConds = (member.conditionalOrders || []).filter((c) => c.assetKey === asset.key);
+    const watchEntry = (member.watchlist || []).find((w) => w.assetKey === asset.key) || null;
+    const supportsConditional = !asset.isRateInstrument && asset.venue !== 'TEFAS' && asset.venue !== 'BENCHMARK_ONLY' && asset.priceTL > 0;
+    const orderBook = (asset.subVenue === 'BIST_STOCK' && G.computeOrderBookDepth)
+      ? G.computeOrderBookDepth(asset, draftOrderAmount || 100000)
+      : null;
     const partnerScaleTL = existingSpotSnap
       ? Math.max(1000, Math.round(existingSpotSnap.netValTL))
       : Math.max(1000, Math.round(draftOrderAmount || 100000));
@@ -5829,7 +6485,8 @@
       : 0;
     const usableCashTL = Math.max(0, +(snap.cashTL + unsettledUsableForBist).toFixed(2));
     const minOrderTL = (asset.venue === 'BANK_RATE' || asset.venue === 'TEFAS') ? 100 : 10;
-    const rawMaxPower = Math.floor(usableCashTL + (selectedUseMargin && micro.marginAllowed ? Math.max(0, snap.totalNetWorthTL * 0.5 - snap.marginDebtTL) : 0));
+    const marginEffective = selectedUseMargin && micro.marginAllowed && drawerBuyMode === 'MARKET';
+    const rawMaxPower = Math.floor(usableCashTL + (marginEffective ? Math.max(0, snap.totalNetWorthTL * 0.5 - snap.marginDebtTL) : 0));
     const maxBuyPower = Math.max(minOrderTL, rawMaxPower);
     const sliderMin = rawMaxPower > 0 && rawMaxPower < 1000 ? minOrderTL : 1000;
     const sliderMax = Math.max(sliderMin + 100, rawMaxPower > 0 ? rawMaxPower : 10000);
@@ -5894,7 +6551,7 @@
       }
 
       let marginHtml = '';
-      if (micro.marginAllowed && clock.bistCanMatchNow && drawerOrderSide === 'BUY') {
+      if (micro.marginAllowed && clock.bistCanMatchNow && drawerOrderSide === 'BUY' && drawerBuyMode === 'MARKET') {
         marginHtml = `
           <label style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 11px;margin:8px 0;border-radius:11px;background:${selectedUseMargin ? 'var(--red-soft)' : 'var(--surface-2)'};border:1px solid ${selectedUseMargin ? 'rgba(244,63,94,0.4)' : 'var(--line-subtle)'};font-size:12px;font-weight:700;cursor:pointer">
             <span>⚡ Kredili İşlem (Yıllık %${K.getAnnualMarginRatePct()} Günlük Faiz)</span>
@@ -5939,11 +6596,24 @@
           ? fmtCompactLots(availQty)
           : (+Number(availQty).toFixed(availQty >= 10 ? 2 : 4)).toLocaleString('tr-TR');
 
+        const defaultCondSellP = drawerSellMode === 'TAKE_PROFIT'
+          ? (asset.subVenue === 'BIST_STOCK' ? K.snapToBistTick(asset.priceTL * 1.15) : +(asset.priceTL * 1.15).toFixed(2))
+          : (asset.subVenue === 'BIST_STOCK' ? K.snapToBistTick(asset.priceTL * 0.92) : +(asset.priceTL * 0.92).toFixed(2));
+        const activeSellTrigP = draftTriggerPriceTL > 0 ? draftTriggerPriceTL : defaultCondSellP;
+
         tabContentHtml = `
           ${ !asset.isRateInstrument ? `
             <div class="ae-seg" style="margin-bottom:10px">
               <button type="button" class="ae-seg-btn" data-dside="BUY">Alım Yap</button>
               <button type="button" class="ae-seg-btn active" data-dside="SELL" style="color:var(--red-ink)">Satış (${segAvailLbl})</button>
+            </div>
+          ` : ''}
+
+          ${supportsConditional ? `
+            <div class="ae-hscroll" style="margin-bottom:8px">
+              <button type="button" class="ae-chip ${drawerSellMode === 'MARKET' ? 'active' : 'sub'}" data-sell-mode="MARKET">⚡ Anlık Sat</button>
+              <button type="button" class="ae-chip ${drawerSellMode === 'STOP_LOSS' ? 'active' : 'sub'}" data-sell-mode="STOP_LOSS">🛡️ Zarar Kes (Stop)</button>
+              <button type="button" class="ae-chip ${drawerSellMode === 'TAKE_PROFIT' ? 'active' : 'sub'}" data-sell-mode="TAKE_PROFIT">🎯 Kâr Al (Hedef)</button>
             </div>
           ` : ''}
 
@@ -5955,10 +6625,24 @@
               <strong class="${(existingSpotSnap?.pnlNetTL || 0) >= 0 ? 'pos' : 'neg'}">${(existingSpotSnap?.pnlNetTL || 0) >= 0 ? '+' : ''}${fmtTL(existingSpotSnap?.pnlNetTL || 0)}</strong>
             </div>
 
-            <div style="margin-bottom:8px">
-              <label style="display:block;font-size:11.3px;font-weight:800;color:var(--ink-400);margin-bottom:4px">Satılacak Miktar (${isIntLot ? 'Tam Lot' : 'Birim'}):</label>
-              <input id="aeSellQtyInp" class="ae-input" type="number" inputmode="decimal" min="${isIntLot ? 1 : 0.0001}" max="${availQty}" step="${isIntLot ? 1 : 'any'}" value="${effectiveSellQty}" style="font-weight:800;text-align:center" />
-            </div>
+            ${drawerSellMode !== 'MARKET' && supportsConditional ? `
+              <div style="margin-bottom:10px;padding:10px;border-radius:12px;background:var(--surface-1);border:1px solid ${drawerSellMode === 'STOP_LOSS' ? 'rgba(244,63,94,0.4)' : 'rgba(16,185,129,0.4)'}">
+                <label style="display:block;font-size:11.6px;font-weight:800;color:${drawerSellMode === 'STOP_LOSS' ? 'var(--red-ink)' : 'var(--green-ink)'};margin-bottom:5px">
+                  ${drawerSellMode === 'STOP_LOSS' ? '🛡️ Zarar Kes Tetik Fiyatı (Güncel fiyatın altında):' : '🎯 Kâr Al Hedef Fiyatı (Güncel fiyatın üstünde):'}
+                </label>
+                <input id="aeCondTriggerInp" class="ae-input" type="number" inputmode="decimal" step="any" value="${activeSellTrigP}" style="font-weight:900;text-align:center;font-size:17px !important;padding:9px" />
+                <div class="ae-hscroll" style="margin-top:7px;padding-bottom:0">
+                  ${drawerSellMode === 'STOP_LOSS'
+                    ? [-5, -8, -12, -15].map((p) => `<button type="button" class="ae-chip sub" data-trig-pct="${p}">%${p}</button>`).join('')
+                    : [10, 15, 25, 40].map((p) => `<button type="button" class="ae-chip sub" data-trig-pct="${p}">+%${p}</button>`).join('')}
+                </div>
+              </div>
+            ` : `
+              <div style="margin-bottom:8px">
+                <label style="display:block;font-size:11.3px;font-weight:800;color:var(--ink-400);margin-bottom:4px">Satılacak Miktar (${isIntLot ? 'Tam Lot' : 'Birim'}):</label>
+                <input id="aeSellQtyInp" class="ae-input" type="number" inputmode="decimal" min="${isIntLot ? 1 : 0.0001}" max="${availQty}" step="${isIntLot ? 1 : 'any'}" value="${effectiveSellQty}" style="font-weight:800;text-align:center" />
+              </div>
+            `}
 
             ${showPartialRatios ? `
               <div class="ae-hscroll" style="margin-bottom:10px">
@@ -5973,19 +6657,50 @@
               </div>
             `}
 
-            <div id="aeSellPreviewLine" style="font-size:11.8px;color:var(--ink-400);margin-bottom:10px">
-              Satılacak: <strong style="color:var(--ink-100)">${effectiveSellQty} ${isIntLot ? 'lot' : 'birim'} (%${effectivePct})</strong> · Tahmini Net Tutar: <strong style="color:var(--ink-100)">~${fmtTL(estGross)}</strong> ·
-              ${asset.venue === 'BIST'
-                ? 'BIST kuralıyla satış tutarı T+2 takas kum saatine girer (2 iş günü nakit çekilemez).'
-                : (asset.venue === 'TEFAS'
-                  ? `TEFAS valör kuralıyla bozum tutarı T+${asset.sellValorDays || 1} iş gününde nakit kasana geçer${asset.stopajPct > 0 ? ` (kârdan %${asset.stopajPct} stopaj kesilir)` : ' (%0 stopaj)'}.`
-                  : 'Anında nakit kasana geçer.')}
-            </div>
+            ${drawerSellMode !== 'MARKET' && supportsConditional ? `
+              <button type="button" class="ms-btn ${drawerSellMode === 'STOP_LOSS' ? 'sell-cta' : 'buy-cta'}" style="width:100%;padding:13px;font-size:14.8px" id="aeConfirmCondSellBtn" ${availQty <= 0 ? 'disabled' : ''}>
+                ${drawerSellMode === 'STOP_LOSS' ? '🛡️ Zarar Kes Kalkanı Kur' : '🎯 Hedef Kâr Al Emri Kur'}
+              </button>
+            ` : `
+              <div id="aeSellPreviewLine" style="font-size:11.8px;color:var(--ink-400);margin-bottom:10px">
+                Satılacak: <strong style="color:var(--ink-100)">${effectiveSellQty} ${isIntLot ? 'lot' : 'birim'} (%${effectivePct})</strong> · Tahmini Net Tutar: <strong style="color:var(--ink-100)">~${fmtTL(estGross)}</strong> ·
+                ${asset.venue === 'BIST'
+                  ? 'BIST kuralıyla satış tutarı T+2 takas kum saatine girer (2 iş günü nakit çekilemez).'
+                  : (asset.venue === 'TEFAS'
+                    ? `TEFAS valör kuralıyla bozum tutarı T+${asset.sellValorDays || 1} iş gününde nakit kasana geçer${asset.stopajPct > 0 ? ` (kârdan %${asset.stopajPct} stopaj kesilir)` : ' (%0 stopaj)'}.`
+                    : 'Anında nakit kasana geçer.')}
+              </div>
 
-            <button type="button" class="ms-btn sell-cta" style="width:100%;padding:13px;font-size:15px" id="aeConfirmSellBtn" ${availQty <= 0 ? 'disabled' : ''}>
-              ${effectiveSellQty} ${isIntLot ? 'Lot' : 'Birim'} (%${effectivePct}) Satış Emri Ver
-            </button>
+              <button type="button" class="ms-btn sell-cta" style="width:100%;padding:13px;font-size:15px" id="aeConfirmSellBtn" ${availQty <= 0 ? 'disabled' : ''}>
+                ${effectiveSellQty} ${isIntLot ? 'Lot' : 'Birim'} (%${effectivePct}) Satış Emri Ver
+              </button>
+            `}
           </div>
+
+          ${existingConds.length > 0 ? `
+            <div class="ms-list" style="margin-top:8px">
+              ${existingConds.map((co) => `
+                <div class="ms-list-row" style="border-color:rgba(240,180,41,0.38)">
+                  <span style="font-size:12px">
+                    ${co.kind === 'LIMIT_BUY' ? '🎯 Limit Alım' : (co.kind === 'STOP_LOSS' ? '🛡️ Zarar Kes' : '🎯 Kâr Al')}:
+                    <strong>${fmtUnitTL(co.triggerPriceTL)}</strong> (${co.kind === 'LIMIT_BUY' ? fmtTL(co.reservedTL) : co.qty + ' adet'})
+                  </span>
+                  <button type="button" class="ms-btn danger sm" data-drawer-cancel-cond="${esc(co.id)}">İptal</button>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+
+          ${existingPending.length > 0 ? `
+            <div class="ms-list" style="margin-top:8px">
+              ${existingPending.map((ord) => `
+                <div class="ms-list-row">
+                  <span style="font-size:12px">⏳ Bekleyen ${ord.side === 'BUY' ? 'Alım' : 'Satış'} (${ord.side === 'BUY' ? fmtTL(ord.reservedTL) : ord.qty + ' adet'})</span>
+                  <button type="button" class="ms-btn danger sm" data-drawer-cancel-ord="${esc(ord.id)}">İptal Et</button>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
         `;
       } else {
         const ripple = computeOrderRipplePreview(asset, draftOrderAmount);
@@ -5998,11 +6713,23 @@
                 : Math.floor(existingPos.qty).toLocaleString('tr-TR') + ' Lot'))
             : (+Number(existingPos.qty).toFixed(existingPos.qty >= 10 ? 2 : 4)).toLocaleString('tr-TR'))
           : '';
+        const defaultLimitBuyP = asset.subVenue === 'BIST_STOCK'
+          ? K.snapToBistTick(Math.max(0.05, asset.priceTL * 0.96))
+          : +(Math.max(0.01, asset.priceTL * 0.96)).toFixed(2);
+        const activeBuyTrigP = draftTriggerPriceTL > 0 ? draftTriggerPriceTL : defaultLimitBuyP;
+
         tabContentHtml = `
           ${existingPos && existingPos.qty > 0 ? `
             <div class="ae-seg" style="margin-bottom:10px">
               <button type="button" class="ae-seg-btn active" data-dside="BUY" style="color:var(--green-ink)">Alım Ekle</button>
               <button type="button" class="ae-seg-btn" data-dside="SELL">Satış (${segHeldLbl})</button>
+            </div>
+          ` : ''}
+
+          ${supportsConditional ? `
+            <div class="ae-hscroll" style="margin-bottom:8px">
+              <button type="button" class="ae-chip ${drawerBuyMode === 'MARKET' ? 'active' : 'sub'}" data-buy-mode="MARKET">⚡ Anlık (Piyasa)</button>
+              <button type="button" class="ae-chip ${drawerBuyMode === 'LIMIT' ? 'active' : 'sub'}" data-buy-mode="LIMIT">🎯 Limit Emir (Hedef Fiyat)</button>
             </div>
           ` : ''}
 
@@ -6040,7 +6767,7 @@
 
             <input id="msOrderAmountInp" class="ae-input" style="font-weight:900;font-size:22px !important;text-align:center;padding:12px" type="number" inputmode="numeric" min="${minOrderTL}" step="${sliderStep}" value="${draftOrderAmount}" />
             <div id="aeEstUnitsLine" style="text-align:center;font-size:13px;font-weight:800;color:var(--gold-bright);margin-top:6px">
-              ${esc(estimatePlainUnitPurchase(asset, draftOrderAmount))}
+              ${esc(estimatePlainUnitPurchase(asset, draftOrderAmount, drawerBuyMode === 'LIMIT' ? activeBuyTrigP : 0))}
             </div>
 
             <input id="aeAmountSlider" class="ae-slider" type="range" min="${sliderMin}" max="${sliderMax}" step="${sliderStep}" value="${Math.min(sliderMax, Math.max(sliderMin, draftOrderAmount))}" />
@@ -6079,10 +6806,99 @@
               </div>
             </details>
 
-            <button type="button" class="ae-big-btn green" style="width:100%" id="msBuyConfirmBtn">
-              ${asset.isRateInstrument ? '✅ Vadeli / Fona Bağla' : (selectedUseMargin ? '⚡ Kredili Alım Emri Ver' : '✅ Alım Emri Ver')}
-            </button>
+            ${drawerBuyMode === 'LIMIT' && supportsConditional ? `
+              <div style="margin-bottom:11px;padding:10px;border-radius:12px;background:var(--surface-1);border:1px solid rgba(56,189,248,0.4)">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap">
+                  <label style="font-size:11.8px;font-weight:800;color:var(--cyan)">🎯 Hedef Limit Alım Fiyatı (₺):</label>
+                  <span style="font-size:11px;color:var(--ink-400)">Güncel: ${fmtUnitTL(asset.priceTL)}${asset.subVenue === 'BIST_STOCK' ? ` · Adım: ${K.getBistTickSize(asset.priceTL)} ₺` : ''}</span>
+                </div>
+                <input id="aeCondTriggerInp" class="ae-input" type="number" inputmode="decimal" step="any" value="${activeBuyTrigP}" style="font-weight:900;text-align:center;font-size:17px !important;padding:9px" />
+                <div class="ae-hscroll" style="margin-top:7px;padding-bottom:0">
+                  ${[-2, -4, -7, -10].map((p) => `<button type="button" class="ae-chip sub" data-trig-pct="${p}">%${p} İndirim</button>`).join('')}
+                </div>
+              </div>
+              <button type="button" class="ae-big-btn gold" style="width:100%" id="aeConfirmLimitBuyBtn">
+                🎯 Hedef Fiyattan Limit Alım Kur
+              </button>
+            ` : `
+              <button type="button" class="ae-big-btn green" style="width:100%" id="msBuyConfirmBtn">
+                ${asset.isRateInstrument ? '✅ Vadeli / Fona Bağla' : (selectedUseMargin ? '⚡ Kredili Alım Emri Ver' : '✅ Alım Emri Ver')}
+              </button>
+            `}
           </div>
+
+          ${orderBook ? `
+            <details class="ae-guide-acc" ${orderBook.recommendLimit ? 'open' : ''} style="margin-top:10px;background:var(--surface-2)">
+              <summary style="padding:10px 12px;font-size:12.6px">
+                <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                  <span>📊 5 Kademe Tahta Derinliği</span>
+                  <span class="ms-sig-pill ${orderBook.liquidityTone === 'good' ? 'good' : (orderBook.liquidityTone === 'danger' ? 'danger' : 'info')}">${esc(orderBook.liquidityTier)}</span>
+                </span>
+              </summary>
+              <div class="ae-guide-body" style="padding:8px 12px 12px">
+                <div id="aeOrderBookSlipLine" style="font-size:11.6px;color:var(--ink-200);margin-bottom:6px">
+                  Günlük Hacim: <strong>${fmtInt(orderBook.turnoverMillionTL)} Mn ₺</strong> · Adım: <strong>${orderBook.tick} ₺</strong> · ${fmtCompactTL(orderBook.orderAmountTL)} Piyasa Emri Kayması:
+                  <strong class="${orderBook.slippagePct >= 0.35 ? 'neg' : 'pos'}">~%${orderBook.slippagePct} (${orderBook.slippageTL > 0 ? '-' + fmtTL(orderBook.slippageTL) : '0 ₺'})</strong>
+                </div>
+                ${orderBook.recommendLimit ? `<div class="ms-alert warn" style="margin:0 0 6px;padding:7px 9px;font-size:11.6px">⚠️ Bu tahtada piyasa emri ${orderBook.levelsSwept} kademe süpürüyor! Yukarıdan <strong>🎯 Limit Emir</strong> seçerek kaymayı sıfırla.</div>` : ''}
+                <div class="ae-ob-grid">
+                  <div class="ae-ob-col">
+                    <div class="ae-ob-head"><span>ALIŞ (Lot)</span><span>FİYAT</span></div>
+                    ${orderBook.bids.map((b) => {
+                      const lotLbl = b.lots >= 1000000 ? `${TR_DEC2.format(b.lots / 1000000)}M` : (b.lots >= 100000 ? `${Math.round(b.lots / 1000)}B` : b.lots.toLocaleString('tr-TR'));
+                      return `
+                      <div class="ae-ob-row">
+                        <div class="ae-ob-bar bid" style="width:${Math.max(12, Math.round((b.valueTL / orderBook.maxLevelTL) * 100))}%"></div>
+                        <span class="ae-ob-lots">${lotLbl}</span>
+                        <span class="ae-ob-price pos">${b.priceTL.toFixed(2)}</span>
+                      </div>`;
+                    }).join('')}
+                  </div>
+                  <div class="ae-ob-col">
+                    <div class="ae-ob-head"><span>SATIŞ</span><span>(Lot)</span></div>
+                    ${orderBook.asks.map((a) => {
+                      const lotLbl = a.lots >= 1000000 ? `${TR_DEC2.format(a.lots / 1000000)}M` : (a.lots >= 100000 ? `${Math.round(a.lots / 1000)}B` : a.lots.toLocaleString('tr-TR'));
+                      return `
+                      <div class="ae-ob-row">
+                        <div class="ae-ob-bar ask" style="width:${Math.max(12, Math.round((a.valueTL / orderBook.maxLevelTL) * 100))}%"></div>
+                        <span class="ae-ob-price neg">${a.priceTL.toFixed(2)}</span>
+                        <span class="ae-ob-lots">${lotLbl}</span>
+                      </div>`;
+                    }).join('')}
+                  </div>
+                </div>
+              </div>
+            </details>
+          ` : ''}
+
+          ${supportsConditional ? `
+            <details class="ae-guide-acc" style="margin-top:8px;background:var(--surface-2)">
+              <summary style="padding:10px 12px;font-size:12.6px">
+                🔔 Fiyat Alarmı & İzleme Notu ${watchEntry?.targetPriceTL > 0 ? `(Hedef: ${fmtUnitTL(watchEntry.targetPriceTL)})` : ''}
+              </summary>
+              <div class="ae-guide-body" style="padding:10px 12px">
+                <div style="display:flex;gap:7px;align-items:center">
+                  <input id="aeAlertPriceInp" class="ae-input" type="number" inputmode="decimal" step="any" value="${watchEntry?.targetPriceTL > 0 ? watchEntry.targetPriceTL : defaultLimitBuyP}" placeholder="Hedef fiyat (₺)" style="padding:8px 10px;font-weight:800" />
+                  <button type="button" class="ms-btn primary sm" id="aeSavePriceAlertBtn" style="flex-shrink:0">🔔 Alarm Kur</button>
+                </div>
+                <div style="font-size:11.2px;color:var(--ink-400);margin-top:5px">Hedef fiyat güncel fiyatın altındaysa "düşünce", üstündeyse "çıkınca" otomatik uyarır.</div>
+              </div>
+            </details>
+          ` : ''}
+
+          ${existingConds.length > 0 ? `
+            <div class="ms-list" style="margin-top:8px">
+              ${existingConds.map((co) => `
+                <div class="ms-list-row" style="border-color:rgba(240,180,41,0.38)">
+                  <span style="font-size:12px">
+                    ${co.kind === 'LIMIT_BUY' ? '🎯 Limit Alım' : (co.kind === 'STOP_LOSS' ? '🛡️ Zarar Kes' : '🎯 Kâr Al')}:
+                    <strong>${fmtUnitTL(co.triggerPriceTL)}</strong> (${co.kind === 'LIMIT_BUY' ? fmtTL(co.reservedTL) : co.qty + ' adet'})
+                  </span>
+                  <button type="button" class="ms-btn danger sm" data-drawer-cancel-cond="${esc(co.id)}">İptal</button>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
 
           ${existingTranches.length > 0 ? `
             <div class="ms-list" style="margin-top:8px">
@@ -6115,7 +6931,7 @@
     } else if (drawerSubTab === 'VAULT') {
       tabContentHtml = `
         ${renderInteractiveCycleSvg(info)}
-        ${renderHealthVaultHtml(info)}
+        ${renderHealthVaultHtml(info, asset)}
         <button type="button" class="ms-btn primary" style="width:100%;padding:12px" id="aeJumpToOrderTabBtn">Emir Gişesine Geç</button>
       `;
     } else if (drawerSubTab === 'DUEL') {
@@ -6247,7 +7063,7 @@
       `;
     }
 
-    const gv = G.getGrandmaVerdict ? G.getGrandmaVerdict(asset, partnerScaleTL) : null;
+    const gv = G.getPlainAssetVerdict ? G.getPlainAssetVerdict(asset, partnerScaleTL) : null;
 
     sheet.innerHTML = `
       <div class="ae-sheet-grabber-zone" id="aeSheetDragHandle">
@@ -6259,6 +7075,7 @@
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
             ${gv ? `<span class="ae-traffic-dot ${esc(gv.trafficLight)}"></span>` : ''}
             <span class="ms-asset-code">${esc(asset.symbol)}</span>
+            <button type="button" class="ae-watch-btn ${watchEntry ? 'active' : ''}" id="aeDrawerWatchBtn">${watchEntry ? '★ Takipte' : '☆ Takip'}</button>
             ${gv ? `<span class="ms-sig-pill ${gv.trafficLight === 'green' ? 'good' : (gv.trafficLight === 'red' ? 'danger' : 'warn')}">${esc(gv.simpleLabel)}</span>` : ''}
           </div>
           <h2 style="margin:5px 0 0;font-size:19.5px;font-weight:900;line-height:1.22">${esc(asset.name)}</h2>
@@ -6576,6 +7393,133 @@
         renderCurrentTab(true);
       });
     });
+
+    document.getElementById('aeDrawerWatchBtn')?.addEventListener('click', () => {
+      const res = K.toggleWatchlistAsset(asset.key);
+      AetherNative.haptic('selection');
+      if (res.message) AetherNative.toast(res.message, 'info');
+      renderAssetDrawer();
+      renderCurrentTab(true);
+    });
+
+    sheet.querySelectorAll('[data-buy-mode]').forEach((b) => {
+      b.addEventListener('click', () => {
+        AetherNative.haptic('selection');
+        drawerBuyMode = b.getAttribute('data-buy-mode') || 'MARKET';
+        draftTriggerPriceTL = 0;
+        renderAssetDrawer();
+      });
+    });
+
+    sheet.querySelectorAll('[data-sell-mode]').forEach((b) => {
+      b.addEventListener('click', () => {
+        AetherNative.haptic('selection');
+        drawerSellMode = b.getAttribute('data-sell-mode') || 'MARKET';
+        draftTriggerPriceTL = 0;
+        renderAssetDrawer();
+      });
+    });
+
+    sheet.querySelectorAll('[data-trig-pct]').forEach((b) => {
+      b.addEventListener('click', () => {
+        AetherNative.haptic('selection');
+        const pct = Number(b.getAttribute('data-trig-pct')) || 0;
+        const raw = asset.priceTL * (1 + pct / 100);
+        draftTriggerPriceTL = asset.subVenue === 'BIST_STOCK' ? K.snapToBistTick(Math.max(0.05, raw)) : +Math.max(0.01, raw).toFixed(2);
+        const inp = document.getElementById('aeCondTriggerInp');
+        if (inp) inp.value = String(draftTriggerPriceTL);
+        if (drawerOrderSide === 'BUY' && drawerBuyMode === 'LIMIT') updateLiveRippleBoxInSheet(asset);
+      });
+    });
+
+    document.getElementById('aeCondTriggerInp')?.addEventListener('input', (e) => {
+      draftTriggerPriceTL = Number(e.target.value) || 0;
+      if (drawerOrderSide === 'BUY' && drawerBuyMode === 'LIMIT') updateLiveRippleBoxInSheet(asset);
+    });
+
+    document.getElementById('aeConfirmLimitBuyBtn')?.addEventListener('click', () => {
+      const amt = Number(document.getElementById('msOrderAmountInp')?.value || draftOrderAmount || 0);
+      const trig = Number(document.getElementById('aeCondTriggerInp')?.value || draftTriggerPriceTL || 0);
+      const noteVal = document.getElementById('msThesisNoteInp')?.value || draftThesisNote || '';
+      const res = K.executeOrder({
+        side: 'PLACE_LIMIT_BUY',
+        assetKey: asset.key,
+        amountTL: amt,
+        triggerPriceTL: trig,
+        door: selectedDoor,
+        thesisTag: selectedThesisTag,
+        thesisNote: noteVal
+      });
+      AetherNative.haptic(res.ok ? 'success' : 'error');
+      lastDrawerFeedback = { ok: res.ok, text: res.ok ? res.message : res.reason };
+      if (res.ok) AetherNative.toast(`${asset.ticker}: Limit Alım emri kuruldu!`, 'ok');
+      renderAssetDrawer();
+      renderHeader();
+      renderCurrentTab(true);
+    });
+
+    document.getElementById('aeConfirmCondSellBtn')?.addEventListener('click', () => {
+      const trig = Number(document.getElementById('aeCondTriggerInp')?.value || draftTriggerPriceTL || 0);
+      const res = K.executeOrder({
+        side: drawerSellMode === 'TAKE_PROFIT' ? 'PLACE_TAKE_PROFIT' : 'PLACE_STOP_LOSS',
+        assetKey: asset.key,
+        triggerPriceTL: trig,
+        sellRatio: draftSellRatio,
+        door: selectedDoor
+      });
+      AetherNative.haptic(res.ok ? 'success' : 'error');
+      lastDrawerFeedback = { ok: res.ok, text: res.ok ? res.message : res.reason };
+      if (res.ok) AetherNative.toast(res.message, 'ok');
+      renderAssetDrawer();
+      renderHeader();
+      renderCurrentTab(true);
+    });
+
+    document.getElementById('aeSavePriceAlertBtn')?.addEventListener('click', () => {
+      const pVal = Number(document.getElementById('aeAlertPriceInp')?.value || 0);
+      if (!(pVal > 0)) return;
+      const dir = pVal >= asset.priceTL ? 'ABOVE' : 'BELOW';
+      const res = K.toggleWatchlistAsset(asset.key, pVal, dir, 'Hedef Fiyat Alarmı');
+      AetherNative.haptic(res.ok ? 'success' : 'error');
+      lastDrawerFeedback = { ok: res.ok, text: res.message || res.reason || '' };
+      if (res.ok) AetherNative.toast(res.message, 'ok');
+      renderAssetDrawer();
+      renderCurrentTab(true);
+    });
+
+    sheet.querySelectorAll('[data-drawer-cancel-cond]').forEach((b) => {
+      b.addEventListener('click', () => {
+        const res = K.executeOrder({ side: 'CANCEL_CONDITIONAL', orderId: b.getAttribute('data-drawer-cancel-cond') });
+        AetherNative.haptic(res.ok ? 'success' : 'error');
+        lastDrawerFeedback = { ok: res.ok, text: res.ok ? res.message : res.reason };
+        renderAssetDrawer();
+        renderHeader();
+        renderCurrentTab(true);
+      });
+    });
+
+    sheet.querySelectorAll('[data-vault-limit-price]').forEach((b) => {
+      b.addEventListener('click', () => {
+        AetherNative.haptic('selection');
+        draftTriggerPriceTL = Number(b.getAttribute('data-vault-limit-price')) || 0;
+        drawerSubTab = 'ORDER';
+        drawerOrderSide = 'BUY';
+        drawerBuyMode = 'LIMIT';
+        renderAssetDrawer();
+      });
+    });
+
+    sheet.querySelectorAll('[data-vault-alert-price]').forEach((b) => {
+      b.addEventListener('click', () => {
+        const pVal = Number(b.getAttribute('data-vault-alert-price')) || 0;
+        if (!(pVal > 0)) return;
+        const res = K.toggleWatchlistAsset(asset.key, pVal, pVal >= asset.priceTL ? 'ABOVE' : 'BELOW', 'Röntgen Hedefi');
+        AetherNative.haptic('success');
+        if (res.message) AetherNative.toast(res.message, 'ok');
+        renderAssetDrawer();
+        renderCurrentTab(true);
+      });
+    });
   }
 
   // --------------------------------------------------------------------------
@@ -6715,7 +7659,7 @@
       <div style="display:grid;gap:12px;margin-bottom:8px">
         <div>
           <label style="display:block;font-size:13.2px;font-weight:800;color:var(--ink-100);margin-bottom:6px">Adın Nedir?</label>
-          <input id="msWelcomeName" class="ae-input" type="text" maxlength="28" placeholder="Örn: Ayşe, Ahmet, Ertuğrul..." />
+          <input id="msWelcomeName" class="ae-input" type="text" maxlength="28" placeholder="Örn: Ertuğrul, Deniz, Kerem..." />
         </div>
         <div>
           <label style="display:block;font-size:13.2px;font-weight:800;color:var(--ink-100);margin-bottom:6px">Hedefin Ne?</label>
@@ -6826,7 +7770,7 @@
     const sheet = document.getElementById('msModalSheet');
     if (!sheet) return;
 
-    const releaseIpaUrl = 'https://github.com/4zyq4sk2tk-collab/AETHER-iOS/releases/download/v18.0.0-ios/AETHER-iOS.ipa';
+    const releaseIpaUrl = 'https://github.com/4zyq4sk2tk-collab/AETHER-iOS/releases/download/v19.0.0-ios/AETHER-iOS.ipa';
     const sideStoreDeepLink = 'sidestore://install?url=' + encodeURIComponent(releaseIpaUrl);
     const isLocalServer = global.location?.port === '3847';
     const directIpaHref = isLocalServer ? './download/AETHER-Sideload.ipa' : releaseIpaUrl;

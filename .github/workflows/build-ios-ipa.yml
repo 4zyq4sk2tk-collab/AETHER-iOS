@@ -80,8 +80,8 @@ jobs:
       - name: Publish IPA to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v18.0.0-ios
-          name: "AETHER v18.0.0 — Sesli Dost Anlatımı, Canlı Sepet Terazisi, Aa+ Rahat Okuma, 7 İnteraktif Laboratuvar, 40 Saha Vakası, 20 Akademi Modülü & 2026 Mevzuatı (ARM64 iOS IPA)"
+          tag_name: v19.0.0-ios
+          name: "AETHER v19.0.0 — Limit/Stop-Loss/Kâr Al, 5 Kademe Tahta, 5 Soruda Röntgen, 6 Çok Aşamalı Tatbikat, 9 Laboratuvar (2026 Vergi & BES 10811), 48 Vaka, 24 Akademi Modülü & 84 Terim (ARM64 iOS IPA)"
           files: AETHER-iOS.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

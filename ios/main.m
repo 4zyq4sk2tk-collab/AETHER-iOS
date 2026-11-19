@@ -437,8 +437,8 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
     NSURL *stageDir = [appSup URLByAppendingPathComponent:@"AETHER_StageWWW" isDirectory:YES];
     NSURL *stageIndex = [stageDir URLByAppendingPathComponent:@"index.html"];
 
-    NSString *bundleVer = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] ?: @"1800";
-    NSString *bundleShort = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"18.0.0";
+    NSString *bundleVer = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] ?: @"1900";
+    NSString *bundleShort = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"19.0.0";
     NSUserDefaults *ud = [NSUserDefaults standardUserDefaults];
     NSString *savedBundleVer = [ud stringForKey:@"aether_live_bundle_ver"];
 
@@ -490,7 +490,7 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
     NSMutableURLRequest *req = [NSMutableURLRequest requestWithURL:url
                                                        cachePolicy:NSURLRequestReloadIgnoringLocalCacheData
                                                    timeoutInterval:14.0];
-    [req setValue:@"AETHER-iOS-OTA/18.0" forHTTPHeaderField:@"User-Agent"];
+    [req setValue:@"AETHER-iOS-OTA/19.0" forHTTPHeaderField:@"User-Agent"];
     NSURLSessionDataTask *t = [[NSURLSession sharedSession] dataTaskWithRequest:req
                                                               completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
         if (!error && [response isKindOfClass:[NSHTTPURLResponse class]] && ((NSHTTPURLResponse *)response).statusCode == 200) {
