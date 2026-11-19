@@ -1,6 +1,6 @@
 // ============================================================================
-// AETHER v13.1 — GERÇEK PİYASA FİZİĞİ, CİHAZ BAZLI YATIRIMCI KİMLİĞİ,
-// KÜRESEL CANLI YATIRIMCI LİGİ AĞI (WSS MQTT MESH) & USTALIK AYNASI ÇEKİRDEĞİ
+// AETHER v18.0.0 — GERÇEK TÜRKİYE PİYASA FİZİĞİ, 2026 VERGİ MEVZUATI (GVK 80,
+// 11444 KARAR, EUROBOND BEYAN), CİHAZ BAZLI KİMLİK & CANLI LİG ÇEKİRDEĞİ
 // ============================================================================
 (function (global) {
   'use strict';
@@ -418,20 +418,23 @@
     const chg = Number(asset.change1D) || 0;
     const tickSize = getBistTickSize(asset.priceTL);
     const isEquity = asset.subVenue === 'BIST_STOCK';
+    const bist100Chg = Number(assetCatalog.get('bist-100')?.change1D) || 0;
+    const isIndexCircuitBreaker = bist100Chg <= -6.0;
     const isTavanLocked = isEquity && chg >= 9.85;
     const isTabanLocked = isEquity && chg <= -9.85;
-    const isCircuitBreaker = isEquity && chg <= -5.0 && chg > -9.85;
+    const isCircuitBreaker = isIndexCircuitBreaker || (isEquity && chg <= -5.0 && chg > -9.85);
     const isBrutTakas = Boolean(asset.isBrutTakas);
     const sameDaySellBlocked = isBrutTakas;
-    const marginAllowed = isEquity && !isBrutTakas && !asset.isPumpAnomaly;
+    const marginAllowed = isEquity && !isBrutTakas && !asset.isPumpAnomaly && !isIndexCircuitBreaker;
 
     let statusNote = null;
-    if (isTavanLocked) statusNote = `Tavan Kilitli (+%${chg.toFixed(2)}): Tahtada satıcı yok, piyasa alım emri eşleşmez.`;
+    if (isIndexCircuitBreaker) statusNote = `Endekse Bağlı Devre Kesici (EBDKS · BIST 100 %${bist100Chg.toFixed(2)}): Tek kademeli -%6 eşiği aşıldı; tüm Pay Piyasası ve VİOP geçici durduruldu.`;
+    else if (isTavanLocked) statusNote = `Tavan Kilitli (+%${chg.toFixed(2)}): Tahtada satıcı yok, piyasa alım emri eşleşmez.`;
     else if (isTabanLocked) statusNote = `Taban Kilitli (%${chg.toFixed(2)}): Tahtada alıcı yok, satış emri taban kuyruğunda kilitli!`;
-    else if (isCircuitBreaker) statusNote = `Pay Bazında Devre Kesici (%${chg.toFixed(2)}): Aşağı yönlü -%5 eşiği aşıldı; eşleşme bitene kadar işlemler durdu.`;
+    else if (isCircuitBreaker) statusNote = `Pay Bazında Devre Kesici (%${chg.toFixed(2)}): Aşağı yönlü -%5 eşiği aşıldı; 10 dk emir toplama + 2 dk eşleşme bitene kadar işlemler durdu.`;
     else if (isBrutTakas) statusNote = `VBTS Brüt Takas & Kredili İşlem Yasağı: Aynı gün al-sat ve kredili alım kapalıdır; T+2 takas nakdi kullanılamaz.`;
 
-    return { tickSize, isTavanLocked, isTabanLocked, isCircuitBreaker, isBrutTakas, sameDaySellBlocked, marginAllowed, statusNote };
+    return { tickSize, isTavanLocked, isTabanLocked, isCircuitBreaker, isIndexCircuitBreaker, isBrutTakas, sameDaySellBlocked, marginAllowed, statusNote };
   }
 
   // --------------------------------------------------------------------------
@@ -745,7 +748,10 @@
         venue = 'BENCHMARK_ONLY';
         subVenue = 'PHYSICAL_INDEX';
       } else if (inst.isRateInstrument) {
-        if (sym.startsWith('TEFAS:')) {
+        if (inst.id === 'kira-sertifikasi-sukuk' || inst.id === 'dibs-tahvil') {
+          venue = 'BANK_RATE';
+          subVenue = 'GOV_BOND';
+        } else if (sym.startsWith('TEFAS:')) {
           venue = 'TEFAS';
           subVenue = inst.id === 'para-piyasasi-fonu' ? 'TEFAS_PPF' : 'TEFAS_DEBT';
         } else {
@@ -795,12 +801,16 @@
         ? (typeof inst.tlChange1D === 'number' ? inst.tlChange1D : +((((1 + rawChg1D / 100) * (1 + fxChg1D / 100)) - 1) * 100).toFixed(2))
         : rawChg1D;
 
+      const displaySymbol = inst.id === 'kira-sertifikasi-sukuk'
+        ? 'HAZINE:SUKUK'
+        : (inst.id === 'dibs-tahvil' ? 'HAZINE:DIBS' : sym);
+
       const descriptor = {
         key: inst.id,
         id: inst.id,
         isCore: true,
         ticker: tUp || inst.id.toUpperCase(),
-        symbol: sym,
+        symbol: displaySymbol,
         name: inst.name,
         categoryId: String(inst.categoryId || '1'),
         categoryName: inst.categoryName || '',
@@ -869,6 +879,7 @@
 
       assetCatalog.set(inst.id, descriptor);
       if (sym) assetCatalog.set(sym.toUpperCase(), descriptor);
+      if (displaySymbol) assetCatalog.set(displaySymbol.toUpperCase(), descriptor);
       if (tUp && sym.startsWith('BIST:')) {
         assetCatalog.set('BIST:' + tUp, descriptor);
         assetCatalog.set(tUp, descriptor);
@@ -1330,6 +1341,7 @@
       cashTL: DEFAULT_STARTING_CAPITAL_TL,
       marginDebtTL: 0,
       gvk80TaxPayableTL: 0,
+      annualGvk80RealGainTL: 0,
       autoOvernightRepo: false,
       overnightRepoEarnedTL: 0,
       lastOvernightRepoMs: now,
@@ -1350,6 +1362,7 @@
       completedFieldCases: {},
       studiedAcademyIds: [],
       detectiveStats: { played: 0, wins: 0, streak: 0, bestStreak: 0 },
+      dailyChallengeLog: { lastYmd: '', streak: 0, totalPlayed: 0, totalCorrect: 0 },
       customScreenerFilters: [],
       seenNewsIds: [],
       idleErosionLog: {
@@ -1375,7 +1388,7 @@
       : ('inv_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4));
     const me = createDeviceInvestor(deviceId, '', '1 Milyon ₺ Portföy Yöneticisi');
     return {
-      version: '16.1.0',
+      version: '17.0.0',
       roomCode: DEFAULT_ROOM_CODE,
       localDeviceId: deviceId,
       me,
@@ -1393,6 +1406,7 @@
     me.rev = Number(me.rev) || 1;
     me.marginDebtTL = Number(me.marginDebtTL) || 0;
     me.gvk80TaxPayableTL = Number(me.gvk80TaxPayableTL) || 0;
+    me.annualGvk80RealGainTL = Number(me.annualGvk80RealGainTL) || 0;
     me.autoOvernightRepo = Boolean(me.autoOvernightRepo);
     me.overnightRepoEarnedTL = Number(me.overnightRepoEarnedTL) || 0;
     me.lastOvernightRepoMs = Number(me.lastOvernightRepoMs) || Date.now();
@@ -1420,6 +1434,14 @@
           bestStreak: Number(me.detectiveStats.bestStreak) || 0
         }
       : { played: 0, wins: 0, streak: 0, bestStreak: 0 };
+    me.dailyChallengeLog = me.dailyChallengeLog && typeof me.dailyChallengeLog === 'object'
+      ? {
+          lastYmd: String(me.dailyChallengeLog.lastYmd || ''),
+          streak: Number(me.dailyChallengeLog.streak) || 0,
+          totalPlayed: Number(me.dailyChallengeLog.totalPlayed) || 0,
+          totalCorrect: Number(me.dailyChallengeLog.totalCorrect) || 0
+        }
+      : { lastYmd: '', streak: 0, totalPlayed: 0, totalCorrect: 0 };
     me.customScreenerFilters = Array.isArray(me.customScreenerFilters) ? me.customScreenerFilters : [];
     me.seenNewsIds = Array.isArray(me.seenNewsIds) ? me.seenNewsIds : [];
     me.livedMilestones = me.livedMilestones || {};
@@ -2325,7 +2347,105 @@
     }
   }
 
-  function computePositionTaxOnGain(asset, pos, sellUnitTL, sellQty, currentYiUfeOverride) {
+  // 2026 Gelir Vergisi Ücret Dışı Kademeli Tarife (190B %15 · 400B %20 · 1M %27 · 5.3M %35 · 5.3M+ %40)
+  const TR_INCOME_TAX_BRACKETS_2026 = [
+    { limit: 190000, rate: 0.15 },
+    { limit: 400000, rate: 0.20 },
+    { limit: 1000000, rate: 0.27 },
+    { limit: 5300000, rate: 0.35 },
+    { limit: Infinity, rate: 0.40 }
+  ];
+
+  function calcTotalTax2026(totalBaseTL) {
+    const base = Math.max(0, Number(totalBaseTL) || 0);
+    let tax = 0;
+    let prev = 0;
+    for (const br of TR_INCOME_TAX_BRACKETS_2026) {
+      if (base <= prev) break;
+      const slice = Math.min(base, br.limit) - prev;
+      tax += slice * br.rate;
+      prev = br.limit;
+    }
+    return +tax.toFixed(2);
+  }
+
+  function computeProgressiveGvk80Tax2026(newTaxableGainTL, priorAnnualGainTL = 0) {
+    const add = Math.max(0, Number(newTaxableGainTL) || 0);
+    const prior = Math.max(0, Number(priorAnnualGainTL) || 0);
+    if (add <= 0) return { taxTL: 0, effectiveRatePct: 0, topBracketPct: 15 };
+    const totalTax = calcTotalTax2026(prior + add);
+    const priorTax = calcTotalTax2026(prior);
+    const taxTL = Math.max(0, +(totalTax - priorTax).toFixed(2));
+    const effectiveRatePct = +((taxTL / add) * 100).toFixed(2);
+    const topBr = TR_INCOME_TAX_BRACKETS_2026.find((b) => (prior + add) <= b.limit) || TR_INCOME_TAX_BRACKETS_2026[4];
+    return { taxTL, effectiveRatePct, topBracketPct: Math.round(topBr.rate * 100) };
+  }
+
+  function computeGvk80Simulation(params = {}) {
+    const buyTL = Math.max(1000, Number(params.buyTL) || 500000);
+    const sellTL = Math.max(1000, Number(params.sellTL) || 750000);
+    const yiUfePct = Math.max(0, Number(params.yiUfePct) || 0);
+    const priorAnnualGainTL = Math.max(0, Number(params.priorAnnualGainTL) || 0);
+    const nominalGainTL = +(sellTL - buyTL).toFixed(2);
+    const yiUfeIndexed = yiUfePct >= 10;
+    const indexedCostTL = yiUfeIndexed ? +(buyTL * (1 + yiUfePct / 100)).toFixed(2) : buyTL;
+    const taxableGainTL = Math.max(0, +(sellTL - indexedCostTL).toFixed(2));
+    const prog = computeProgressiveGvk80Tax2026(taxableGainTL, priorAnnualGainTL);
+    // Karşılaştırma: Yİ-ÜFE %10 altında kalsaydı ödenecek vergi
+    const unindexedTaxable = Math.max(0, nominalGainTL);
+    const unindexedProg = computeProgressiveGvk80Tax2026(unindexedTaxable, priorAnnualGainTL);
+    const taxSavedByIndexTL = Math.max(0, +(unindexedProg.taxTL - prog.taxTL).toFixed(2));
+    const netAfterTaxTL = +(sellTL - prog.taxTL).toFixed(2);
+    const netProfitAfterTaxTL = +(netAfterTaxTL - buyTL).toFixed(2);
+    return {
+      buyTL,
+      sellTL,
+      yiUfePct,
+      nominalGainTL,
+      yiUfeIndexed,
+      indexedCostTL,
+      taxableGainTL,
+      taxTL: prog.taxTL,
+      effectiveRatePct: prog.effectiveRatePct,
+      topBracketPct: prog.topBracketPct,
+      unindexedTaxTL: unindexedProg.taxTL,
+      taxSavedByIndexTL,
+      netAfterTaxTL,
+      netProfitAfterTaxTL
+    };
+  }
+
+  // 2026 Eurobond Kupon Beyan Sınırı (GVK 103 — 2. Gelir Dilimi = 400.000 ₺)
+  const TR_EUROBOND_COUPON_LIMIT_2026 = 400000;
+
+  function computeEurobondTax2026(params = {}) {
+    const annualCouponTL = Math.max(0, Number(params.annualCouponTL) || 0);
+    const saleGainSim = params.sellTL > 0 && params.buyTL > 0
+      ? computeGvk80Simulation({
+          buyTL: params.buyTL,
+          sellTL: params.sellTL,
+          yiUfePct: params.yiUfePct || 0,
+          priorAnnualGainTL: 0
+        })
+      : null;
+    const couponMustDeclare = annualCouponTL > TR_EUROBOND_COUPON_LIMIT_2026;
+    const totalDeclaredBaseTL = +(
+      (couponMustDeclare ? annualCouponTL : 0) +
+      (saleGainSim ? saleGainSim.taxableGainTL : 0)
+    ).toFixed(2);
+    const prog = computeProgressiveGvk80Tax2026(totalDeclaredBaseTL, 0);
+    return {
+      couponLimit2026TL: TR_EUROBOND_COUPON_LIMIT_2026,
+      annualCouponTL,
+      couponMustDeclare,
+      saleTaxableGainTL: saleGainSim ? saleGainSim.taxableGainTL : 0,
+      totalDeclaredBaseTL,
+      totalTaxTL: prog.taxTL,
+      topBracketPct: prog.topBracketPct
+    };
+  }
+
+  function computePositionTaxOnGain(asset, pos, sellUnitTL, sellQty, currentYiUfeOverride, priorAnnualGainTL = 0) {
     const grossProceedsTL = +(sellQty * sellUnitTL).toFixed(2);
     const costBasisTL = +(sellQty * (pos.avgCostTL || sellUnitTL)).toFixed(2);
     const nominalGainTL = +(grossProceedsTL - costBasisTL).toFixed(2);
@@ -2342,8 +2462,8 @@
       const yiUfeIndexed = ufeGrowth >= 0.10;
       const indexedCostTL = yiUfeIndexed ? +(costBasisTL * (curUfe / buyUfe)).toFixed(2) : costBasisTL;
       const realTaxableGainTL = Math.max(0, +(grossProceedsTL - indexedCostTL).toFixed(2));
-      const gvk80TaxReserveTL = +(realTaxableGainTL * 0.20).toFixed(2);
-      return { stopajTL: 0, gvk80TaxReserveTL, indexedRealGainTL: realTaxableGainTL, yiUfeIndexed };
+      const prog = computeProgressiveGvk80Tax2026(realTaxableGainTL, priorAnnualGainTL);
+      return { stopajTL: 0, gvk80TaxReserveTL: prog.taxTL, indexedRealGainTL: realTaxableGainTL, yiUfeIndexed, topBracketPct: prog.topBracketPct };
     }
 
     return { stopajTL: 0, gvk80TaxReserveTL: 0, indexedRealGainTL: nominalGainTL, yiUfeIndexed: false };
@@ -2369,13 +2489,14 @@
     else if (asset.venue === 'GLOBAL_USD') feeRate = 0.0015;
     else if (asset.venue === 'CRYPTO_24_7' || asset.venue === 'VIOP') feeRate = 0.0010;
     const feeTL = +(grossTL * feeRate).toFixed(2);
-    const taxInfo = computePositionTaxOnGain(asset, pos, effectiveBidTL, sellQty);
+    const taxInfo = computePositionTaxOnGain(asset, pos, effectiveBidTL, sellQty, undefined, Number(member.annualGvk80RealGainTL) || 0);
     const netAfterFeeAndStopajTL = Math.max(0, +(grossTL - feeTL - taxInfo.stopajTL).toFixed(2));
     const realizedPnlPct = pos.avgCostTL > 0 ? +(((effectiveBidTL / pos.avgCostTL) - 1) * 100).toFixed(2) : 0;
     const originThesisTag = pos.thesisTag || 'RESEARCH_FUNDAMENTAL';
 
     if (taxInfo.gvk80TaxReserveTL > 0) {
       member.gvk80TaxPayableTL = +((member.gvk80TaxPayableTL || 0) + taxInfo.gvk80TaxReserveTL).toFixed(2);
+      member.annualGvk80RealGainTL = +((member.annualGvk80RealGainTL || 0) + (taxInfo.indexedRealGainTL || 0)).toFixed(2);
     }
 
     member.totalFrictionBurnedTL = +((member.totalFrictionBurnedTL || 0) + spreadLeakTL + feeTL).toFixed(2);
@@ -2847,10 +2968,10 @@
         return borrowed;
       };
 
-      // A) BANKA VADELİ MEVDUAT / DİBS
+      // A) BANKA VADELİ MEVDUAT / DOĞRUDAN HAZİNE DİBS & KAMU KİRA SERTİFİKASI (HMVKŞ)
       if (asset.venue === 'BANK_RATE') {
         if (!clock.isBizDay && asset.subVenue === 'GOV_BOND') {
-          return { ok: false, reason: 'Hazine DİBS tahvil gişesi hafta sonu ve resmi tatilde kapalıdır.' };
+          return { ok: false, reason: 'Hazine DİBS ve Kamu Kira Sertifikası (HMVKŞ) gişesi hafta sonu ve resmi tatilde kapalıdır (Pazartesi sabahı anında bağlayabilir veya 7/24 Vadeli Mevduat seçebilirsin).' };
         }
         const maturityDays = asset.subVenue === 'TERM_DEPOSIT' ? (Number(params.maturityDays) || 32) : 0;
         let stopajPct = asset.stopajPct;
@@ -2858,7 +2979,7 @@
           if (maturityDays > 365) stopajPct = 10.0;
           else if (maturityDays > 180) stopajPct = 15.0;
           else stopajPct = 17.5;
-        } else if (asset.id === 'dibs-tahvil') {
+        } else if (asset.id === 'dibs-tahvil' || asset.id === 'kira-sertifikasi-sukuk') {
           stopajPct = 0;
         }
         deductFunds(amountTL);
@@ -3982,6 +4103,29 @@
       isOptimal: Boolean(isOptimal),
       solvedCount: Object.values(m.completedFieldCases).filter((x) => x && x.isOptimal).length
     };
+  }
+
+  function recordDailyChallenge(dateYmd, isCorrect) {
+    const m = getActiveMember();
+    if (!m.dailyChallengeLog || typeof m.dailyChallengeLog !== 'object') {
+      m.dailyChallengeLog = { lastYmd: '', streak: 0, totalPlayed: 0, totalCorrect: 0 };
+    }
+    const dc = m.dailyChallengeLog;
+    const ymd = String(dateYmd || getIstanbulParts().ymd);
+    if (dc.lastYmd !== ymd) {
+      dc.totalPlayed = (Number(dc.totalPlayed) || 0) + 1;
+      if (isCorrect) {
+        dc.totalCorrect = (Number(dc.totalCorrect) || 0) + 1;
+        dc.streak = (Number(dc.streak) || 0) + 1;
+      } else {
+        dc.streak = 0;
+      }
+      dc.lastYmd = ymd;
+      m.updatedAt = Date.now();
+      m.rev = (Number(m.rev) || 1) + 1;
+      saveState(true, true);
+    }
+    return { ok: true, log: { ...dc } };
   }
 
   function recordDetectiveAttempt(isWin) {
@@ -5227,6 +5371,11 @@
     evaluateImpatienceLedger,
     recordFieldCaseAttempt,
     recordDetectiveAttempt,
+    recordDailyChallenge,
+    computeGvk80Simulation,
+    computeProgressiveGvk80Tax2026,
+    computeEurobondTax2026,
+    TR_EUROBOND_COUPON_LIMIT_2026,
     toggleAcademyModuleStudied,
     saveCustomScreenerFilters,
     getCustomScreenerFilters,

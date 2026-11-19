@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="tr" data-theme="obsidian">
+<html lang="tr" data-theme="obsidian" data-font-scale="normal">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
@@ -8,19 +8,19 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="AETHER" />
   <meta name="format-detection" content="telephone=no" />
-  <meta id="aeThemeColorMeta" name="theme-color" content="#060a12" />
+  <meta id="aeThemeColorMeta" name="theme-color" content="#070a11" />
   <title>AETHER — 1.000.000 ₺ Gerçek Yatırım Meydanı</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" href="apple-touch-icon.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-  <link rel="stylesheet" href="million-sim.css?v=16.1.0" />
+  <link rel="stylesheet" href="million-sim.css?v=18.0.0" />
 </head>
 <body>
   <div id="aeAppShell" class="ae-app-shell">
     <!-- Dynamic Island Canlı Bildirim Kapsülü -->
     <div id="aeIslandToast" class="ae-island-toast" role="status" aria-live="polite"></div>
 
-    <!-- Üst Kompakt Native Kokpit -->
+    <!-- Üst Ferah Native Kokpit -->
     <header id="msHeader" class="ae-topbar">
       <div id="msHeaderInner" class="ae-topbar-inner"></div>
     </header>
@@ -34,22 +34,34 @@
       <div id="msMainContainer" class="ae-screen-content"></div>
     </main>
 
-    <!-- 5 Bölmeli Native Alt Uygulama Dock'u -->
+    <!-- 5 Bölmeli Ferah Native Alt Dock -->
     <nav class="ae-tabbar" aria-label="Ana Uygulama Sekmeleri">
-      <button type="button" class="ms-tab-btn ae-tab-item active" data-tab="market">
+      <button type="button" class="ms-tab-btn ae-tab-item active" data-tab="home">
         <span class="ae-tab-icon-wrap">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 10.5L12 3l9 7.5"/>
+            <path d="M5 9.8V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.8"/>
+            <path d="M9.5 21v-6h5v6"/>
+          </svg>
+          <span id="aeWalletBadge" class="ae-tab-pill" hidden>0</span>
+        </span>
+        <span class="ae-tab-label">Ana Sayfa</span>
+      </button>
+
+      <button type="button" class="ms-tab-btn ae-tab-item" data-tab="market">
+        <span class="ae-tab-icon-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M4 18V6M9 19V10M15 19V4M20 19v-7"/>
             <circle cx="9" cy="8" r="1.5" fill="currentColor" stroke="none"/>
             <circle cx="15" cy="4" r="1.5" fill="currentColor" stroke="none"/>
           </svg>
         </span>
-        <span class="ae-tab-label">Piyasa</span>
+        <span class="ae-tab-label">Yatırım</span>
       </button>
 
       <button type="button" class="ms-tab-btn ae-tab-item" data-tab="compass">
         <span class="ae-tab-icon-wrap">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="9"/>
             <polygon points="15.8 8.2 13.6 13.6 8.2 15.8 10.4 10.4 15.8 8.2"/>
           </svg>
@@ -58,21 +70,9 @@
         <span class="ae-tab-label">Pusula</span>
       </button>
 
-      <button type="button" class="ms-tab-btn ae-tab-item" data-tab="wallet">
-        <span class="ae-tab-icon-wrap">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="3" y="5" width="18" height="14" rx="3.5"/>
-            <path d="M16 12h2.5"/>
-            <path d="M3 9.5h18"/>
-          </svg>
-          <span id="aeWalletBadge" class="ae-tab-pill" hidden>0</span>
-        </span>
-        <span class="ae-tab-label">Cüzdan</span>
-      </button>
-
       <button type="button" class="ms-tab-btn ae-tab-item" data-tab="mastery">
         <span class="ae-tab-icon-wrap">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <polygon points="12 2.5 20 7 20 17 12 21.5 4 17 4 7 12 2.5"/>
             <path d="M9 12.2l2 2 4.2-4.4"/>
           </svg>
@@ -82,7 +82,7 @@
 
       <button type="button" class="ms-tab-btn ae-tab-item" data-tab="family">
         <span class="ae-tab-icon-wrap">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20"/>
             <circle cx="10" cy="8.5" r="3.2"/>
             <path d="M20 20v-1.3a3 3 0 0 0-2.2-2.9"/>
@@ -98,12 +98,17 @@
     <div id="msModalBackdrop" class="ms-modal-backdrop" role="dialog" aria-modal="true">
       <div id="msModalSheet" class="ms-modal-sheet"></div>
     </div>
+
+    <!-- Her Yerden Tek Dokunuş Terim Açıklayıcı Katmanı (Çekmeceyi Kaybetmeden Üste Açılır) -->
+    <div id="aeTermOverlay" class="ae-term-overlay" role="dialog" aria-modal="true" hidden>
+      <div id="aeTermCard" class="ae-term-card"></div>
+    </div>
   </div>
 
-  <script src="aether-data-bundle.js?v=16.1.0"></script>
-  <script src="aether-kernel-v10.js?v=16.1.0"></script>
-  <script src="real-investment-guide.js?v=16.1.0"></script>
-  <script src="million-sim-app.js?v=16.1.0"></script>
+  <script src="aether-data-bundle.js?v=18.0.0"></script>
+  <script src="aether-kernel-v10.js?v=18.0.0"></script>
+  <script src="real-investment-guide.js?v=18.0.0"></script>
+  <script src="million-sim-app.js?v=18.0.0"></script>
   <script>
     (function () {
       'use strict';
@@ -111,7 +116,7 @@
         window.MillionSimApp.mount();
       }
       if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-        navigator.serviceWorker.register('./sw.js?v=16.1.0').catch(function () {});
+        navigator.serviceWorker.register('./sw.js?v=18.0.0').catch(function () {});
       }
     })();
   </script>

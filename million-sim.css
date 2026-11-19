@@ -6,58 +6,58 @@
 
 :root,
 html[data-theme="obsidian"] {
-  --bg-deep: #060a12;
-  --bg-canvas: #090e1a;
-  --surface-1: #0f1728;
-  --surface-2: #141f35;
-  --surface-3: #1b2944;
-  --surface-glass: rgba(10, 15, 28, 0.84);
-  --sheet-bg: #0e1626;
+  --bg-deep: #070a11;
+  --bg-canvas: #0a0e18;
+  --surface-1: #111827;
+  --surface-2: #172034;
+  --surface-3: #1f2b44;
+  --surface-glass: rgba(10, 14, 24, 0.88);
+  --sheet-bg: #0f1625;
   --ink-100: #f8fafc;
   --ink-200: #e2e8f0;
-  --ink-400: #94a3b8;
-  --ink-500: #64748b;
-  --line-subtle: rgba(148, 163, 184, 0.12);
-  --line-strong: rgba(148, 163, 184, 0.24);
-  --specular: rgba(255, 255, 255, 0.06);
+  --ink-400: #a3b2c7;
+  --ink-500: #7c8da6;
+  --line-subtle: rgba(148, 163, 184, 0.14);
+  --line-strong: rgba(148, 163, 184, 0.26);
+  --specular: rgba(255, 255, 255, 0.07);
 
-  --gold: #f59e0b;
-  --gold-bright: #fbbf24;
-  --gold-soft: rgba(245, 158, 11, 0.15);
+  --gold: #f0b429;
+  --gold-bright: #fcd34d;
+  --gold-soft: rgba(240, 180, 41, 0.16);
   --cyan: #38bdf8;
-  --cyan-soft: rgba(56, 189, 248, 0.14);
+  --cyan-soft: rgba(56, 189, 248, 0.15);
   --primary: #3b82f6;
   --primary-strong: #2563eb;
   --primary-soft: rgba(59, 130, 246, 0.16);
 
   --green: #10b981;
   --green-ink: #34d399;
-  --green-soft: rgba(16, 185, 129, 0.15);
+  --green-soft: rgba(16, 185, 129, 0.16);
   --red: #f43f5e;
   --red-ink: #fb7185;
-  --red-soft: rgba(244, 63, 94, 0.15);
+  --red-soft: rgba(244, 63, 94, 0.16);
   --amber: #f59e0b;
-  --amber-ink: #fbbf24;
-  --amber-soft: rgba(245, 158, 11, 0.15);
+  --amber-ink: #fcd34d;
+  --amber-soft: rgba(245, 158, 11, 0.16);
   --purple: #a855f7;
   --purple-ink: #c084fc;
-  --purple-soft: rgba(168, 85, 247, 0.15);
+  --purple-soft: rgba(168, 85, 247, 0.16);
 
-  --card-shadow: 0 10px 28px rgba(2, 6, 16, 0.42), inset 0 1px 0 var(--specular);
-  --hero-gradient: radial-gradient(125% 95% at 0% 0%, rgba(245, 158, 11, 0.18) 0%, rgba(56, 189, 248, 0.10) 46%, rgba(15, 23, 40, 0.98) 100%);
-  --backdrop-overlay: rgba(3, 6, 14, 0.72);
-  --seg-bg: rgba(255, 255, 255, 0.05);
-  --seg-thumb: #1e2d4a;
+  --card-shadow: 0 12px 32px rgba(2, 6, 16, 0.44), inset 0 1px 0 var(--specular);
+  --hero-gradient: radial-gradient(130% 105% at 0% 0%, rgba(240, 180, 41, 0.17) 0%, rgba(16, 185, 129, 0.08) 44%, rgba(17, 24, 39, 0.98) 100%);
+  --backdrop-overlay: rgba(3, 6, 14, 0.74);
+  --seg-bg: rgba(255, 255, 255, 0.06);
+  --seg-thumb: #202e4a;
   color-scheme: dark;
 }
 
 html[data-theme="daylight"] {
-  --bg-deep: #eef2f7;
-  --bg-canvas: #f2f5fa;
+  --bg-deep: #f2f4f8;
+  --bg-canvas: #f5f7fa;
   --surface-1: #ffffff;
   --surface-2: #f8fafc;
-  --surface-3: #eef2f7;
-  --surface-glass: rgba(255, 255, 255, 0.88);
+  --surface-3: #edf1f7;
+  --surface-glass: rgba(255, 255, 255, 0.92);
   --sheet-bg: #ffffff;
   --ink-100: #0b1120;
   --ink-200: #1e293b;
@@ -65,34 +65,34 @@ html[data-theme="daylight"] {
   --ink-500: #64748b;
   --line-subtle: rgba(15, 23, 42, 0.09);
   --line-strong: rgba(15, 23, 42, 0.18);
-  --specular: rgba(255, 255, 255, 0.8);
+  --specular: rgba(255, 255, 255, 0.9);
 
   --gold: #d97706;
   --gold-bright: #b45309;
-  --gold-soft: rgba(217, 119, 6, 0.11);
+  --gold-soft: rgba(217, 119, 6, 0.12);
   --cyan: #0284c7;
-  --cyan-soft: rgba(2, 132, 199, 0.10);
+  --cyan-soft: rgba(2, 132, 199, 0.11);
   --primary: #2563eb;
   --primary-strong: #1d4ed8;
-  --primary-soft: rgba(37, 99, 235, 0.10);
+  --primary-soft: rgba(37, 99, 235, 0.11);
 
   --green: #059669;
-  --green-ink: #059669;
-  --green-soft: rgba(5, 150, 105, 0.11);
+  --green-ink: #047857;
+  --green-soft: rgba(5, 150, 105, 0.12);
   --red: #e11d48;
-  --red-ink: #e11d48;
-  --red-soft: rgba(225, 29, 72, 0.10);
+  --red-ink: #be123c;
+  --red-soft: rgba(225, 29, 72, 0.11);
   --amber: #d97706;
   --amber-ink: #b45309;
-  --amber-soft: rgba(217, 119, 6, 0.11);
+  --amber-soft: rgba(217, 119, 6, 0.12);
   --purple: #7c3aed;
   --purple-ink: #6d28d9;
-  --purple-soft: rgba(124, 58, 237, 0.10);
+  --purple-soft: rgba(124, 58, 237, 0.11);
 
-  --card-shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
-  --hero-gradient: linear-gradient(135deg, #ffffff 0%, #f1f6ff 55%, #fffbeb 100%);
-  --backdrop-overlay: rgba(15, 23, 42, 0.52);
-  --seg-bg: #e8edf5;
+  --card-shadow: 0 6px 24px rgba(15, 23, 42, 0.06);
+  --hero-gradient: linear-gradient(135deg, #ffffff 0%, #f4f8ff 52%, #fffbeb 100%);
+  --backdrop-overlay: rgba(15, 23, 42, 0.54);
+  --seg-bg: #e7ecf4;
   --seg-thumb: #ffffff;
   color-scheme: light;
 }
@@ -157,15 +157,15 @@ button {
   overflow: hidden;
 }
 
-/* Dynamic Island Canlı Bildirim Kapsülü */
+/* Dynamic Island Canlı Bildirim Kapsülü (Üst Bar Düğmelerini Asla Örtmez) */
 .ae-island-toast {
   position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  top: calc(env(safe-area-inset-top, 0px) + 86px);
   left: 50%;
-  transform: translate(-50%, -150%) scale(0.92);
+  transform: translate(-50%, -180%) scale(0.92);
   opacity: 0;
   pointer-events: none;
-  z-index: 140;
+  z-index: 950;
   max-width: min(92vw, 420px);
   width: max-content;
   background: rgba(9, 14, 26, 0.96);
@@ -452,7 +452,7 @@ button {
 .ae-screen-content {
   max-width: 1080px;
   margin: 0 auto;
-  padding: 10px 12px calc(env(safe-area-inset-bottom, 0px) + 88px);
+  padding: 12px 14px calc(env(safe-area-inset-bottom, 0px) + 92px);
 }
 
 /* ----------------------------------------------------------------------------
@@ -522,7 +522,7 @@ button {
 }
 
 .ae-tab-label {
-  font-size: 10.4px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: -0.1px;
   white-space: nowrap;
@@ -634,13 +634,13 @@ button {
   background: var(--surface-1);
   color: var(--ink-200);
   border-radius: 999px;
-  padding: 7px 13px;
-  font-size: 12.4px;
+  padding: 9px 14px;
+  font-size: 13.2px;
   font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   white-space: nowrap;
   transition: all 0.14s ease;
 }
@@ -680,8 +680,8 @@ button {
   background: transparent;
   color: var(--ink-400);
   border-radius: 10px;
-  padding: 8px 4px;
-  font-size: 11.6px;
+  padding: 10px 6px;
+  font-size: 12.6px;
   font-weight: 800;
   letter-spacing: -0.15px;
   cursor: pointer;
@@ -731,6 +731,18 @@ button {
   margin-bottom: 12px;
   min-width: 0;
   max-width: 100%;
+}
+
+.ae-card,
+.ae-hero-card,
+.ae-lab-card {
+  overflow-x: clip;
+}
+
+.ae-card div,
+.ae-hero-card div,
+.ae-lab-card div {
+  min-width: 0;
 }
 
 .ae-search-bar {
@@ -2045,9 +2057,605 @@ button {
 .ae-pending-unlock-box {
   background: linear-gradient(145deg, rgba(245, 158, 11, 0.13), rgba(56, 189, 248, 0.08));
   border: 1px solid rgba(245, 158, 11, 0.42);
+  border-radius: 16px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+/* ==========================================================================
+   v17.0.0 — FERAH, MODERN 2026 TASARIM & "YAŞLI NİNE" RAHAT OKUMA SİSTEMİ
+   ========================================================================== */
+
+/* Üst Bar Aa+ Rahat Okuma Düğmesi */
+.ae-icon-btn.font-active {
+  background: var(--gold-soft);
+  border-color: var(--gold);
+  color: var(--gold-bright);
+  font-weight: 900;
+}
+
+/* Ana Sayfa Dev 1M Bakiye Hero Kartı */
+.ae-balance-hero {
+  background: var(--hero-gradient);
+  border: 1px solid rgba(240, 180, 41, 0.28);
+  border-radius: 24px;
+  padding: 20px 18px 18px;
+  box-shadow: var(--card-shadow);
+  margin-bottom: 14px;
+}
+
+.ae-balance-eyebrow {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--ink-400);
+  letter-spacing: 0.2px;
+}
+
+.ae-balance-figure {
+  font-size: clamp(30px, 8.2vw, 38px);
+  font-weight: 900;
+  letter-spacing: -0.9px;
+  line-height: 1.08;
+  margin: 4px 0 6px;
+  color: var(--ink-100);
+}
+
+.ae-balance-pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.ae-balance-trio {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.ae-trio-cell {
+  background: var(--surface-2);
+  border: 1px solid var(--line-subtle);
+  border-radius: 14px;
+  padding: 10px 10px;
+  min-width: 0;
+}
+
+.ae-trio-cell span {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-400);
+  margin-bottom: 2px;
+}
+
+.ae-trio-cell strong {
+  display: block;
+  font-size: 13.8px;
+  font-weight: 800;
+  color: var(--ink-100);
+  line-height: 1.22;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.ae-hero-cta-row {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 10px;
+}
+
+.ae-big-btn {
+  appearance: none;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-2);
+  color: var(--ink-100);
+  border-radius: 15px;
+  min-height: 48px;
+  padding: 12px 14px;
+  font-size: 14.5px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: transform 0.12s ease, opacity 0.15s ease;
+}
+
+.ae-big-btn:active {
+  transform: scale(0.97);
+}
+
+.ae-big-btn.gold {
+  background: linear-gradient(135deg, var(--gold) 0%, #ea580c 100%);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 8px 22px rgba(240, 180, 41, 0.30);
+}
+
+.ae-big-btn.green {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 8px 22px rgba(16, 185, 129, 0.28);
+}
+
+/* 4 Büyük Yaşlı-Nine Dostu Ana Kapı */
+.ae-section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 2px 10px;
+}
+
+.ae-section-title h2,
+.ae-section-title h3 {
+  margin: 0;
+  font-size: 16.5px;
+  font-weight: 900;
+  color: var(--ink-100);
+  letter-spacing: -0.2px;
+}
+
+.ae-doorway-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.ae-doorway-card {
+  appearance: none;
+  text-align: left;
+  background: var(--surface-1);
+  border: 1px solid var(--line-subtle);
+  border-radius: 20px;
+  padding: 15px 14px;
+  cursor: pointer;
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  transition: transform 0.12s ease, border-color 0.16s ease;
+}
+
+.ae-doorway-card:active {
+  transform: scale(0.97);
+}
+
+.ae-doorway-icon {
+  width: 40px;
+  height: 40px;
   border-radius: 13px;
-  padding: 9px 11px;
-  margin-bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-subtle);
+}
+
+.ae-doorway-card strong {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--ink-100);
+  line-height: 1.25;
+}
+
+.ae-doorway-card span {
+  font-size: 12.2px;
+  color: var(--ink-400);
+  line-height: 1.38;
+}
+
+/* 4 Büyük Canlı Gösterge Karesi */
+.ae-pulse-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.ae-pulse-tile {
+  appearance: none;
+  text-align: left;
+  background: var(--surface-1);
+  border: 1px solid var(--line-subtle);
+  border-radius: 18px;
+  padding: 13px 14px;
+  cursor: pointer;
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  transition: transform 0.12s ease;
+}
+
+.ae-pulse-tile:active {
+  transform: scale(0.97);
+}
+
+.ae-pulse-tile .p-lbl {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-400);
+}
+
+.ae-pulse-tile .p-val {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--ink-100);
+  letter-spacing: -0.3px;
+}
+
+/* Dostun Günlük Sohbet Kartı */
+.ae-brief-stack {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.ae-brief-item {
+  background: var(--surface-1);
+  border: 1px solid var(--line-subtle);
+  border-left: 4px solid var(--gold);
+  border-radius: 18px;
+  padding: 14px 15px;
+  box-shadow: var(--card-shadow);
+}
+
+.ae-brief-item.good { border-left-color: var(--green); }
+.ae-brief-item.info { border-left-color: var(--cyan); }
+.ae-brief-item.warn { border-left-color: var(--gold); }
+
+.ae-brief-item strong {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--ink-100);
+  margin-bottom: 5px;
+  line-height: 1.32;
+}
+
+.ae-brief-item p {
+  margin: 0;
+  font-size: 13.4px;
+  color: var(--ink-200);
+  line-height: 1.5;
+}
+
+/* Ferah v17 Varlık Listesi Kartları */
+.ae-asset-list-v17 {
+  display: grid;
+  gap: 9px;
+}
+
+.ae-asset-card-v17 {
+  background: var(--surface-1);
+  border: 1px solid var(--line-subtle);
+  border-radius: 18px;
+  padding: 14px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  box-shadow: var(--card-shadow);
+  transition: transform 0.12s ease, border-color 0.15s ease;
+  min-width: 0;
+}
+
+.ae-asset-card-v17:active {
+  transform: scale(0.985);
+}
+
+.ae-asset-card-v17.owned {
+  border-color: rgba(240, 180, 41, 0.45);
+  background: linear-gradient(100deg, rgba(240, 180, 41, 0.09) 0%, var(--surface-1) 55%);
+}
+
+.ae-asset-card-v17.flash-up { animation: aeFlashUp 1.1s ease; }
+.ae-asset-card-v17.flash-down { animation: aeFlashDown 1.1s ease; }
+
+.ae-traffic-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ae-traffic-dot.green { background: var(--green); box-shadow: 0 0 0 3px var(--green-soft); }
+.ae-traffic-dot.amber { background: var(--amber); box-shadow: 0 0 0 3px var(--amber-soft); }
+.ae-traffic-dot.red { background: var(--red); box-shadow: 0 0 0 3px var(--red-soft); }
+
+.ae-v17-main {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.ae-v17-title {
+  font-size: 14.8px;
+  font-weight: 800;
+  color: var(--ink-100);
+  line-height: 1.26;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 3px;
+}
+
+.ae-v17-desc {
+  font-size: 12.6px;
+  color: var(--ink-400);
+  margin-top: 4px;
+  line-height: 1.38;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ae-v17-right {
+  text-align: right;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+
+.ae-v17-price {
+  font-size: 15.8px;
+  font-weight: 900;
+  color: var(--ink-100);
+  white-space: nowrap;
+}
+
+/* Varlık Çekmecesi Trafik Işığı Özet Kartı */
+.ae-verdict-banner {
+  border-radius: 18px;
+  padding: 14px 15px;
+  margin-bottom: 12px;
+  border: 1px solid var(--line-subtle);
+  background: var(--surface-2);
+}
+
+.ae-verdict-banner.green {
+  border-color: rgba(16, 185, 129, 0.42);
+  background: linear-gradient(145deg, rgba(16, 185, 129, 0.12), var(--surface-2));
+}
+
+.ae-verdict-banner.amber {
+  border-color: rgba(245, 158, 11, 0.42);
+  background: linear-gradient(145deg, rgba(245, 158, 11, 0.11), var(--surface-2));
+}
+
+.ae-verdict-banner.red {
+  border-color: rgba(244, 63, 94, 0.46);
+  background: linear-gradient(145deg, rgba(244, 63, 94, 0.13), var(--surface-2));
+}
+
+/* Her Yerden Dokunulabilir Terim Açıklama Hapları */
+.ae-term-pill {
+  appearance: none;
+  border: 1px dashed var(--line-strong);
+  background: var(--surface-2);
+  color: var(--cyan);
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  transition: transform 0.12s ease, border-color 0.15s ease;
+}
+
+.ae-term-pill:active {
+  transform: scale(0.95);
+}
+
+/* Terim Açıklayıcı Katman (Bottom Sheet'in Üstünde!) */
+.ae-term-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 160;
+  background: rgba(3, 6, 14, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.ae-term-card {
+  width: 100%;
+  max-width: 460px;
+  background: var(--sheet-bg);
+  border: 1.5px solid rgba(240, 180, 41, 0.42);
+  border-radius: 24px;
+  padding: 20px 18px 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  animation: aePopIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes aePopIn {
+  from { opacity: 0; transform: scale(0.94) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* İnteraktif Laboratuvar & Simülatör Kartları */
+.ae-lab-card {
+  background: var(--surface-1);
+  border: 1px solid var(--line-subtle);
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: var(--card-shadow);
+  margin-bottom: 13px;
+}
+
+.ae-lab-slider-row {
+  margin: 10px 0 12px;
+}
+
+.ae-lab-slider-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13.4px;
+  font-weight: 800;
+  color: var(--ink-200);
+}
+
+.ae-journey-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin: 10px 0 6px;
+}
+
+.ae-journey-node {
+  background: var(--surface-2);
+  border: 1px solid var(--line-subtle);
+  border-radius: 13px;
+  padding: 9px 8px;
+  text-align: center;
+  min-width: 0;
+}
+
+.ae-journey-node.done {
+  border-color: rgba(16, 185, 129, 0.48);
+  background: var(--green-soft);
+}
+
+.ae-journey-node.current {
+  border-color: var(--gold);
+  background: var(--gold-soft);
+}
+
+/* İlk 5 Dakika Adım Kartı */
+.ae-step-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-subtle);
+}
+
+.ae-step-row.done {
+  border-color: rgba(16, 185, 129, 0.4);
+  opacity: 0.85;
+}
+
+/* ==========================================================================
+   RAHATLIKLA OKUMA MODU (Aa+ YAŞLI NİNE & YÜKSEK KONTRAST MODU)
+   ========================================================================== */
+html[data-font-scale="large"] body {
+  font-size: 17px;
+  line-height: 1.54;
+}
+
+html[data-font-scale="large"] {
+  --ink-400: var(--ink-200);
+}
+
+html[data-font-scale="large"] .ae-tab-label {
+  font-size: 12px;
+}
+
+html[data-font-scale="large"] .ae-tab-item {
+  min-height: 54px;
+}
+
+html[data-font-scale="large"] .ae-balance-figure {
+  font-size: clamp(34px, 9.2vw, 42px);
+}
+
+html[data-font-scale="large"] .ae-v17-title {
+  font-size: 17px;
+}
+
+html[data-font-scale="large"] .ae-v17-desc,
+html[data-font-scale="large"] .ae-brief-item p,
+html[data-font-scale="large"] .ae-doorway-card span,
+html[data-font-scale="large"] .ae-choice-btn,
+html[data-font-scale="large"] .ae-guide-body,
+html[data-font-scale="large"] .ms-alert {
+  font-size: 15.2px !important;
+  line-height: 1.56 !important;
+}
+
+html[data-font-scale="large"] .ae-v17-price,
+html[data-font-scale="large"] .ae-doorway-card strong,
+html[data-font-scale="large"] .ae-brief-item strong {
+  font-size: 17px !important;
+}
+
+html[data-font-scale="large"] .ae-chip,
+html[data-font-scale="large"] .ms-btn,
+html[data-font-scale="large"] .ae-seg-btn {
+  font-size: 14px !important;
+  min-height: 44px;
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+
+html[data-font-scale="large"] .ae-big-btn {
+  min-height: 54px;
+  font-size: 16.5px;
+}
+
+html[data-font-scale="large"] .ae-trio-cell span,
+html[data-font-scale="large"] .ms-kpi-box span,
+html[data-font-scale="large"] .ms-bakery-cell span {
+  font-size: 13px !important;
+}
+
+html[data-font-scale="large"] .ae-trio-cell strong {
+  font-size: 14.2px !important;
+}
+
+html[data-font-scale="large"] .ms-kpi-box strong,
+html[data-font-scale="large"] .ms-bakery-cell strong {
+  font-size: 16.5px !important;
+}
+
+html[data-font-scale="large"] .ae-fscore-tag,
+html[data-font-scale="large"] .ae-r52-mini {
+  display: none !important;
+}
+
+html[data-font-scale="large"] .ae-v17-desc {
+  -webkit-line-clamp: 3;
+}
+
+@media (max-width: 359px) {
+  .ae-doorway-grid,
+  .ae-pulse-grid,
+  .ae-hero-cta-row {
+    grid-template-columns: 1fr;
+  }
+  .ae-balance-trio {
+    grid-template-columns: 1fr;
+  }
+  .ae-journey-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 

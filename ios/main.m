@@ -2,6 +2,7 @@
 #import <WebKit/WebKit.h>
 #import <SafariServices/SafariServices.h>
 #import <UserNotifications/UserNotifications.h>
+#import <AVFoundation/AVFoundation.h>
 
 static NSString * const kAetherNativeStateKey = @"aether_native_state_v13";
 static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
@@ -13,9 +14,10 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
 - (instancetype)initWithController:(AetherViewController *)controller;
 @end
 
-@interface AetherViewController : UIViewController <WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate, UNUserNotificationCenterDelegate>
+@interface AetherViewController : UIViewController <WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate, UNUserNotificationCenterDelegate, AVSpeechSynthesizerDelegate>
 @property (nonatomic, strong) WKWebView *webView;
 @property (nonatomic, strong) WKUserContentController *userContentController;
+@property (nonatomic, strong) AVSpeechSynthesizer *speechSynthesizer;
 @property (nonatomic, assign) BOOL isDaylightTheme;
 - (void)handleScriptMessage:(WKScriptMessage *)message;
 - (void)refreshBootUserScript;
@@ -108,6 +110,7 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
 
     NSString *bootJs = [NSString stringWithFormat:
         @"window.__AETHER_NATIVE_IOS_APP__ = true;"
+         "window.__AETHER_NATIVE_TTS__ = true;"
          "window.__AETHER_DEVICE_LABEL__ = 'iPhone Uygulaması';"
          "window.__AETHER_NATIVE_SAVED_STATE__ = %@;",
         encodedSaved];
@@ -146,6 +149,14 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
        willPresentNotification:(UNNotification *)notification
          withCompletionHandler:(void (^)(UNNotificationPresentationOptions options))completionHandler {
     completionHandler(UNNotificationPresentationOptionBanner | UNNotificationPresentationOptionList | UNNotificationPresentationOptionSound);
+}
+
+- (void)speechSynthesizer:(AVSpeechSynthesizer *)synthesizer didFinishSpeechUtterance:(AVSpeechUtterance *)utterance {
+    [[AVAudioSession sharedInstance] setActive:NO withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:nil];
+}
+
+- (void)speechSynthesizer:(AVSpeechSynthesizer *)synthesizer didCancelSpeechUtterance:(AVSpeechUtterance *)utterance {
+    [[AVAudioSession sharedInstance] setActive:NO withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:nil];
 }
 
 - (void)handleScriptMessage:(WKScriptMessage *)message {
@@ -221,6 +232,54 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
             [[NSUserDefaults standardUserDefaults] synchronize];
             [self refreshBootUserScript];
         }
+        return;
+    }
+
+    if ([action isEqualToString:@"applyStagedOtaNow"]) {
+        if (self.speechSynthesizer && self.speechSynthesizer.isSpeaking) {
+            [self.speechSynthesizer stopSpeakingAtBoundary:AVSpeechBoundaryImmediate];
+        }
+        NSURL *activeWwwDir = [self prepareLocalLiveWwwDirectory];
+        NSURL *indexUrl = activeWwwDir ? [activeWwwDir URLByAppendingPathComponent:@"index.html"] : nil;
+        if (indexUrl && [[NSFileManager defaultManager] fileExistsAtPath:[indexUrl path]]) {
+            [self refreshBootUserScript];
+            [self.webView loadFileURL:indexUrl allowingReadAccessToURL:activeWwwDir];
+        }
+        return;
+    }
+
+    if ([action isEqualToString:@"stopSpeak"]) {
+        if (self.speechSynthesizer && self.speechSynthesizer.isSpeaking) {
+            [self.speechSynthesizer stopSpeakingAtBoundary:AVSpeechBoundaryImmediate];
+        }
+        return;
+    }
+
+    if ([action isEqualToString:@"speak"]) {
+        if (!self.speechSynthesizer) {
+            self.speechSynthesizer = [[AVSpeechSynthesizer alloc] init];
+            self.speechSynthesizer.delegate = self;
+        }
+        if (self.speechSynthesizer.isSpeaking) {
+            [self.speechSynthesizer stopSpeakingAtBoundary:AVSpeechBoundaryImmediate];
+            [self.webView evaluateJavaScript:@"window.dispatchEvent(new CustomEvent('aetherNativeTtsState',{detail:'stopped'}));" completionHandler:nil];
+            return;
+        }
+        NSString *text = [body[@"text"] isKindOfClass:[NSString class]] ? body[@"text"] : @"";
+        if (text.length == 0) return;
+        AVAudioSession *session = [AVAudioSession sharedInstance];
+        [session setCategory:AVAudioSessionCategoryPlayback withOptions:AVAudioSessionCategoryOptionDuckOthers error:nil];
+        [session setActive:YES error:nil];
+
+        AVSpeechUtterance *utt = [AVSpeechUtterance speechUtteranceWithString:text];
+        AVSpeechSynthesisVoice *trVoice = [AVSpeechSynthesisVoice voiceWithLanguage:@"tr-TR"];
+        if (trVoice) {
+            utt.voice = trVoice;
+        }
+        utt.rate = AVSpeechUtteranceDefaultSpeechRate * 0.96f;
+        utt.pitchMultiplier = 1.0f;
+        [self.speechSynthesizer speakUtterance:utt];
+        [self.webView evaluateJavaScript:@"window.dispatchEvent(new CustomEvent('aetherNativeTtsState',{detail:'speaking'}));" completionHandler:nil];
         return;
     }
 
@@ -378,8 +437,8 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
     NSURL *stageDir = [appSup URLByAppendingPathComponent:@"AETHER_StageWWW" isDirectory:YES];
     NSURL *stageIndex = [stageDir URLByAppendingPathComponent:@"index.html"];
 
-    NSString *bundleVer = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] ?: @"1610";
-    NSString *bundleShort = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"16.1.0";
+    NSString *bundleVer = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] ?: @"1800";
+    NSString *bundleShort = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"18.0.0";
     NSUserDefaults *ud = [NSUserDefaults standardUserDefaults];
     NSString *savedBundleVer = [ud stringForKey:@"aether_live_bundle_ver"];
 
@@ -431,7 +490,7 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
     NSMutableURLRequest *req = [NSMutableURLRequest requestWithURL:url
                                                        cachePolicy:NSURLRequestReloadIgnoringLocalCacheData
                                                    timeoutInterval:14.0];
-    [req setValue:@"AETHER-iOS-OTA/16.1" forHTTPHeaderField:@"User-Agent"];
+    [req setValue:@"AETHER-iOS-OTA/18.0" forHTTPHeaderField:@"User-Agent"];
     NSURLSessionDataTask *t = [[NSURLSession sharedSession] dataTaskWithRequest:req
                                                               completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
         if (!error && [response isKindOfClass:[NSHTTPURLResponse class]] && ((NSHTTPURLResponse *)response).statusCode == 200) {
@@ -501,10 +560,19 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
         [bundleData writeToURL:bundleDest options:NSDataWritingAtomic error:nil];
     }
 
-    // Çalışan WKWebView altındaki AETHER_LiveWWW klasörüne DOKUNMA; bir sonraki açılışta atomik terfi için işaretle
+    // Çalışan WKWebView altındaki AETHER_LiveWWW klasörüne DOKUNMA; bir sonraki açılışta veya kullanıcı onayıyla atomik terfi için işaretle
     [self ensureWritablePermissionsInDirectory:stageDir];
     [ud setObject:remoteVer forKey:@"aether_staged_ota_ver"];
     [ud synchronize];
+    __weak typeof(self) weakSelf = self;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (!strongSelf || !strongSelf.webView) return;
+        NSData *verJsonData = [NSJSONSerialization dataWithJSONObject:@[remoteVer] options:0 error:nil];
+        NSString *verJson = verJsonData ? [[NSString alloc] initWithData:verJsonData encoding:NSUTF8StringEncoding] : @"[\"\"]";
+        NSString *js = [NSString stringWithFormat:@"window.dispatchEvent(new CustomEvent('aetherOtaReady',{detail:(%@)[0]}));", verJson];
+        [strongSelf.webView evaluateJavaScript:js completionHandler:nil];
+    });
 }
 
 - (void)webViewWebContentProcessDidTerminate:(WKWebView *)webView {
