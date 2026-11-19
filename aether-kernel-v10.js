@@ -2061,6 +2061,62 @@
     }
   }
 
+  function refundReservedOrderFunds(member, ord, refundAmountTL, nowMs, settleNote) {
+    const refund = +(Number(refundAmountTL) || 0).toFixed(2);
+    if (!(refund > 0)) return { returnedCashTL: 0, returnedSettlementTL: 0 };
+    const hasChunks = Array.isArray(ord?.reservedSettlementChunks) && ord.reservedSettlementChunks.length > 0;
+    if (!hasChunks) {
+      member.cashTL = +(member.cashTL + refund).toFixed(2);
+      if (ord && ord.reservedCashTL != null) {
+        ord.reservedCashTL = Math.max(0, +(Number(ord.reservedCashTL) - refund).toFixed(2));
+      }
+      return { returnedCashTL: refund, returnedSettlementTL: 0 };
+    }
+    let rem = refund;
+    let returnedCashTL = 0;
+    let returnedSettlementTL = 0;
+    const curCashPart = Math.max(0, +(Number(ord.reservedCashTL) || 0).toFixed(2));
+    const cashTake = Math.min(rem, curCashPart);
+    if (cashTake > 0) {
+      member.cashTL = +(member.cashTL + cashTake).toFixed(2);
+      ord.reservedCashTL = +(curCashPart - cashTake).toFixed(2);
+      returnedCashTL = +(returnedCashTL + cashTake).toFixed(2);
+      rem = +(rem - cashTake).toFixed(2);
+    }
+    if (rem > 0) {
+      for (const ch of ord.reservedSettlementChunks) {
+        if (rem <= 0) break;
+        const chAvail = +(Number(ch.grossTL) || 0).toFixed(2);
+        if (chAvail <= 0) continue;
+        const take = Math.min(chAvail, rem);
+        ch.grossTL = +(chAvail - take).toFixed(2);
+        rem = +(rem - take).toFixed(2);
+        if (Number(ch.settlesAtMs) > nowMs) {
+          if (!Array.isArray(member.settlementQueue)) member.settlementQueue = [];
+          member.settlementQueue.push({
+            id: 'sq_' + Math.random().toString(36).slice(2, 9),
+            assetKey: ch.assetKey || ord.assetKey,
+            name: ch.name || ord.name,
+            grossTL: +take.toFixed(2),
+            settlesAtMs: ch.settlesAtMs,
+            usableForBist: true,
+            note: settleNote || ch.note || 'İade edilen BIST T+2 takas tutarı'
+          });
+          returnedSettlementTL = +(returnedSettlementTL + take).toFixed(2);
+        } else {
+          member.cashTL = +(member.cashTL + take).toFixed(2);
+          returnedCashTL = +(returnedCashTL + take).toFixed(2);
+        }
+      }
+      ord.reservedSettlementChunks = ord.reservedSettlementChunks.filter((ch) => Number(ch.grossTL) > 0.01);
+    }
+    if (rem > 0.01) {
+      member.cashTL = +(member.cashTL + rem).toFixed(2);
+      returnedCashTL = +(returnedCashTL + rem).toFixed(2);
+    }
+    return { returnedCashTL, returnedSettlementTL };
+  }
+
   function processTimeHooksForMember(member, customNowMs) {
     const clock = getTurkishClock(customNowMs);
     const nowMs = clock.ms;
@@ -2100,16 +2156,27 @@
               isTermDeposit: false
             });
           } else {
-            const execPrice = asset.priceTL > 0 ? asset.priceTL : 1;
+            const execPrice = asset.priceTL > 0 ? (asset.subVenue === 'BIST_STOCK' ? snapToBistTick(asset.priceTL) : asset.priceTL) : 1;
             const feePct = asset.venue === 'BIST' ? 0.00084 : 0;
-            const feeTL = +(ord.reservedTL * feePct).toFixed(2);
-            const netInvestTL = Math.max(0, ord.reservedTL - feeTL);
-            const qty = asset.venue === 'BIST' && asset.subVenue === 'BIST_STOCK'
-              ? Math.floor(netInvestTL / execPrice)
-              : +(netInvestTL / execPrice).toFixed(6);
-            const spentTL = +(qty * execPrice + feeTL).toFixed(2);
+            let qty = 0;
+            let feeTL = 0;
+            let spentTL = 0;
+            if (asset.venue === 'BIST' && asset.subVenue === 'BIST_STOCK') {
+              qty = Math.floor(ord.reservedTL / (execPrice * (1 + feePct)));
+              while (qty > 0 && +(qty * execPrice + +(qty * execPrice * feePct).toFixed(2)).toFixed(2) > ord.reservedTL) qty--;
+              const principalTL = +(qty * execPrice).toFixed(2);
+              feeTL = +(principalTL * feePct).toFixed(2);
+              spentTL = +(principalTL + feeTL).toFixed(2);
+            } else {
+              feeTL = +(ord.reservedTL * feePct).toFixed(2);
+              const netInvestTL = Math.max(0, ord.reservedTL - feeTL);
+              qty = +(netInvestTL / execPrice).toFixed(6);
+              spentTL = +(qty * execPrice + feeTL).toFixed(2);
+            }
             const refundTL = Math.max(0, +(ord.reservedTL - spentTL).toFixed(2));
-            if (refundTL > 0) member.cashTL = +(member.cashTL + refundTL).toFixed(2);
+            if (refundTL > 0) {
+              refundReservedOrderFunds(member, ord, refundTL, nowMs, 'Açılış emri lot yuvarlama artığı (T+2 takas)');
+            }
             member.totalFrictionBurnedTL = +((member.totalFrictionBurnedTL || 0) + feeTL).toFixed(2);
             if (qty > 0) {
               mergeSpotPosition(member, asset, qty, execPrice, clock.ymd, ord.door || 'STANDARD', ord.thesisTag, ord.thesisNote);
@@ -2148,11 +2215,18 @@
           continue;
         }
         const micro = inspectBoardMicrostructure(asset);
+        const coDoor = asset.venue === 'TWO_DOOR'
+          ? (co.door === 'BAZAAR' ? 'BAZAAR' : (co.door === 'NOBETCI' ? 'NOBETCI' : 'BANK'))
+          : (co.door || asset.venue);
         const venueOpen = asset.venue === 'BIST'
           ? (clock.bistCanMatchNow && !micro.isCircuitBreaker)
           : (asset.venue === 'VIOP'
             ? clock.viopOpen
-            : (asset.venue === 'GLOBAL_USD' ? !clock.isWeekend : true));
+            : (asset.venue === 'GLOBAL_USD'
+              ? !clock.isWeekend
+              : (asset.venue === 'TWO_DOOR'
+                ? (coDoor === 'BAZAAR' ? clock.grandBazaarOpen : (coDoor === 'NOBETCI' ? clock.nobetciOpen : true))
+                : true)));
 
         if (!venueOpen) {
           stillCond.push(co);
@@ -2163,45 +2237,51 @@
         const trigP = Number(co.triggerPriceTL);
 
         if (co.kind === 'LIMIT_BUY' && liveP <= trigP && !micro.isTavanLocked) {
-          const execPrice = asset.subVenue === 'BIST_STOCK' ? snapToBistTick(Math.min(liveP, trigP)) : liveP;
-          const feeRate = asset.venue === 'BIST' ? 0.00084 : (asset.venue === 'GLOBAL_USD' ? 0.0015 : (asset.venue === 'TWO_DOOR' ? (clock.bankSpreadPct / 200 + 0.002) : 0.001));
           const reserved = Number(co.reservedTL) || 0;
-          const feeTL = +(reserved * feeRate).toFixed(2);
-          const netInvestTL = Math.max(0, reserved - feeTL);
-          const qty = asset.subVenue === 'BIST_STOCK' ? Math.floor(netInvestTL / execPrice) : +(netInvestTL / execPrice).toFixed(6);
+          let execPrice = liveP;
+          let feeTL = 0;
+          let spreadLeakTL = 0;
+          let qty = 0;
+          let spentTL = 0;
+
+          if (asset.venue === 'TWO_DOOR') {
+            const fullSpreadPct = coDoor === 'BAZAAR'
+              ? clock.bazaarSpreadPct
+              : (coDoor === 'NOBETCI' ? clock.nobetciSpreadPct : clock.bankSpreadPct);
+            const halfSpreadPct = fullSpreadPct / 2;
+            const bsmvPct = coDoor === 'BANK' ? 0.20 : 0;
+            execPrice = +(liveP * (1 + halfSpreadPct / 100)).toFixed(4);
+            feeTL = +(reserved * (bsmvPct / 100)).toFixed(2);
+            const netInvestTL = Math.max(0, +(reserved - feeTL).toFixed(2));
+            qty = +(netInvestTL / execPrice).toFixed(6);
+            const pureMidQty = reserved / liveP;
+            spreadLeakTL = Math.max(0, +((pureMidQty - qty) * liveP).toFixed(2));
+            spentTL = reserved;
+          } else {
+            execPrice = asset.subVenue === 'BIST_STOCK' ? snapToBistTick(Math.min(liveP, trigP)) : liveP;
+            const feeRate = asset.venue === 'BIST' ? 0.00084 : (asset.venue === 'GLOBAL_USD' ? 0.0015 : 0.001);
+            if (asset.subVenue === 'BIST_STOCK') {
+              qty = Math.floor(reserved / (execPrice * (1 + feeRate)));
+              while (qty > 0 && +(qty * execPrice + +(qty * execPrice * feeRate).toFixed(2)).toFixed(2) > reserved) qty--;
+              const principalTL = +(qty * execPrice).toFixed(2);
+              feeTL = +(principalTL * feeRate).toFixed(2);
+              spentTL = +(principalTL + feeTL).toFixed(2);
+            } else {
+              feeTL = +(reserved * feeRate).toFixed(2);
+              const netInvestTL = Math.max(0, reserved - feeTL);
+              qty = +(netInvestTL / execPrice).toFixed(6);
+              spentTL = +(qty * execPrice + feeTL).toFixed(2);
+            }
+          }
+
           if (qty > 0) {
-            const spentTL = +(qty * execPrice + feeTL).toFixed(2);
             const refundTL = Math.max(0, +(reserved - spentTL).toFixed(2));
             if (refundTL > 0) {
-              const unsettledChunks = Array.isArray(co.reservedSettlementChunks)
-                ? co.reservedSettlementChunks.filter((ch) => Number(ch.settlesAtMs) > nowMs && Number(ch.grossTL) > 0)
-                : [];
-              const cashBackedTL = Array.isArray(co.reservedSettlementChunks) && co.reservedSettlementChunks.length > 0
-                ? Math.max(0, +(Number(co.reservedCashTL) || 0).toFixed(2))
-                : refundTL;
-              if (unsettledChunks.length > 0 && refundTL > cashBackedTL) {
-                const cashRefund = Math.max(0, +(Math.min(refundTL, cashBackedTL)).toFixed(2));
-                const settleRefund = +(refundTL - cashRefund).toFixed(2);
-                if (cashRefund > 0) member.cashTL = +(member.cashTL + cashRefund).toFixed(2);
-                if (settleRefund > 0) {
-                  if (!Array.isArray(member.settlementQueue)) member.settlementQueue = [];
-                  const latestSettleMs = Math.max(...unsettledChunks.map((ch) => Number(ch.settlesAtMs) || 0));
-                  member.settlementQueue.push({
-                    id: 'sq_' + Math.random().toString(36).slice(2, 9),
-                    assetKey: asset.key,
-                    name: asset.name,
-                    grossTL: settleRefund,
-                    settlesAtMs: latestSettleMs,
-                    usableForBist: true,
-                    note: 'Limit alım lot yuvarlama artığı (T+2 takas)'
-                  });
-                }
-              } else {
-                member.cashTL = +(member.cashTL + refundTL).toFixed(2);
-              }
+              refundReservedOrderFunds(member, co, refundTL, nowMs, 'Limit alım lot yuvarlama artığı (T+2 takas)');
             }
-            member.totalFrictionBurnedTL = +((member.totalFrictionBurnedTL || 0) + feeTL).toFixed(2);
-            mergeSpotPosition(member, asset, qty, execPrice, clock.ymd, co.door || asset.venue, co.thesisTag || 'RESEARCH_FUNDAMENTAL', co.thesisNote || `Limit emir (${trigP} ₺)`);
+            const frictionAddTL = asset.venue === 'TWO_DOOR' ? spreadLeakTL : feeTL;
+            member.totalFrictionBurnedTL = +((member.totalFrictionBurnedTL || 0) + frictionAddTL).toFixed(2);
+            mergeSpotPosition(member, asset, qty, execPrice, clock.ymd, coDoor, co.thesisTag || 'RESEARCH_FUNDAMENTAL', co.thesisNote || `Limit emir (${trigP} ₺)`);
             member.livedMilestones.executedRealOrder = true;
             member.livedMilestones.usedLimitOrStop = true;
             member.tradeHistory.unshift({
@@ -2216,11 +2296,13 @@
               thesisTag: co.thesisTag || 'RESEARCH_FUNDAMENTAL',
               thesisNote: co.thesisNote || '',
               feeAndTaxTL: feeTL,
-              spreadLeakTL: 0,
+              spreadLeakTL,
               note: `Hedef limit fiyat (${trigP.toLocaleString('tr-TR')} ₺) gerçekleşti: ${qty} adet ${execPrice.toLocaleString('tr-TR')} ₺'den alındı.`
             });
+            if (member.tradeHistory.length > 60) member.tradeHistory.length = 60;
             maybeSnapshotGhostHoldPortfolio(member);
             checkConcentrationFootprint(member);
+            recordEquityCurveSnapshot(member, nowMs, true);
             changed = true;
           } else {
             stillCond.push(co);
@@ -2238,12 +2320,13 @@
           const targetQty = Math.min(pos.qty, Number(co.qty) || pos.qty);
           const sellQty = asset.subVenue === 'BIST_STOCK' ? Math.floor(targetQty) : +targetQty.toFixed(6);
           if (sellQty > 0) {
-            const res = settleSpotSale(member, asset, sellQty, liveP, nowMs, co.door || 'BANK', false);
+            const res = settleSpotSale(member, asset, sellQty, liveP, nowMs, coDoor, false);
             if (member.tradeHistory[0]) {
               member.tradeHistory[0].side = co.kind === 'STOP_LOSS' ? 'ZARAR KES' : 'KÂR AL';
               member.tradeHistory[0].note = `${co.kind === 'STOP_LOSS' ? 'Zarar kes' : 'Hedef kâr al'} tetiklendi (${trigP.toLocaleString('tr-TR')} ₺ -> canlı ${liveP.toLocaleString('tr-TR')} ₺): Net ${res.netAfterFeeAndStopajTL.toLocaleString('tr-TR')} ₺.`;
             }
             member.livedMilestones.usedLimitOrStop = true;
+            recordEquityCurveSnapshot(member, nowMs, true);
             changed = true;
           }
         } else {
@@ -2693,7 +2776,7 @@
     const totalNetRealTL = netOwnVault + netStateVault;
     const stdGain = Math.max(0, stdVault - totalOwnPaid);
     const netStdTotalTL = Math.round(stdVault - stdGain * (exitStopajPct / 100)) + netStateVault;
-    const befasAdvantageTL = Math.max(0, totalNetRealTL - netStdTotalTL);
+    const befasAdvantageTL = Math.round(totalNetRealTL - netStdTotalTL);
 
     return {
       monthlyContribTL,
@@ -2910,7 +2993,10 @@
       const curReserved = +(Number(ord.reservedTL) || 0).toFixed(2);
       if (ord.side === 'BUY' && reqRelease > 0 && curReserved - reqRelease >= 100) {
         ord.reservedTL = +(curReserved - reqRelease).toFixed(2);
-        member.cashTL = +(member.cashTL + reqRelease).toFixed(2);
+        const { returnedCashTL, returnedSettlementTL } = refundReservedOrderFunds(member, ord, reqRelease, nowMs, 'Revize edilen emirden dönen BIST T+2 takas tutarı');
+        const relDetail = returnedSettlementTL > 0
+          ? `${returnedCashTL > 0 ? `${returnedCashTL.toLocaleString('tr-TR')} ₺ nakde, ` : ''}${returnedSettlementTL.toLocaleString('tr-TR')} ₺ T+2 takasa döndü`
+          : `${returnedCashTL.toLocaleString('tr-TR')} ₺ anında kullanılabilir nakde çözüldü`;
         member.tradeHistory.unshift({
           id: 'th_' + Math.random().toString(36).slice(2, 9),
           ts: nowMs,
@@ -2921,7 +3007,7 @@
           priceTL: 1,
           feeAndTaxTL: 0,
           spreadLeakTL: 0,
-          note: `Bekleyen alım emrinden ${reqRelease.toLocaleString('tr-TR')} ₺ nakde çözüldü; kalan ${ord.reservedTL.toLocaleString('tr-TR')} ₺ sırada bekliyor.`
+          note: `Bekleyen alım emrinden ${reqRelease.toLocaleString('tr-TR')} ₺ çözüldü (${relDetail}); kalan ${ord.reservedTL.toLocaleString('tr-TR')} ₺ sırada bekliyor.`
         });
         member.updatedAt = nowMs;
         member.rev = (member.rev || 1) + 1;
@@ -2930,23 +3016,32 @@
           ok: true,
           status: 'ORDER_REDUCED',
           releasedTL: reqRelease,
+          returnedCashTL,
+          returnedSettlementTL,
           remainingTL: ord.reservedTL,
-          message: `${ord.name} emrinden ${reqRelease.toLocaleString('tr-TR')} ₺ anında kullanılabilir nakde çözüldü (Sırada kalan: ${ord.reservedTL.toLocaleString('tr-TR')} ₺).`
+          message: `${ord.name} emrinden ${relDetail} (Sırada kalan: ${ord.reservedTL.toLocaleString('tr-TR')} ₺).`
         };
       }
       member.pendingOrders.splice(idx, 1);
-      if (curReserved > 0) {
-        member.cashTL = +(member.cashTL + curReserved).toFixed(2);
-      }
+      const { returnedCashTL, returnedSettlementTL } = curReserved > 0
+        ? refundReservedOrderFunds(member, ord, curReserved, nowMs, 'İptal edilen açılış emrinden dönen BIST T+2 takas tutarı')
+        : { returnedCashTL: 0, returnedSettlementTL: 0 };
       member.updatedAt = nowMs;
       member.rev = (member.rev || 1) + 1;
       saveState(true, true);
+      const cancelDetail = curReserved > 0
+        ? (returnedSettlementTL > 0
+          ? ` (${returnedCashTL > 0 ? `${returnedCashTL.toLocaleString('tr-TR')} ₺ nakde, ` : ''}${returnedSettlementTL.toLocaleString('tr-TR')} ₺ T+2 takasa iade edildi)`
+          : ` ve ${returnedCashTL.toLocaleString('tr-TR')} ₺ nakde iade edildi`)
+        : '';
       return {
         ok: true,
         status: 'ORDER_CANCELLED',
         releasedTL: curReserved,
+        returnedCashTL,
+        returnedSettlementTL,
         remainingTL: 0,
-        message: `${ord.name} için bekleyen ${ord.side === 'BUY' ? 'alım' : 'satış'} emri iptal edildi${curReserved > 0 ? ` ve ${curReserved.toLocaleString('tr-TR')} ₺ nakde iade edildi` : ''}.`
+        message: `${ord.name} için bekleyen ${ord.side === 'BUY' ? 'alım' : 'satış'} emri iptal edildi${cancelDetail}.`
       };
     }
 
@@ -2957,38 +3052,9 @@
       const ord = member.conditionalOrders[idx];
       member.conditionalOrders.splice(idx, 1);
       const refund = +(Number(ord.reservedTL) || 0).toFixed(2);
-      let returnedCashTL = 0;
-      let returnedSettlementTL = 0;
-      if (Array.isArray(ord.reservedSettlementChunks) && ord.reservedSettlementChunks.length > 0) {
-        const cashPart = Math.min(refund, Math.max(0, +(Number(ord.reservedCashTL) || 0).toFixed(2)));
-        if (cashPart > 0) {
-          member.cashTL = +(member.cashTL + cashPart).toFixed(2);
-          returnedCashTL = +(returnedCashTL + cashPart).toFixed(2);
-        }
-        for (const ch of ord.reservedSettlementChunks) {
-          const chAmt = +(Number(ch.grossTL) || 0).toFixed(2);
-          if (chAmt <= 0) continue;
-          if (Number(ch.settlesAtMs) > nowMs) {
-            if (!Array.isArray(member.settlementQueue)) member.settlementQueue = [];
-            member.settlementQueue.push({
-              id: 'sq_' + Math.random().toString(36).slice(2, 9),
-              assetKey: ch.assetKey || ord.assetKey,
-              name: ch.name || ord.name,
-              grossTL: chAmt,
-              settlesAtMs: ch.settlesAtMs,
-              usableForBist: true,
-              note: ch.note || 'İptal edilen Limit Alımdan dönen BIST T+2 takas tutarı'
-            });
-            returnedSettlementTL = +(returnedSettlementTL + chAmt).toFixed(2);
-          } else {
-            member.cashTL = +(member.cashTL + chAmt).toFixed(2);
-            returnedCashTL = +(returnedCashTL + chAmt).toFixed(2);
-          }
-        }
-      } else if (refund > 0) {
-        member.cashTL = +(member.cashTL + refund).toFixed(2);
-        returnedCashTL = refund;
-      }
+      const { returnedCashTL, returnedSettlementTL } = refund > 0
+        ? refundReservedOrderFunds(member, ord, refund, nowMs, 'İptal edilen Limit Alımdan dönen BIST T+2 takas tutarı')
+        : { returnedCashTL: 0, returnedSettlementTL: 0 };
       member.updatedAt = nowMs;
       member.rev = (member.rev || 1) + 1;
       saveState(true, true);
@@ -3105,7 +3171,9 @@
     // --- YENİ KOŞULLU EMİR: ZARAR KES (STOP-LOSS) & KÂR AL (TAKE-PROFIT) ---
     if (side === 'PLACE_STOP_LOSS' || side === 'PLACE_TAKE_PROFIT') {
       const asset = getAsset(params.assetKey);
-      if (!asset) return { ok: false, reason: 'Varlık bulunamadı.' };
+      if (!asset || asset.isRateInstrument || asset.venue === 'BENCHMARK_ONLY' || asset.venue === 'TEFAS') {
+        return { ok: false, reason: 'Zarar Kes ve Kâr Al emirleri yalnızca tahtada işlem gören hisse, altın, döviz, ABD veya kripto varlıklarında geçerlidir.' };
+      }
       const pos = member.positions[asset.key];
       if (!pos || pos.qty <= 0) return { ok: false, reason: 'Bu varlıktan portföyünde bulunmuyor.' };
       const isStop = side === 'PLACE_STOP_LOSS';
@@ -3414,11 +3482,17 @@
         thesisTag = 'RUMOR_IMPULSE';
       }
 
+      let lastDeductedCashTL = 0;
+      let lastDeductedSettlementChunks = [];
       const deductFunds = (amt) => {
+        lastDeductedCashTL = 0;
+        lastDeductedSettlementChunks = [];
         if (member.cashTL >= amt) {
           member.cashTL = +(member.cashTL - amt).toFixed(2);
+          lastDeductedCashTL = +amt.toFixed(2);
           return 0;
         }
+        lastDeductedCashTL = +(member.cashTL).toFixed(2);
         let rem = +(amt - member.cashTL).toFixed(2);
         member.cashTL = 0;
         if (asset.venue === 'BIST' && !micro.isBrutTakas) {
@@ -3426,8 +3500,17 @@
             if (rem <= 0) break;
             if (q.usableForBist === false) continue;
             const take = Math.min(q.grossTL, rem);
+            if (take <= 0) continue;
             q.grossTL = +(q.grossTL - take).toFixed(2);
             rem = +(rem - take).toFixed(2);
+            lastDeductedSettlementChunks.push({
+              assetKey: q.assetKey,
+              name: q.name,
+              grossTL: +take.toFixed(2),
+              settlesAtMs: q.settlesAtMs,
+              usableForBist: true,
+              note: q.note || 'BIST T+2 Takas'
+            });
           }
           member.settlementQueue = member.settlementQueue.filter((q) => q.grossTL > 0.01);
         }
@@ -3688,6 +3771,8 @@
             assetKey: asset.key,
             name: asset.name,
             reservedTL: amountTL,
+            reservedCashTL: lastDeductedCashTL,
+            reservedSettlementChunks: lastDeductedSettlementChunks.slice(),
             qty: 0,
             orderType: aucInfo.orderType,
             executesAtMs: aucInfo.executesAtMs,
@@ -3727,15 +3812,28 @@
         }
 
         const execPrice = asset.subVenue === 'BIST_STOCK' ? snapToBistTick(asset.priceTL) : asset.priceTL;
-        const feeTL = +(amountTL * 0.00084).toFixed(2);
-        const investable = Math.max(0, amountTL - feeTL);
-        const qty = asset.subVenue === 'BIST_STOCK'
-          ? Math.floor(investable / execPrice)
-          : +(investable / execPrice).toFixed(4);
-        if (qty <= 0) {
-          return { ok: false, reason: `1 lot ${asset.ticker} fiyatı (${execPrice.toLocaleString('tr-TR')} ₺) girilen tutardan yüksek.` };
+        const feeRateBist = 0.00084;
+        let qty = 0;
+        let feeTL = 0;
+        let totalCostTL = 0;
+        if (asset.subVenue === 'BIST_STOCK') {
+          qty = Math.floor(amountTL / (execPrice * (1 + feeRateBist)));
+          while (qty > 0 && +(qty * execPrice + +(qty * execPrice * feeRateBist).toFixed(2)).toFixed(2) > amountTL) qty--;
+          if (qty <= 0) {
+            return { ok: false, reason: `1 lot ${asset.ticker} fiyatı (${execPrice.toLocaleString('tr-TR')} ₺) girilen tutardan yüksek.` };
+          }
+          const principalTL = +(qty * execPrice).toFixed(2);
+          feeTL = +(principalTL * feeRateBist).toFixed(2);
+          totalCostTL = +(principalTL + feeTL).toFixed(2);
+        } else {
+          feeTL = +(amountTL * feeRateBist).toFixed(2);
+          const investable = Math.max(0, amountTL - feeTL);
+          qty = +(investable / execPrice).toFixed(4);
+          if (qty <= 0) {
+            return { ok: false, reason: `1 lot ${asset.ticker} fiyatı (${execPrice.toLocaleString('tr-TR')} ₺) girilen tutardan yüksek.` };
+          }
+          totalCostTL = +(qty * execPrice + feeTL).toFixed(2);
         }
-        const totalCostTL = +(qty * execPrice + feeTL).toFixed(2);
         const borrowedTL = deductFunds(totalCostTL);
         member.totalFrictionBurnedTL = +((member.totalFrictionBurnedTL || 0) + feeTL).toFixed(2);
         mergeSpotPosition(member, asset, qty, execPrice, clock.ymd, borrowedTL > 0 ? 'BIST_MARGIN' : 'BIST', thesisTag, thesisNote);
@@ -4746,6 +4844,7 @@
     item.triggeredAtMs = 0;
     item.targetPriceTL = 0;
     m.updatedAt = Date.now();
+    m.rev = (Number(m.rev) || 1) + 1;
     saveState(true, false);
     return { ok: true };
   }

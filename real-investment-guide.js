@@ -6253,18 +6253,34 @@
 
     const bids = [];
     const asks = [];
-    const midBid = asset.subVenue === 'BIST_STOCK' ? K.snapToBistTick(price) : +price.toFixed(4);
+    const isBistStock = asset.subVenue === 'BIST_STOCK';
+    const midBid = isBistStock ? K.snapToBistTick(price) : +price.toFixed(4);
     const spreadTicks = liquidityTone === 'danger' ? 2 : 1;
 
+    let curBid = midBid;
+    let curAsk = midBid;
+    for (let s = 0; s < spreadTicks; s++) {
+      const upTick = isBistStock ? K.getBistTickSize(curAsk + 0.0001) : tick;
+      curAsk = +(curAsk + upTick).toFixed(isBistStock ? 2 : 4);
+    }
+
     for (let lvl = 0; lvl < 5; lvl++) {
-      const bidP = +(Math.max(tick, midBid - lvl * tick)).toFixed(asset.subVenue === 'BIST_STOCK' ? 2 : 4);
-      const askP = +(midBid + (lvl + spreadTicks) * tick).toFixed(asset.subVenue === 'BIST_STOCK' ? 2 : 4);
+      if (lvl > 0) {
+        const downTick = isBistStock ? K.getBistTickSize(Math.max(0.01, curBid - 0.0001)) : tick;
+        curBid = +(Math.max(0.01, curBid - downTick)).toFixed(isBistStock ? 2 : 4);
+        const upTick = isBistStock ? K.getBistTickSize(curAsk + 0.0001) : tick;
+        curAsk = +(curAsk + upTick).toFixed(isBistStock ? 2 : 4);
+      }
+      const bidP = curBid;
+      const askP = curAsk;
       const multB = 0.72 + (((seed + lvl * 19) % 70) / 100) + lvl * 0.22;
       const multA = 0.70 + (((seed + lvl * 29 + 11) % 75) / 100) + lvl * 0.24;
-      const bidTL = Math.round(baseLevelTL * multB);
-      const askTL = Math.round(baseLevelTL * multA);
-      const bidLots = Math.max(1, Math.round(bidTL / Math.max(0.01, bidP)));
-      const askLots = Math.max(1, Math.round(askTL / Math.max(0.01, askP)));
+      const targetBidTL = baseLevelTL * multB;
+      const targetAskTL = baseLevelTL * multA;
+      const bidLots = Math.max(1, Math.round(targetBidTL / Math.max(0.01, bidP)));
+      const askLots = Math.max(1, Math.round(targetAskTL / Math.max(0.01, askP)));
+      const bidTL = Math.round(bidLots * bidP);
+      const askTL = Math.round(askLots * askP);
       bids.push({ level: lvl + 1, priceTL: bidP, lots: bidLots, valueTL: bidTL });
       asks.push({ level: lvl + 1, priceTL: askP, lots: askLots, valueTL: askTL });
     }

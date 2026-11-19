@@ -4076,19 +4076,23 @@
               <input type="range" class="ae-slider" id="aeBesMonSl" min="2000" max="45000" step="1000" value="${labBesMonthlyTL}" />
             </div>
             <div class="ae-lab-slider-row">
-              <div class="ae-lab-slider-head"><span>Sistemde Kalma Süren (Başlangıç Yaşı: ${labBesStartAge})</span><strong id="aeBesYrLbl">${labBesYears} Yıl (Çıkış Yaşı: ${bes.endAge})</strong></div>
+              <div class="ae-lab-slider-head"><span>Başlangıç Yaşın</span><strong id="aeBesAgeLbl">${labBesStartAge} Yaş</strong></div>
+              <input type="range" class="ae-slider" id="aeBesAgeSl" min="18" max="55" step="1" value="${labBesStartAge}" />
+            </div>
+            <div class="ae-lab-slider-row">
+              <div class="ae-lab-slider-head"><span>Sistemde Kalma Süren</span><strong id="aeBesYrLbl">${labBesYears} Yıl (Çıkış Yaşı: ${bes.endAge})</strong></div>
               <input type="range" class="ae-slider" id="aeBesYrSl" min="2" max="25" step="1" value="${labBesYears}" />
             </div>
             <div class="ae-lab-slider-row">
-              <div class="ae-lab-slider-head"><span>BEFAS Fon Reel Getirisi (Enflasyon Üstü)</span><strong id="aeBesRealLbl" class="pos">Reel +%${labBesRealPct}/yıl</strong></div>
-              <input type="range" class="ae-slider" id="aeBesRealSl" min="2" max="16" step="1" value="${labBesRealPct}" />
+              <div class="ae-lab-slider-head"><span>BEFAS Fon Reel Getirisi (Enflasyon Üstü)</span><strong id="aeBesRealLbl" class="${labBesRealPct >= 2 ? 'pos' : 'warn-txt'}">Reel ${labBesRealPct >= 0 ? '+' : ''}%${labBesRealPct}/yıl</strong></div>
+              <input type="range" class="ae-slider" id="aeBesRealSl" min="0" max="16" step="1" value="${labBesRealPct}" />
             </div>
 
             <div id="aeBesLiveOut">
               <div class="ae-kpi-2x2" style="margin-bottom:10px">
                 <div class="ms-kpi-box" style="border-color:rgba(16,185,129,0.48)"><span>Net Reel BES Havuzun</span><strong class="pos">${fmtCompactTL(bes.totalNetRealTL)}</strong><small>Yatırdığın: ${fmtCompactTL(bes.totalOwnPaidTL)}</small></div>
                 <div class="ms-kpi-box"><span>2026 Yıllık Devlet Katkısı</span><strong class="pos">+${fmtTL(bes.annualStateContribTL)}/yıl</strong><small>Hak Ediş: %${bes.vestingPct} · Stopaj: %${bes.exitStopajPct}</small></div>
-                <div class="ms-kpi-box" style="border-color:rgba(240,180,41,0.45)"><span>BEFAS Yönetimi Farkı</span><strong class="pos">+${fmtCompactTL(bes.befasAdvantageTL)}</strong><small>Standart fon (${fmtCompactTL(bes.netStdTotalTL)}) üstü</small></div>
+                <div class="ms-kpi-box" style="border-color:rgba(240,180,41,0.45)"><span>BEFAS Yönetimi Farkı</span><strong class="${bes.befasAdvantageTL >= 0 ? 'pos' : 'neg'}">${bes.befasAdvantageTL >= 0 ? '+' : ''}${fmtCompactTL(bes.befasAdvantageTL)}</strong><small>Standart fon (${fmtCompactTL(bes.netStdTotalTL)}) farkı</small></div>
                 <div class="ms-kpi-box"><span>Aylık Ömür Boyu Maaş (%4)</span><strong>+${fmtTL(bes.monthlyPensionReal4PctTL)}/ay</strong><small>Bugünkü alım gücüyle</small></div>
               </div>
               <div class="ms-alert ${bes.vestingPct >= 60 ? 'ok' : 'warn'}" style="margin-bottom:0">
@@ -5069,18 +5073,23 @@
         : null;
       if (!bes) return;
       const mLbl = document.getElementById('aeBesMonLbl');
+      const aLbl = document.getElementById('aeBesAgeLbl');
       const yLbl = document.getElementById('aeBesYrLbl');
       const rLbl = document.getElementById('aeBesRealLbl');
       if (mLbl) mLbl.textContent = `${fmtTL(labBesMonthlyTL)}/ay`;
+      if (aLbl) aLbl.textContent = `${labBesStartAge} Yaş`;
       if (yLbl) yLbl.textContent = `${labBesYears} Yıl (Çıkış Yaşı: ${bes.endAge})`;
-      if (rLbl) rLbl.textContent = `Reel +%${labBesRealPct}/yıl`;
+      if (rLbl) {
+        rLbl.textContent = `Reel ${labBesRealPct >= 0 ? '+' : ''}%${labBesRealPct}/yıl`;
+        rLbl.className = labBesRealPct >= 2 ? 'pos' : 'warn-txt';
+      }
       const out = document.getElementById('aeBesLiveOut');
       if (out) {
         out.innerHTML = `
           <div class="ae-kpi-2x2" style="margin-bottom:10px">
             <div class="ms-kpi-box" style="border-color:rgba(16,185,129,0.48)"><span>Net Reel BES Havuzun</span><strong class="pos">${fmtCompactTL(bes.totalNetRealTL)}</strong><small>Yatırdığın: ${fmtCompactTL(bes.totalOwnPaidTL)}</small></div>
             <div class="ms-kpi-box"><span>2026 Yıllık Devlet Katkısı</span><strong class="pos">+${fmtTL(bes.annualStateContribTL)}/yıl</strong><small>Hak Ediş: %${bes.vestingPct} · Stopaj: %${bes.exitStopajPct}</small></div>
-            <div class="ms-kpi-box" style="border-color:rgba(240,180,41,0.45)"><span>BEFAS Yönetimi Farkı</span><strong class="pos">+${fmtCompactTL(bes.befasAdvantageTL)}</strong><small>Standart fon (${fmtCompactTL(bes.netStdTotalTL)}) üstü</small></div>
+            <div class="ms-kpi-box" style="border-color:rgba(240,180,41,0.45)"><span>BEFAS Yönetimi Farkı</span><strong class="${bes.befasAdvantageTL >= 0 ? 'pos' : 'neg'}">${bes.befasAdvantageTL >= 0 ? '+' : ''}${fmtCompactTL(bes.befasAdvantageTL)}</strong><small>Standart fon (${fmtCompactTL(bes.netStdTotalTL)}) farkı</small></div>
             <div class="ms-kpi-box"><span>Aylık Ömür Boyu Maaş (%4)</span><strong>+${fmtTL(bes.monthlyPensionReal4PctTL)}/ay</strong><small>Bugünkü alım gücüyle</small></div>
           </div>
           <div class="ms-alert ${bes.vestingPct >= 60 ? 'ok' : 'warn'}" style="margin-bottom:0">
@@ -5093,8 +5102,9 @@
       }
     };
     document.getElementById('aeBesMonSl')?.addEventListener('input', (e) => { labBesMonthlyTL = Number(e.target.value) || 15000; updateBesLive(); });
+    document.getElementById('aeBesAgeSl')?.addEventListener('input', (e) => { labBesStartAge = Number(e.target.value) || 35; updateBesLive(); });
     document.getElementById('aeBesYrSl')?.addEventListener('input', (e) => { labBesYears = Number(e.target.value) || 10; updateBesLive(); });
-    document.getElementById('aeBesRealSl')?.addEventListener('input', (e) => { labBesRealPct = Number(e.target.value) || 10; updateBesLive(); });
+    document.getElementById('aeBesRealSl')?.addEventListener('input', (e) => { labBesRealPct = Number(e.target.value); if (!Number.isFinite(labBesRealPct)) labBesRealPct = 10; updateBesLive(); });
 
     host.querySelectorAll('[data-lab-tool]').forEach((b) => {
       b.addEventListener('click', () => {
@@ -6596,10 +6606,27 @@
           ? fmtCompactLots(availQty)
           : (+Number(availQty).toFixed(availQty >= 10 ? 2 : 4)).toLocaleString('tr-TR');
 
+        const snapStrictTrigger = (rawTarget, mustBeBelow) => {
+          const isBist = asset.subVenue === 'BIST_STOCK';
+          const pLive = Number(asset.priceTL) || 0;
+          let snapped = isBist ? K.snapToBistTick(Math.max(0.01, rawTarget)) : +Math.max(0.01, rawTarget).toFixed(2);
+          if (mustBeBelow && snapped >= pLive) {
+            const step = isBist ? K.getBistTickSize(Math.max(0.01, pLive - 0.0001)) : 0.01;
+            snapped = +(Math.max(0.01, (isBist ? K.snapToBistTick(pLive) : pLive) - step)).toFixed(2);
+          } else if (!mustBeBelow && snapped <= pLive) {
+            const step = isBist ? K.getBistTickSize(pLive + 0.0001) : 0.01;
+            snapped = +((isBist ? K.snapToBistTick(pLive) : pLive) + step).toFixed(2);
+          }
+          return snapped;
+        };
         const defaultCondSellP = drawerSellMode === 'TAKE_PROFIT'
-          ? (asset.subVenue === 'BIST_STOCK' ? K.snapToBistTick(asset.priceTL * 1.15) : +(asset.priceTL * 1.15).toFixed(2))
-          : (asset.subVenue === 'BIST_STOCK' ? K.snapToBistTick(asset.priceTL * 0.92) : +(asset.priceTL * 0.92).toFixed(2));
-        const activeSellTrigP = draftTriggerPriceTL > 0 ? draftTriggerPriceTL : defaultCondSellP;
+          ? snapStrictTrigger(asset.priceTL * 1.15, false)
+          : snapStrictTrigger(asset.priceTL * 0.92, true);
+        const activeSellTrigP = (draftTriggerPriceTL > 0 && ((drawerSellMode === 'TAKE_PROFIT' && draftTriggerPriceTL > asset.priceTL) || (drawerSellMode === 'STOP_LOSS' && draftTriggerPriceTL < asset.priceTL)))
+          ? draftTriggerPriceTL
+          : defaultCondSellP;
+        const condEstProceedsTL = Math.round(effectiveSellQty * activeSellTrigP);
+        const condEstPnlTL = Math.round(effectiveSellQty * (activeSellTrigP - (existingPos.avgCostTL || activeSellTrigP)));
 
         tabContentHtml = `
           ${ !asset.isRateInstrument ? `
@@ -6658,8 +6685,11 @@
             `}
 
             ${drawerSellMode !== 'MARKET' && supportsConditional ? `
+              <div id="aeCondSellPreviewLine" style="font-size:11.8px;color:var(--ink-400);margin-bottom:10px">
+                Tetiklenince satılacak: <strong style="color:var(--ink-100)">${effectiveSellQty} ${isIntLot ? 'lot' : 'birim'} (%${effectivePct})</strong> · Tahmini Tutar: <strong style="color:var(--ink-100)">~${fmtTL(condEstProceedsTL)}</strong> (<strong class="${condEstPnlTL >= 0 ? 'pos' : 'neg'}">${condEstPnlTL >= 0 ? '+' : ''}${fmtTL(condEstPnlTL)}</strong> maliyete göre)
+              </div>
               <button type="button" class="ms-btn ${drawerSellMode === 'STOP_LOSS' ? 'sell-cta' : 'buy-cta'}" style="width:100%;padding:13px;font-size:14.8px" id="aeConfirmCondSellBtn" ${availQty <= 0 ? 'disabled' : ''}>
-                ${drawerSellMode === 'STOP_LOSS' ? '🛡️ Zarar Kes Kalkanı Kur' : '🎯 Hedef Kâr Al Emri Kur'}
+                ${drawerSellMode === 'STOP_LOSS' ? `🛡️ ${effectiveSellQty} ${isIntLot ? 'Lot' : 'Birim'} Zarar Kes Kalkanı Kur` : `🎯 ${effectiveSellQty} ${isIntLot ? 'Lot' : 'Birim'} Hedef Kâr Al Emri Kur`}
               </button>
             ` : `
               <div id="aeSellPreviewLine" style="font-size:11.8px;color:var(--ink-400);margin-bottom:10px">
@@ -6713,10 +6743,13 @@
                 : Math.floor(existingPos.qty).toLocaleString('tr-TR') + ' Lot'))
             : (+Number(existingPos.qty).toFixed(existingPos.qty >= 10 ? 2 : 4)).toLocaleString('tr-TR'))
           : '';
-        const defaultLimitBuyP = asset.subVenue === 'BIST_STOCK'
-          ? K.snapToBistTick(Math.max(0.05, asset.priceTL * 0.96))
+        const rawDefaultLimit = asset.subVenue === 'BIST_STOCK'
+          ? K.snapToBistTick(Math.max(0.01, asset.priceTL * 0.96))
           : +(Math.max(0.01, asset.priceTL * 0.96)).toFixed(2);
-        const activeBuyTrigP = draftTriggerPriceTL > 0 ? draftTriggerPriceTL : defaultLimitBuyP;
+        const defaultLimitBuyP = rawDefaultLimit >= asset.priceTL
+          ? +(Math.max(0.01, (asset.subVenue === 'BIST_STOCK' ? K.snapToBistTick(asset.priceTL) : asset.priceTL) - (asset.subVenue === 'BIST_STOCK' ? K.getBistTickSize(Math.max(0.01, asset.priceTL - 0.0001)) : 0.01))).toFixed(2)
+          : rawDefaultLimit;
+        const activeBuyTrigP = (draftTriggerPriceTL > 0 && draftTriggerPriceTL < asset.priceTL) ? draftTriggerPriceTL : defaultLimitBuyP;
 
         tabContentHtml = `
           ${existingPos && existingPos.qty > 0 ? `
@@ -6846,8 +6879,9 @@
                     <div class="ae-ob-head"><span>ALIŞ (Lot)</span><span>FİYAT</span></div>
                     ${orderBook.bids.map((b) => {
                       const lotLbl = b.lots >= 1000000 ? `${TR_DEC2.format(b.lots / 1000000)}M` : (b.lots >= 100000 ? `${Math.round(b.lots / 1000)}B` : b.lots.toLocaleString('tr-TR'));
+                      const pickAttr = b.priceTL < asset.priceTL ? `data-ob-pick-price="${b.priceTL}" style="cursor:pointer" title="Limit Alım hedefi yap"` : '';
                       return `
-                      <div class="ae-ob-row">
+                      <div class="ae-ob-row" ${pickAttr}>
                         <div class="ae-ob-bar bid" style="width:${Math.max(12, Math.round((b.valueTL / orderBook.maxLevelTL) * 100))}%"></div>
                         <span class="ae-ob-lots">${lotLbl}</span>
                         <span class="ae-ob-price pos">${b.priceTL.toFixed(2)}</span>
@@ -7202,6 +7236,7 @@
       b.addEventListener('click', () => {
         AetherNative.haptic('selection');
         drawerOrderSide = b.getAttribute('data-dside');
+        draftTriggerPriceTL = 0;
         renderAssetDrawer();
       });
     });
@@ -7420,21 +7455,58 @@
       });
     });
 
+    const refreshCondSellPreview = (trigVal) => {
+      const prevEl = document.getElementById('aeCondSellPreviewLine');
+      if (!prevEl || !existingPos || !(existingPos.qty > 0) || !(trigVal > 0)) return;
+      const queuedSQ = existingPending.filter((o) => o.side === 'SELL').reduce((s, o) => s + Number(o.qty || 0), 0);
+      const avQ = Math.max(0, +(existingPos.qty - queuedSQ).toFixed(6));
+      const isInt = asset.subVenue === 'BIST_STOCK';
+      const effQ = isInt ? Math.min(Math.floor(avQ), Math.max(1, Math.floor(avQ * draftSellRatio))) : +(avQ * draftSellRatio).toFixed(6);
+      const effPct = avQ > 0 ? Math.min(100, Math.round((effQ / avQ) * 100)) : 0;
+      const estProc = Math.round(effQ * trigVal);
+      const estPnl = Math.round(effQ * (trigVal - (existingPos.avgCostTL || trigVal)));
+      prevEl.innerHTML = `Tetiklenince satılacak: <strong style="color:var(--ink-100)">${effQ} ${isInt ? 'lot' : 'birim'} (%${effPct})</strong> · Tahmini Tutar: <strong style="color:var(--ink-100)">~${fmtTL(estProc)}</strong> (<strong class="${estPnl >= 0 ? 'pos' : 'neg'}">${estPnl >= 0 ? '+' : ''}${fmtTL(estPnl)}</strong> maliyete göre)`;
+    };
+
     sheet.querySelectorAll('[data-trig-pct]').forEach((b) => {
       b.addEventListener('click', () => {
         AetherNative.haptic('selection');
         const pct = Number(b.getAttribute('data-trig-pct')) || 0;
         const raw = asset.priceTL * (1 + pct / 100);
-        draftTriggerPriceTL = asset.subVenue === 'BIST_STOCK' ? K.snapToBistTick(Math.max(0.05, raw)) : +Math.max(0.01, raw).toFixed(2);
+        const isBist = asset.subVenue === 'BIST_STOCK';
+        let snapped = isBist ? K.snapToBistTick(Math.max(0.01, raw)) : +Math.max(0.01, raw).toFixed(2);
+        if (pct < 0 && snapped >= asset.priceTL) {
+          const step = isBist ? K.getBistTickSize(Math.max(0.01, asset.priceTL - 0.0001)) : 0.01;
+          snapped = +(Math.max(0.01, (isBist ? K.snapToBistTick(asset.priceTL) : asset.priceTL) - step)).toFixed(2);
+        } else if (pct > 0 && snapped <= asset.priceTL) {
+          const step = isBist ? K.getBistTickSize(asset.priceTL + 0.0001) : 0.01;
+          snapped = +((isBist ? K.snapToBistTick(asset.priceTL) : asset.priceTL) + step).toFixed(2);
+        }
+        draftTriggerPriceTL = snapped;
         const inp = document.getElementById('aeCondTriggerInp');
         if (inp) inp.value = String(draftTriggerPriceTL);
         if (drawerOrderSide === 'BUY' && drawerBuyMode === 'LIMIT') updateLiveRippleBoxInSheet(asset);
+        else if (drawerOrderSide === 'SELL' && drawerSellMode !== 'MARKET') refreshCondSellPreview(draftTriggerPriceTL);
       });
     });
 
     document.getElementById('aeCondTriggerInp')?.addEventListener('input', (e) => {
       draftTriggerPriceTL = Number(e.target.value) || 0;
       if (drawerOrderSide === 'BUY' && drawerBuyMode === 'LIMIT') updateLiveRippleBoxInSheet(asset);
+      else if (drawerOrderSide === 'SELL' && drawerSellMode !== 'MARKET') refreshCondSellPreview(draftTriggerPriceTL);
+    });
+
+    sheet.querySelectorAll('[data-ob-pick-price]').forEach((row) => {
+      row.addEventListener('click', () => {
+        const picked = Number(row.getAttribute('data-ob-pick-price')) || 0;
+        if (!(picked > 0)) return;
+        AetherNative.haptic('selection');
+        draftTriggerPriceTL = picked;
+        drawerOrderSide = 'BUY';
+        drawerBuyMode = 'LIMIT';
+        AetherNative.toast(`Limit Alım hedefi ${fmtUnitTL(picked)} olarak ayarlandı.`, 'info');
+        renderAssetDrawer();
+      });
     });
 
     document.getElementById('aeConfirmLimitBuyBtn')?.addEventListener('click', () => {
