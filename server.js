@@ -35,6 +35,8 @@ const PORT = process.env.PORT || 3847;
 const DOVIZ_PAGES = {
   'gram-altin': 'https://altin.doviz.com/gram-altin',
   'ceyrek-altin': 'https://altin.doviz.com/ceyrek-altin',
+  'yarim-altin': 'https://altin.doviz.com/yarim-altin',
+  'tam-altin': 'https://altin.doviz.com/tam-altin',
   'cumhuriyet-altini': 'https://altin.doviz.com/cumhuriyet-altini',
   'bilezik-22': 'https://altin.doviz.com/22-ayar-bilezik',
   'gumus-gram': 'https://altin.doviz.com/gumus',
@@ -243,8 +245,8 @@ async function fetchMacroFromScanner() {
     // Genişletilmiş 7/24 Kripto (Binance TRY)
     'BINANCE:AVAXTRY', 'BINANCE:XRPTRY', 'BINANCE:BNBTRY',
     'BINANCE:LINKTRY', 'BINANCE:DOGETRY', 'BINANCE:USDTTRY',
-    // VİOP USD/TRY & Altın Vadeli Kontratları
-    'BIST:USDTRY1!', 'BIST:XAUTRY1!',
+    // VİOP USD/TRY, Ons Altın & Gram Altın Vadeli Kontratları
+    'BIST:USDTRY1!', 'BIST:XAUUSD1!', 'BIST:XAUTRY1!',
     ...tvTickers
   ];
   const columns = [
@@ -612,9 +614,13 @@ async function buildFullDataset() {
     'bilezik-22': 0.946
   };
   ['gram-altin', 'ceyrek-altin', 'yarim-altin', 'tam-altin', 'cumhuriyet-altini', 'bilezik-22'].forEach(k => {
-    if (!dv[k]) dv[k] = { key: k, currentPrice: +(spotGramAu * goldMults[k]).toFixed(2) };
+    const ceyrekLive = Number(dv['ceyrek-altin']?.currentPrice) || 0;
+    const fallbackP = (k === 'yarim-altin' && ceyrekLive > 0)
+      ? +(ceyrekLive * 2).toFixed(2)
+      : ((k === 'tam-altin' && ceyrekLive > 0) ? +(ceyrekLive * 3.98).toFixed(2) : +(spotGramAu * goldMults[k]).toFixed(2));
+    if (!dv[k]) dv[k] = { key: k, currentPrice: fallbackP };
     if (!dv[k].currentPrice || dv[k].currentPrice <= 0) {
-      dv[k].currentPrice = +(spotGramAu * goldMults[k]).toFixed(2);
+      dv[k].currentPrice = fallbackP;
     }
     dv[k].change1D = compPct(goldSc.change, fxSc.change);
     dv[k].perf1W = compPct(goldSc.perf1W, fxSc.perf1W);
@@ -1583,6 +1589,19 @@ async function buildFullDataset() {
       taxRatePct: 0,
       taxNote: 'VİOP Dolar/TL vadeli kontratı — kur riskine karşı Long/Short korunma ve 1x–5x kaldıraç (%0 stopaj).'
     }, scanPage('BIST:USDTRY1!', +(dv['usd-try'].currentPrice * 1.02).toFixed(3))),
+    buildUsdAssetItem({
+      id: 'viop-ons-altin-kontrat',
+      categoryId: 3,
+      categoryName: '3. Sermaye Piyasaları ve Hisse Senetleri',
+      name: 'VİOP Ons Altın Vadeli Kontratı (XAUUSD1!)',
+      subCategory: 'VİOP (Vadeli İşlem ve Opsiyon)',
+      symbol: 'BIST:XAUUSD1!',
+      sourceName: 'TradingView BIST:XAUUSD1! Canlı VİOP Ons Altın Kontratı',
+      verifyUrl: 'https://tr.tradingview.com/symbols/BIST-XAUUSD1!/',
+      unitLabel: 'USD / Ons Kontrat',
+      taxRatePct: 0,
+      taxNote: 'Borsa İstanbul VİOP Ons Altın vadeli kontratı — Long (Yükseliş) / Short (Düşüş) ve 1x–5x kaldıraç ile çift yönlü ons altın işlemi (%0 stopaj).'
+    }, scanPage('BIST:XAUUSD1!', Number(macroMap['TVC:GOLD']?.close) || 3600), usdTryRef),
     buildDirectItem({
       id: 'viop-altin-kontrat',
       categoryId: 3,
@@ -2326,23 +2345,38 @@ async function buildFullDataset() {
   }
 
   const usdChange1D = +(macroMap['FX_IDC:USDTRY']?.change ?? 0).toFixed(2);
+  const eurChange1D = +(macroMap['FX_IDC:EURTRY']?.change ?? usdChange1D).toFixed(2);
   const goldOnsChange1D = +(macroMap['TVC:GOLD']?.change ?? 0).toFixed(2);
   const silverOnsChange1D = +(macroMap['TVC:SILVER']?.change ?? 0).toFixed(2);
   const gramGoldChange1D = +((((1 + goldOnsChange1D / 100) * (1 + usdChange1D / 100)) - 1) * 100).toFixed(2);
   const gramSilverChange1D = +((((1 + silverOnsChange1D / 100) * (1 + usdChange1D / 100)) - 1) * 100).toFixed(2);
+  const embChange1D = +(macroMap['NASDAQ:EMB']?.change ?? 0).toFixed(2);
   const symChangeMap = {
     'DOVIZ:USD': 'FX_IDC:USDTRY',
     'DOVIZ:EUR': 'FX_IDC:EURTRY',
     'DOVIZ:GBP': 'FX_IDC:GBPTRY',
-    'DOVIZ:CHF': 'FX_IDC:CHFTRY'
+    'DOVIZ:CHF': 'FX_IDC:CHFTRY',
+    'DOVIZ:JPY': 'FX_IDC:JPYTRY',
+    'DOVIZ:AED': 'FX_IDC:AEDTRY',
+    'DOVIZ:AUD': 'FX_IDC:AUDTRY',
+    'DOVIZ:CAD': 'FX_IDC:CADTRY'
   };
   for (const inst of instruments) {
     if (inst.isRateInstrument) {
       inst.change1D = +((Number(inst.currentPrice) || 0) / 365).toFixed(2);
-    } else if (inst.id === 'gram-altin-spot' || inst.id === 'ceyrek-altin' || inst.id === 'cumhuriyet-altini' || inst.id === 'bilezik-22-ayar') {
+    } else if (['gram-altin-spot', 'ceyrek-altin', 'yarim-altin', 'tam-altin', 'cumhuriyet-altini', 'bilezik-22-ayar'].includes(inst.id)) {
       inst.change1D = gramGoldChange1D;
     } else if (inst.id === 'gram-gumus-spot') {
       inst.change1D = gramSilverChange1D;
+    } else if (inst.id === 'doviz-sar') {
+      inst.change1D = usdChange1D;
+    } else if (inst.id === 'doviz-sepet') {
+      inst.change1D = +(((usdChange1D + eurChange1D) / 2)).toFixed(2);
+    } else if (inst.id === 'eurobond-tr2028' || inst.id === 'eurobond-tr2030' || inst.id === 'eurobond-tr2034') {
+      const durM = inst.id === 'eurobond-tr2028' ? 0.55 : (inst.id === 'eurobond-tr2030' ? 0.85 : 1.25);
+      const ebChg = +(embChange1D * durM).toFixed(2);
+      inst.change1D = ebChg;
+      inst.tlChange1D = +((((1 + ebChg / 100) * (1 + usdChange1D / 100)) - 1) * 100).toFixed(2);
     } else if (inst.id === 'gayrimenkul-konut-tcmb') {
       inst.change1D = +((tcmbHpiMom || 0) / 30).toFixed(2);
     } else if (inst.isTefasSpotFund) {
@@ -2358,7 +2392,7 @@ async function buildFullDataset() {
           inst.change1D = +Number(rawChg).toFixed(2);
         }
       } else {
-        inst.change1D = 0;
+        inst.change1D = Number.isFinite(Number(inst.change1D)) ? +Number(inst.change1D).toFixed(2) : 0;
       }
     }
   }
@@ -3360,11 +3394,11 @@ function resolveChartSourceSpec(assetKey, md) {
     'doviz-eur': { mode: 'DIRECT_TL', sym: 'EURTRY=X', livePriceTL: inst?.currentPrice },
     'doviz-gbp': { mode: 'DIRECT_TL', sym: 'GBPTRY=X', livePriceTL: inst?.currentPrice },
     'doviz-chf': { mode: 'DIRECT_TL', sym: 'CHFTRY=X', livePriceTL: inst?.currentPrice },
-    'doviz-jpy': { mode: 'DIRECT_TL', sym: 'JPYTRY=X', livePriceTL: inst?.currentPrice },
+    'doviz-jpy': { mode: 'COMPOSITE_FX_DIV', usdSym: 'USDJPY=X', scaleToLive: true, livePriceTL: inst?.currentPrice },
     'doviz-sar': { mode: 'DIRECT_TL', sym: 'TRY=X', scaleToLive: true, livePriceTL: inst?.currentPrice },
     'doviz-aed': { mode: 'DIRECT_TL', sym: 'TRY=X', scaleToLive: true, livePriceTL: inst?.currentPrice },
-    'doviz-aud': { mode: 'DIRECT_TL', sym: 'AUDTRY=X', livePriceTL: inst?.currentPrice },
-    'doviz-cad': { mode: 'DIRECT_TL', sym: 'CADTRY=X', livePriceTL: inst?.currentPrice },
+    'doviz-aud': { mode: 'COMPOSITE_FX', usdSym: 'AUDUSD=X', scaleToLive: true, livePriceTL: inst?.currentPrice },
+    'doviz-cad': { mode: 'COMPOSITE_FX_DIV', usdSym: 'USDCAD=X', scaleToLive: true, livePriceTL: inst?.currentPrice },
     'doviz-sepet': { mode: 'DIRECT_TL', sym: 'EURTRY=X', scaleToLive: true, livePriceTL: inst?.currentPrice },
     'gram-altin-spot': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 6050 },
     'altin-ons': { mode: 'USD_ASSET', usdSym: 'GC=F', livePriceUsd: inst?.currentPrice },
@@ -3401,6 +3435,7 @@ function resolveChartSourceSpec(assetKey, md) {
     'emtia-bugday-weat': { mode: 'USD_ASSET', usdSym: 'WEAT', livePriceUsd: inst?.currentPrice },
     'emtia-kahve-kc': { mode: 'USD_ASSET', usdSym: 'KC=F', scaleToLive: true, livePriceUsd: inst?.currentPrice },
     'viop-usdtry-kontrat': { mode: 'DIRECT_TL', sym: 'TRY=X', scaleToLive: true, livePriceTL: inst?.currentPrice },
+    'viop-ons-altin-kontrat': { mode: 'USD_ASSET', usdSym: 'GC=F', scaleToLive: true, livePriceUsd: inst?.currentPrice },
     'viop-altin-kontrat': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice },
     'kripto-avax': { mode: 'COMPOSITE_FX', usdSym: 'AVAX-USD', scaleToLive: true, livePriceTL: inst?.currentPrice },
     'kripto-xrp': { mode: 'COMPOSITE_FX', usdSym: 'XRP-USD', scaleToLive: true, livePriceTL: inst?.currentPrice },
@@ -3446,14 +3481,17 @@ function resolveChartSourceSpec(assetKey, md) {
   }
   if (inst && String(inst.symbol || '').startsWith('TEFAS:')) {
     const sc = String(inst.subCategory || '').toLocaleLowerCase('tr-TR');
+    if (sc.includes('petrol') || sc.includes('emtia')) {
+      return { mode: 'COMPOSITE_FX', usdSym: 'BNO', scaleToLive: true, livePriceTL: inst.currentPrice };
+    }
     if (sc.includes('yabancı') || sc.includes('teknoloji') || sc.includes('küresel') || sc.includes('enerji') || sc.includes('sağlık')) {
-      return { mode: 'COMPOSITE_FX', usdSym: sc.includes('petrol') ? 'BNO' : 'QQQ', scaleToLive: true, livePriceTL: inst.currentPrice };
+      return { mode: 'COMPOSITE_FX', usdSym: 'QQQ', scaleToLive: true, livePriceTL: inst.currentPrice };
     }
     if (sc.includes('eurobond')) {
       return { mode: 'COMPOSITE_FX', usdSym: 'EMB', scaleToLive: true, livePriceTL: inst.currentPrice };
     }
     if (sc.includes('para piyasası') || sc.includes('kira sertifikası') || sc.includes('borçlanma')) {
-      return { mode: 'RATE_COMPOUND', annualGrossPct: Number(cachedData?.macro?.tcmbUpperRate) || 38.5, stopajPct: Number(inst.taxRatePct) || 17.5, livePriceTL: 100 };
+      return { mode: 'RATE_COMPOUND', annualGrossPct: Number(cachedData?.macro?.tcmbUpperRate) || 38.5, stopajPct: Number(inst.taxRatePct) || 17.5, livePriceTL: inst.currentPrice || 100, scaleEndToLive: !inst.isRateInstrument && Number(inst.currentPrice) > 0 };
     }
     return { mode: 'BIST_SCALED', sym: 'XU100.IS', livePriceTL: inst.currentPrice };
   }
@@ -3558,15 +3596,21 @@ async function getOrBuildServerChartSeries(assetKey, rangeKey = '1Y') {
       }
       rawPts.push({ t: tMs, tl: cumVal });
     }
+    const endRaw = rawPts[rawPts.length - 1]?.tl || 100;
+    const rateMult = (spec.scaleEndToLive && Number(spec.livePriceTL) > 0 && endRaw > 0)
+      ? (Number(spec.livePriceTL) / endRaw)
+      : 1.0;
     // Tutarlılık: tüm varlıklarda realTl = tl * cumulativeCpiMultiplierSince(p.t, now) (bugünün TL satın alma gücüyle geçmiş fiyat!)
     points = rawPts.map((p) => {
       const fx = findClosestFxAt(fxBars, p.t, usdTryNow);
       const infMult = cumulativeCpiMultiplierSince(p.t, now, cpiYoy);
+      const tlVal = p.tl * rateMult;
+      const dec = tlVal >= 100 ? 2 : 4;
       return {
         t: p.t,
-        tl: +p.tl.toFixed(2),
-        realTl: +(p.tl * infMult).toFixed(2),
-        usd: +(p.tl / Math.max(0.1, fx)).toFixed(3)
+        tl: +tlVal.toFixed(dec),
+        realTl: +(tlVal * infMult).toFixed(dec),
+        usd: +(tlVal / Math.max(0.1, fx)).toFixed(tlVal / fx >= 10 ? 3 : 4)
       };
     });
   } else if (spec.mode === 'ANCHOR_CURVE' && spec.instRef) {
@@ -3612,10 +3656,12 @@ async function getOrBuildServerChartSeries(assetKey, rangeKey = '1Y') {
   } else if (spec.mode !== 'NONE') {
     let rawBars = [];
     let isUsdQuoted = false;
+    let isInverseUsdCross = false;
     let scaleToLiveTL = null;
 
     if (spec.mode === 'DIRECT_TL') {
       rawBars = await fetchYahooChartRaw(spec.sym, rangeCfg.yRange, rangeCfg.yInt).catch(() => []);
+      if (spec.scaleToLive && spec.livePriceTL > 0) scaleToLiveTL = spec.livePriceTL;
     } else if (spec.mode === 'BIST_OR_FALLBACK') {
       rawBars = await fetchYahooChartRaw(spec.sym, rangeCfg.yRange, rangeCfg.yInt).catch(() => []);
       if (rawBars.length < 6 && spec.fallbackUsdSym) {
@@ -3630,9 +3676,16 @@ async function getOrBuildServerChartSeries(assetKey, rangeKey = '1Y') {
       rawBars = await fetchYahooChartRaw(spec.usdSym, rangeCfg.yRange, rangeCfg.yInt).catch(() => []);
       isUsdQuoted = true;
       scaleToLiveTL = spec.livePriceTL;
+    } else if (spec.mode === 'COMPOSITE_FX_DIV') {
+      rawBars = await fetchYahooChartRaw(spec.usdSym, rangeCfg.yRange, rangeCfg.yInt).catch(() => []);
+      isInverseUsdCross = true;
+      scaleToLiveTL = spec.livePriceTL;
     } else if (spec.mode === 'USD_ASSET') {
       rawBars = await fetchYahooChartRaw(spec.usdSym, rangeCfg.yRange, rangeCfg.yInt).catch(() => []);
       isUsdQuoted = true;
+      if (spec.scaleToLive && spec.livePriceUsd > 0) {
+        scaleToLiveTL = +(spec.livePriceUsd * usdTryNow).toFixed(4);
+      }
     }
 
     rawBars = sliceChartWindowBars(rawBars, rk);
@@ -3640,8 +3693,8 @@ async function getOrBuildServerChartSeries(assetKey, rangeKey = '1Y') {
     if (rawBars.length >= 2) {
       const prelim = rawBars.map((b) => {
         const fx = findClosestFxAt(fxBars, b.t, usdTryNow);
-        const tlRaw = isUsdQuoted ? (b.c * fx) : b.c;
-        const usdRaw = isUsdQuoted ? b.c : (b.c / Math.max(0.1, fx));
+        const tlRaw = isInverseUsdCross ? (fx / Math.max(0.0001, b.c)) : (isUsdQuoted ? (b.c * fx) : b.c);
+        const usdRaw = isInverseUsdCross ? (1 / Math.max(0.0001, b.c)) : (isUsdQuoted ? b.c : (b.c / Math.max(0.1, fx)));
         return { t: b.t, tlRaw, usdRaw, fx };
       });
       const lastRawTl = prelim[prelim.length - 1].tlRaw || 1;
@@ -3666,7 +3719,7 @@ async function getOrBuildServerChartSeries(assetKey, rangeKey = '1Y') {
     range: rk,
     cpiYoy,
     usdTryNow,
-    isRateCurve: spec.mode === 'RATE_COMPOUND',
+    isRateCurve: spec.mode === 'RATE_COMPOUND' && !spec.scaleEndToLive,
     points
   };
   if (points.length >= 2) {

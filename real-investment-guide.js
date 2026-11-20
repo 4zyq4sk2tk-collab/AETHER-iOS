@@ -6969,9 +6969,9 @@
     },
     {
       id: 'fx_usd_eur',
-      label: 'Döviz & Eurobond Zırhı',
+      label: 'Döviz, Eurobond & ABD Tahvili',
       icon: '💵',
-      assetKeys: ['doviz-usd', 'doviz-eur', 'doviz-sepet', 'eurobond-tr2030', 'eurobond-emb'],
+      assetKeys: ['doviz-usd', 'doviz-eur', 'doviz-sepet', 'eurobond-tr2030', 'eurobond-emb', 'abd-etf-tlt'],
       upPlain: 'Belirsizlik veya kur hareketinde döviz ve USD kuponlu Eurobond alım gücünü korur.',
       downPlain: 'Yüksek TL reel faizi ve yabancı girişi kuru yatay tutar, TL sabit getiri öne geçer.',
       upPro: 'Kur şokunda döviz zırh olur; CDS düştüğünde ise T.C. Eurobondları hem USD kupon hem fiyat artışı yazar.',
@@ -6981,10 +6981,10 @@
       id: 'fixed_sukuk_bond',
       label: '%0 Vergili Sukuk, DİBS & PPF',
       icon: '💧',
-      assetKeys: ['kira-sertifikasi-sukuk', 'dibs-tahvil', 'para-piyasasi-fonu', 'gunluk-vadeli', 'bes-emeklilik', 'abd-etf-tlt'],
-      upPlain: 'Faiz yüksekken risksiz aylık gelir verir; faiz inmeye başlarken uzun tahvil (DİBS/TLT) ekstra değer kazanır.',
+      assetKeys: ['kira-sertifikasi-sukuk', 'dibs-tahvil', 'para-piyasasi-fonu', 'gunluk-vadeli', 'bes-emeklilik'],
+      upPlain: 'Faiz yüksekken risksiz aylık gelir verir; faiz inmeye başlarken uzun tahvil (DİBS) ekstra değer kazanır.',
       downPlain: 'Enflasyon beklenmedik şekilde fırlarsa sabit TL getirinin alım gücü zorlanır.',
-      upPro: 'Yüksek reel faizde %0 stopajlı Kamu Sukuk/PPF nakdi korur; faiz indiriminde durasyon (DİBS/TLT) sermaye kazancı üretir.',
+      upPro: 'Yüksek reel faizde %0 stopajlı Kamu Sukuk/PPF nakdi korur; faiz indiriminde durasyon (DİBS) sermaye kazancı üretir.',
       downPro: 'Enflasyon şoku ve yeniden fiyatlama tahvil fiyatını (negatif durasyon) aşağı çeker.'
     },
     {
@@ -7557,10 +7557,13 @@
     if (id.startsWith('doviz-') || id === 'viop-usdtry-kontrat' || id === 'kripto-usdt') {
       return ['fx_usd_eur', 'gold_metals'];
     }
+    if (id === 'abd-etf-tlt') {
+      return ['fx_usd_eur', 'us_broad_defensive'];
+    }
     if (id.startsWith('eurobond-') || ['tefas-ipv', 'tefas-gpa'].includes(id)) {
       return ['fx_usd_eur', 'fixed_sukuk_bond'];
     }
-    if (asset.isRateInstrument || ['tefas-ti1', 'tefas-gtl', 'tefas-ale', 'tefas-ppn', 'tefas-ktv', 'tefas-zpf', 'tefas-dzt', 'abd-etf-tlt'].includes(id)) {
+    if (asset.isRateInstrument || ['tefas-ti1', 'tefas-gtl', 'tefas-ale', 'tefas-ppn', 'tefas-ktv', 'tefas-zpf', 'tefas-dzt'].includes(id)) {
       return ['fixed_sukuk_bond'];
     }
     if (asset.venue === 'CRYPTO_24_7' || id.startsWith('kripto-')) {
@@ -7783,8 +7786,46 @@
     const askLoser = (s % 3 === 0) && sim.ring2Losers.length > 0;
     const correctAsset = askLoser ? sim.ring2Losers[0] : sim.ring2Winners[0];
     const oppositePool = askLoser ? sim.ring2Winners : sim.ring2Losers;
-    const decoy1 = oppositePool[0] || { ticker: 'SUKUK', name: 'Hazine Kamu Sukuk', channelLabel: 'Sabit Getiri', plainWhy: 'Bu olayda daha dengeli/ters yönde hareket eder.' };
-    const decoy2 = oppositePool[1] || (askLoser ? sim.ring2Winners[1] : sim.ring2Losers[1]) || { ticker: 'TL NAKİT', name: 'Boş TL Nakit', channelLabel: 'Vadesiz Nakit', plainWhy: 'Olaydan doğrudan pozitif/negatif ana taşıyıcı olarak ayrışmaz.' };
+
+    // Her yanlış şıkkı FARKLI bir kanaldan ve doğru cevaptan bağımsız seç (sıfır kopya / aynı kanal ipucu!)
+    const usedChannels = new Set([correctAsset.channelLabel]);
+    const usedKeys = new Set([correctAsset.assetKey]);
+    const decoys = [];
+    for (const cand of oppositePool) {
+      if (decoys.length >= 2) break;
+      if (!cand || usedKeys.has(cand.assetKey) || usedChannels.has(cand.channelLabel)) continue;
+      usedChannels.add(cand.channelLabel);
+      usedKeys.add(cand.assetKey);
+      decoys.push(cand);
+    }
+    // Zıt havuzda 2 ayrı kanal yetmezse, bu senaryoda nötr/zayıf kalan gerçek kanallardan 1'er varlık tamamla
+    const K = global.AetherKernelV10;
+    if (decoys.length < 2 && K) {
+      const neutralChannels = ORGANISM_CHANNELS
+        .filter((ch) => !usedChannels.has(ch.label))
+        .map((ch) => {
+          const score = sim.activeTriggers.reduce((acc, tr) => acc + (Number(tr.vec?.[ch.id]) || 0), 0);
+          return { ch, score };
+        })
+        .sort((a, b) => (askLoser ? b.score - a.score : a.score - b.score));
+      for (const item of neutralChannels) {
+        if (decoys.length >= 2) break;
+        const aObj = item.ch.assetKeys.map((k) => K.getAsset(k)).find((a) => a && !usedKeys.has(a.key));
+        if (!aObj) continue;
+        usedChannels.add(item.ch.label);
+        usedKeys.add(aObj.key);
+        decoys.push({
+          assetKey: aObj.key,
+          ticker: aObj.ticker,
+          name: aObj.name,
+          channelLabel: item.ch.label,
+          channelIcon: item.ch.icon,
+          plainWhy: askLoser ? item.ch.upPlain : item.ch.downPlain
+        });
+      }
+    }
+    const decoy1 = decoys[0] || { ticker: 'SUKUK', name: 'Hazine Kamu Sukuk', channelLabel: 'Sabit Getiri', channelIcon: '💧', plainWhy: 'Bu olayda daha dengeli/ters yönde hareket eder.' };
+    const decoy2 = decoys[1] || { ticker: 'TL NAKİT', name: 'Boş TL Nakit', channelLabel: 'Vadesiz Nakit', channelIcon: '🧭', plainWhy: 'Olaydan doğrudan ana taşıyıcı olarak ayrışmaz.' };
 
     const rawChoices = [
       { id: 'A', label: `${correctAsset.channelIcon || '🎯'} ${correctAsset.name} (${correctAsset.channelLabel})`, isCorrect: true, why: correctAsset.plainWhy },

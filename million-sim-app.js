@@ -1,7 +1,7 @@
 // ============================================================================
 // AETHER v20.0.0 — CYBER-FINTECH NEON CANLI EKONOMİ ORGANİZMASI & TAM TÜRKİYE
 // + KÜRESEL 1.000.000 ₺ GERÇEK YATIRIM MEYDANI (SIFIR KAYBOLMA · 7'DEN 70'E)
-// 34 Tetikli Sınırsız Organizma · 753 Canlı Varlık ($1 Parçalı ABD, 33+ TEFAS,
+// 34 Tetikli Sınırsız Organizma · 754 Canlı Varlık ($1 Parçalı ABD, 33+ TEFAS,
 // Sarrafiye, 10 Döviz, Eurobond, BES %20, VİOP Long/Short, 9 Kripto 7/24)
 // ============================================================================
 (function (global) {
@@ -714,7 +714,7 @@
         </button>
       </div>
 
-      <div style="font-size:12px;font-weight:900;color:var(--green-ink);margin:8px 2px 6px">📈 1.000.000 ₺ GERÇEK ZAMANLI PİYASA (753 VARLIK)</div>
+      <div style="font-size:12px;font-weight:900;color:var(--green-ink);margin:8px 2px 6px">📈 1.000.000 ₺ GERÇEK ZAMANLI PİYASA (754 VARLIK)</div>
       <div class="ae-neon-grid-3">
         <button type="button" class="ae-cat-tile" data-nav-cat="SARRAFIYE"><span class="ct-ico">🪙</span><strong>Sarrafiye</strong><small>Çeyrek/Ata/Gram</small></button>
         <button type="button" class="ae-cat-tile" data-nav-cat="FX"><span class="ct-ico">💵</span><strong>10 Döviz</strong><small>USD/EUR/Sepet</small></button>
@@ -933,7 +933,7 @@
     const clock = K.getTurkishClock();
     const feed = G.getEnrichedLiveNewsFeed() || [];
     const unreadNews = K.getUnreadDisclosureCount ? K.getUnreadDisclosureCount(feed.map((x) => x.id)) : 0;
-    const sig = `${clock.bistPhase}|${clock.grandBazaarOpen}|${clock.nobetciOpen}|${clock.tefasBeforeCutoff}|${uiTheme}|${uiFontScale}|${unreadNews}|${activeTab}`;
+    const sig = `${clock.bistPhase}|${clock.grandBazaarOpen}|${clock.nobetciOpen}|${clock.tefasBeforeCutoff}|${uiTheme}|${uiFontScale}|${uiDetailMode}|${unreadNews}|${activeTab}`;
     if (sig !== lastHeaderPhaseSig || !document.getElementById('msLiveClockTime')) {
       renderHeader();
       return;
@@ -1545,7 +1545,7 @@
         ${homeBrief ? `
           <div class="ae-section-title">
             <h2>⚡ Canlı Piyasa Nabzı</h2>
-            <button type="button" class="ms-btn sm" id="aeSeeAllMarketBtn">753 Varlık ›</button>
+            <button type="button" class="ms-btn sm" id="aeSeeAllMarketBtn">754 Varlık ›</button>
           </div>
           <div class="ae-pulse-grid">
             ${homeBrief.heroStats.map((hs) => {
@@ -1593,7 +1593,7 @@
             <span class="nd-sub">Olayları birleştir · Kazanan & Zorlanan</span>
           </button>
           <button type="button" class="ae-neon-door-card tone-green" data-home-module="MARKET">
-            <div class="nd-top"><span class="nd-ico">📈</span><span class="nd-badge">753 Varlık</span></div>
+            <div class="nd-top"><span class="nd-ico">📈</span><span class="nd-badge">754 Varlık</span></div>
             <strong>Yatırım & Piyasa</strong>
             <span class="nd-sub">Altın, BIST, ABD $1, 33+ Fon, Kripto, VİOP</span>
           </button>
@@ -2386,7 +2386,7 @@
     host.innerHTML = `
       ${showMktBreadcrumb ? renderBreadcrumbHtml(['Yatırım', activeCategory !== 'ALL' ? (catLabelMap[activeCategory] || activeCategory) : (activeLensTitleMap[activeLens] || activeLens)], 'aeMktResetToAllBtn', '← Tüm Kategoriler') : ''}
 
-      <!-- 1. ANINDA ARAMA (753 VARLIKTA ANINDA BUL!) -->
+      <!-- 1. ANINDA ARAMA (754 VARLIKTA ANINDA BUL!) -->
       <div class="ae-search-bar" style="margin:2px 0 10px">
         <div class="ae-search-wrap">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -2652,7 +2652,7 @@
           reit: 'Gayrimenkul & GYO'
         };
         if (pid === 'shield') {
-          activeCategory = 'GOLD_FX';
+          activeCategory = 'SARRAFIYE';
           activeLens = 'VITRIN';
         } else if (secMap[pid]) {
           activeCategory = 'BIST_ALL';
@@ -4698,30 +4698,32 @@
               <button type="button" class="ae-chip ${reHorizonYears === 10 ? 'active' : 'sub'}" data-re-hor="10">10 Yıl Kıyasla</button>
             </div>
 
-            <div class="ms-alert ${re.winner === 'BUY_HOME' ? 'ok' : 'info'}" style="margin-bottom:10px">
-              <strong>⚖️ Karar Terazisi:</strong> ${esc(re.verdictPlain)}
-            </div>
+            <div id="aeReLiveOut">
+              <div class="ms-alert ${re.winner === 'BUY_HOME' ? 'ok' : 'info'}" style="margin-bottom:10px">
+                <strong>⚖️ Karar Terazisi:</strong> ${esc(re.verdictPlain)}
+              </div>
 
-            <div class="ae-kpi-2x2" style="margin-bottom:10px">
-              <div class="ms-kpi-box" style="${re.winner === 'BUY_HOME' ? 'border-color:var(--green)' : ''}">
-                <span>🏠 ${re.horizonYears} Yıl Sonra Ev Net Serveti</span>
-                <strong class="pos">${fmtCompactTL(re.buyNetWealthTL)}</strong>
-                <small>Taksit: ${fmtTL(re.monthlyPaymentTL)}/ay · Tapu/Emlakçı: ${fmtCompactTL(re.deedAndAgentCostTL)}</small>
-              </div>
-              <div class="ms-kpi-box" style="${re.winner === 'RENT_AND_INVEST' ? 'border-color:var(--cyan)' : ''}">
-                <span>💼 ${re.horizonYears} Yıl Sonra Kirada Yatırım</span>
-                <strong style="color:var(--cyan)">${fmtCompactTL(re.rentAndInvestWealthTL)}</strong>
-                <small>Peşinat + taksit farkı bileşik büyüme</small>
-              </div>
-              <div class="ms-kpi-box">
-                <span>Kira Amortisman Süresi</span>
-                <strong>${re.paybackYears} Yıl</strong>
-                <small>${esc(re.paybackVerdict)}</small>
-              </div>
-              <div class="ms-kpi-box">
-                <span>Yıllık Brüt Kira Getirisi</span>
-                <strong>%${re.grossRentYieldPct}</strong>
-                <small>Kredi Toplamı: ${fmtCompactTL(re.totalLoanRepaymentTL)}</small>
+              <div class="ae-kpi-2x2" style="margin-bottom:10px">
+                <div class="ms-kpi-box" style="${re.winner === 'BUY_HOME' ? 'border-color:var(--green)' : ''}">
+                  <span>🏠 ${re.horizonYears} Yıl Sonra Ev Net Serveti</span>
+                  <strong class="pos">${fmtCompactTL(re.buyNetWealthTL)}</strong>
+                  <small>Taksit: ${fmtTL(re.monthlyPaymentTL)}/ay · Tapu/Emlakçı: ${fmtCompactTL(re.deedAndAgentCostTL)}</small>
+                </div>
+                <div class="ms-kpi-box" style="${re.winner === 'RENT_AND_INVEST' ? 'border-color:var(--cyan)' : ''}">
+                  <span>💼 ${re.horizonYears} Yıl Sonra Kirada Yatırım</span>
+                  <strong style="color:var(--cyan)">${fmtCompactTL(re.rentAndInvestWealthTL)}</strong>
+                  <small>Peşinat + taksit farkı bileşik büyüme</small>
+                </div>
+                <div class="ms-kpi-box">
+                  <span>Kira Amortisman Süresi</span>
+                  <strong>${re.paybackYears} Yıl</strong>
+                  <small>${esc(re.paybackVerdict)}</small>
+                </div>
+                <div class="ms-kpi-box">
+                  <span>Yıllık Brüt Kira Getirisi</span>
+                  <strong>%${re.grossRentYieldPct}</strong>
+                  <small>Kredi Toplamı: ${fmtCompactTL(re.totalLoanRepaymentTL)}</small>
+                </div>
               </div>
             </div>
 
@@ -5804,28 +5806,69 @@
         renderMasteryTab(host);
       });
     });
-    // Gayrimenkul / Konut Kredisi Karar Aracı Kontrolleri
-    document.getElementById('aeRePriceSl')?.addEventListener('change', (e) => {
-      rePriceTL = Number(e.target.value) || 5000000;
+    // Gayrimenkul / Konut Kredisi Karar Aracı Canlı Kontrolleri (Anlık input tepkili!)
+    const updateRealEstateLive = () => {
+      if (!G.simulateRealEstateDecision) return;
       if (reDownTL > rePriceTL) reDownTL = Math.round(rePriceTL * 0.3);
-      renderMasteryTab(host);
-    });
-    document.getElementById('aeReDownSl')?.addEventListener('change', (e) => {
-      reDownTL = Number(e.target.value) || 0;
-      renderMasteryTab(host);
-    });
-    document.getElementById('aeReRateSl')?.addEventListener('change', (e) => {
-      reRatePct = Number(e.target.value) || 2.89;
-      renderMasteryTab(host);
-    });
-    document.getElementById('aeReRentSl')?.addEventListener('change', (e) => {
-      reRentTL = Number(e.target.value) || 25000;
-      renderMasteryTab(host);
-    });
-    document.getElementById('aeReYieldSl')?.addEventListener('change', (e) => {
-      reAltYieldPct = Number(e.target.value) || 35;
-      renderMasteryTab(host);
-    });
+      const re = G.simulateRealEstateDecision({
+        propertyPriceTL: rePriceTL,
+        downPaymentTL: reDownTL,
+        mortgageMonthlyRatePct: reRatePct,
+        termMonths: reTermMonths,
+        monthlyRentTL: reRentTL,
+        annualHomeGrowthPct: reHomeGrowthPct,
+        altAnnualNetYieldPct: reAltYieldPct,
+        horizonYears: reHorizonYears
+      });
+      if (!re) return;
+      const pLbl = document.getElementById('aeRePriceLbl');
+      const dLbl = document.getElementById('aeReDownLbl');
+      const dSl = document.getElementById('aeReDownSl');
+      const rLbl = document.getElementById('aeReRateLbl');
+      const rnLbl = document.getElementById('aeReRentLbl');
+      const yLbl = document.getElementById('aeReYieldLbl');
+      if (pLbl) pLbl.textContent = fmtTL(re.propertyPriceTL);
+      if (dLbl) dLbl.textContent = fmtTL(re.downPaymentTL);
+      if (dSl) { dSl.max = String(re.propertyPriceTL); dSl.value = String(re.downPaymentTL); }
+      if (rLbl) rLbl.textContent = `%${re.monthlyRatePct.toFixed(2)}/ay`;
+      if (rnLbl) rnLbl.textContent = `${fmtTL(re.monthlyRentTL)}/ay`;
+      if (yLbl) yLbl.textContent = `%${reAltYieldPct}/yıl`;
+      const out = document.getElementById('aeReLiveOut');
+      if (out) {
+        out.innerHTML = `
+          <div class="ms-alert ${re.winner === 'BUY_HOME' ? 'ok' : 'info'}" style="margin-bottom:10px">
+            <strong>⚖️ Karar Terazisi:</strong> ${esc(re.verdictPlain)}
+          </div>
+          <div class="ae-kpi-2x2" style="margin-bottom:10px">
+            <div class="ms-kpi-box" style="${re.winner === 'BUY_HOME' ? 'border-color:var(--green)' : ''}">
+              <span>🏠 ${re.horizonYears} Yıl Sonra Ev Net Serveti</span>
+              <strong class="pos">${fmtCompactTL(re.buyNetWealthTL)}</strong>
+              <small>Taksit: ${fmtTL(re.monthlyPaymentTL)}/ay · Tapu/Emlakçı: ${fmtCompactTL(re.deedAndAgentCostTL)}</small>
+            </div>
+            <div class="ms-kpi-box" style="${re.winner === 'RENT_AND_INVEST' ? 'border-color:var(--cyan)' : ''}">
+              <span>💼 ${re.horizonYears} Yıl Sonra Kirada Yatırım</span>
+              <strong style="color:var(--cyan)">${fmtCompactTL(re.rentAndInvestWealthTL)}</strong>
+              <small>Peşinat + taksit farkı bileşik büyüme</small>
+            </div>
+            <div class="ms-kpi-box">
+              <span>Kira Amortisman Süresi</span>
+              <strong>${re.paybackYears} Yıl</strong>
+              <small>${esc(re.paybackVerdict)}</small>
+            </div>
+            <div class="ms-kpi-box">
+              <span>Yıllık Brüt Kira Getirisi</span>
+              <strong>%${re.grossRentYieldPct}</strong>
+              <small>Kredi Toplamı: ${fmtCompactTL(re.totalLoanRepaymentTL)}</small>
+            </div>
+          </div>
+        `;
+      }
+    };
+    document.getElementById('aeRePriceSl')?.addEventListener('input', (e) => { rePriceTL = Number(e.target.value) || 5000000; updateRealEstateLive(); });
+    document.getElementById('aeReDownSl')?.addEventListener('input', (e) => { reDownTL = Number(e.target.value) || 0; updateRealEstateLive(); });
+    document.getElementById('aeReRateSl')?.addEventListener('input', (e) => { reRatePct = Number(e.target.value) || 2.89; updateRealEstateLive(); });
+    document.getElementById('aeReRentSl')?.addEventListener('input', (e) => { reRentTL = Number(e.target.value) || 25000; updateRealEstateLive(); });
+    document.getElementById('aeReYieldSl')?.addEventListener('input', (e) => { reAltYieldPct = Number(e.target.value) || 35; updateRealEstateLive(); });
     host.querySelectorAll('[data-re-term]').forEach((b) => {
       b.addEventListener('click', () => {
         AetherNative.haptic('selection');
@@ -6953,9 +6996,9 @@
     let monthlyDripTL = 0;
 
     if (asset.venue === 'TWO_DOOR') {
-      const sp = selectedDoor === 'BAZAAR'
-        ? clock.bazaarSpreadPct
-        : (selectedDoor === 'NOBETCI' ? clock.nobetciSpreadPct : clock.bankSpreadPct);
+      const sp = K.getTwoDoorSpreadPct
+        ? K.getTwoDoorSpreadPct(asset, selectedDoor, clock)
+        : (selectedDoor === 'BAZAAR' ? clock.bazaarSpreadPct : (selectedDoor === 'NOBETCI' ? clock.nobetciSpreadPct : clock.bankSpreadPct));
       const bsmv = selectedDoor === 'BANK' ? 0.20 : 0;
       frictionTL = Math.round(amt * ((sp / 2 + bsmv) / 100));
       timingText = selectedDoor === 'BAZAAR'
@@ -6983,8 +7026,12 @@
     } else if (asset.venue === 'BANK_RATE') {
       let stp = asset.stopajPct;
       if (asset.subVenue === 'TERM_DEPOSIT') {
-        stp = selectedMaturity > 365 ? 10 : (selectedMaturity > 180 ? 15 : 17.5);
+        stp = selectedMaturity >= 365 ? 10 : (selectedMaturity > 180 ? 15 : 17.5);
         timingText = `${selectedMaturity} gün kilitli (Erken bozarsan yanar)`;
+      } else if (asset.subVenue === 'DAILY_RATE') {
+        timingText = '7/24 Günlük işler (Cezasız bozum)';
+      } else if (asset.subVenue === 'BES_ACTIVE') {
+        timingText = 'Anında BES (%20 Devlet Katkılı)';
       } else if (!clock.isBizDay && asset.subVenue === 'GOV_BOND') {
         timingText = 'Tatil/Hafta sonu gişe kapalı';
       }
@@ -6995,11 +7042,15 @@
       timingText = clock.isWeekend
         ? 'Hafta sonu kapalı (Pzt açılır)'
         : (clock.globalNyOpen ? 'ABD Seansı Açık · Anında' : 'Küresel Kotasyon · Anında');
-      if (asset.id === 'eurobond-usdtr' || asset.id === 'eurobond-emb') {
+      if (asset.couponRatePct > 0) {
+        monthlyDripTL = Math.round((amt * (asset.couponRatePct / 100)) / 12);
+      } else if (asset.id === 'eurobond-usdtr' || asset.id === 'eurobond-emb') {
         monthlyDripTL = Math.round((amt * 0.055) / 12);
+      } else if (asset.fundamentals?.divYield > 0) {
+        monthlyDripTL = Math.round((amt * (asset.fundamentals.divYield / 100) * 0.80) / 12);
       }
     } else if (asset.venue === 'VIOP') {
-      frictionTL = Math.round(amt * 0.0010);
+      frictionTL = Math.round(amt * Math.max(1, draftViopLeverage) * 0.0006);
       timingText = clock.viopOpen
         ? (clock.viopEvening ? '19:00 Akşam Seansı · Anında' : 'VİOP Seansı · Anında')
         : 'VİOP Kapalı (09:30 / 19:00)';
@@ -7327,6 +7378,12 @@
     const p = Number(overridePriceTL) > 0 ? Number(overridePriceTL) : (Number(asset.priceTL) || 0);
     if (p <= 0) return '';
     const atSuffix = Number(overridePriceTL) > 0 ? ` (${fmtUnitTL(p)} hedefinde)` : '';
+    if (asset.venue === 'VIOP') {
+      const lev = Math.max(1, draftViopLeverage);
+      const notional = Math.round(amt * lev);
+      const qtyV = +(notional / p).toFixed(3);
+      return `VİOP ${draftViopDirection} (${lev}x) · ${fmtCompactTL(notional)} pozisyon (~${qtyV.toLocaleString('tr-TR')} birim)`;
+    }
     if (asset.subVenue === 'BIST_STOCK') {
       const lots = Math.floor((amt * (1 - 0.00084)) / p);
       return `Yaklaşık ${lots.toLocaleString('tr-TR')} adet (lot) hisse alırsın${atSuffix}`;
@@ -7334,6 +7391,12 @@
     if (asset.id === 'gram-altin-spot' || asset.id === 'gram-gumus-spot') {
       const gr = +(amt / p).toFixed(2);
       return `Yaklaşık ${gr.toLocaleString('tr-TR')} gram alırsın${atSuffix}`;
+    }
+    if (asset.venue === 'GLOBAL_USD') {
+      const usdRate = global.AetherKernelV10?.getUsdTry ? global.AetherKernelV10.getUsdTry() : 50;
+      const usdEst = +(amt / Math.max(1, usdRate)).toFixed(2);
+      const qtyU = +(amt / p).toFixed(4);
+      return `Yaklaşık ~$${usdEst.toLocaleString('tr-TR')} (${qtyU.toLocaleString('tr-TR')} parçalı/tam hisse)${atSuffix}`;
     }
     const qty = +(amt / p).toFixed(p >= 100 ? 2 : 3);
     return `Yaklaşık ${qty.toLocaleString('tr-TR')} birim alırsın${atSuffix}`;
@@ -7346,6 +7409,19 @@
         ? (Number(document.getElementById('aeCondTriggerInp')?.value) || draftTriggerPriceTL || 0)
         : 0;
       unitEl.textContent = estimatePlainUnitPurchase(asset, draftOrderAmount, trigOverride);
+    }
+    const viopNotEl = document.getElementById('aeViopNotionalLbl');
+    if (viopNotEl && asset?.venue === 'VIOP') {
+      viopNotEl.textContent = `Hacim: ${fmtCompactTL(Math.round((draftOrderAmount || 0) * Math.max(1, draftViopLeverage)))}`;
+    }
+    const besBannerEl = document.getElementById('aeBesBonusBanner');
+    if (besBannerEl && asset?.subVenue === 'BES_ACTIVE') {
+      const K = global.AetherKernelV10;
+      const remCap = K?.getRemainingBesAnnualBonusTL ? K.getRemainingBesAnnualBonusTL(K.getActiveMember()) : 79272;
+      const estBonus = Math.min(remCap, Math.round((draftOrderAmount || 0) * 0.20));
+      besBannerEl.innerHTML = remCap > 0
+        ? `🏛️ <strong>2026 10811 Kararı Aktif BES (%20 Devlet Katkısı):</strong> Bu yatırıma anında <strong>+${fmtTL(estBonus)}</strong> devlet katkısı hak ediş kumbarana yazılır (Yıllık kalan tavan: ${fmtTL(remCap)}).`
+        : `🏛️ <strong>2026 BES Yıllık Devlet Katkısı Tavanı Dolu (79.272 ₺):</strong> Yeni yatırımlar fon getirisi üretmeye devam eder; ek devlet katkısı gelecek yıl tavanına devreder.`;
     }
     const box = document.getElementById('aeLiveRippleBox');
     if (box && asset) {
@@ -7390,6 +7466,8 @@
     const existingConds = (member.conditionalOrders || []).filter((c) => c.assetKey === asset.key);
     const watchEntry = (member.watchlist || []).find((w) => w.assetKey === asset.key) || null;
     const supportsConditional = !asset.isRateInstrument && asset.venue !== 'TEFAS' && asset.venue !== 'BENCHMARK_ONLY' && asset.priceTL > 0;
+    const supportsLimitBuy = supportsConditional && asset.venue !== 'VIOP';
+    if (!supportsLimitBuy && drawerBuyMode === 'LIMIT') drawerBuyMode = 'MARKET';
     const orderBook = (asset.subVenue === 'BIST_STOCK' && G.computeOrderBookDepth)
       ? G.computeOrderBookDepth(asset, draftOrderAmount || 100000)
       : null;
@@ -7402,7 +7480,9 @@
       ? (member.settlementQueue || []).filter((x) => x.usableForBist !== false).reduce((s, x) => s + Number(x.grossTL || 0), 0)
       : 0;
     const usableCashTL = Math.max(0, +(snap.cashTL + unsettledUsableForBist).toFixed(2));
-    const minOrderTL = (asset.venue === 'BANK_RATE' || asset.venue === 'TEFAS') ? 100 : 10;
+    const minOrderTL = asset.venue === 'GLOBAL_USD'
+      ? Math.max(40, Math.ceil(K.getUsdTry()))
+      : ((asset.venue === 'BANK_RATE' || asset.venue === 'TEFAS') ? 100 : 10);
     const marginEffective = selectedUseMargin && micro.marginAllowed && drawerBuyMode === 'MARKET';
     const rawMaxPower = Math.floor(usableCashTL + (marginEffective ? Math.max(0, snap.totalNetWorthTL * 0.5 - snap.marginDebtTL) : 0));
     const maxBuyPower = Math.max(minOrderTL, rawMaxPower);
@@ -7421,33 +7501,36 @@
     if (drawerSubTab === 'ORDER') {
       let doorHtml = '';
       if (asset.venue === 'TWO_DOOR') {
-        const bazCost = Math.round(100000 * (clock.bazaarSpreadPct / 200));
-        const nobCost = Math.round(100000 * (clock.nobetciSpreadPct / 200));
-        const bankCost = Math.round(100000 * (clock.bankSpreadPct / 200 + (drawerOrderSide === 'BUY' ? 0.002 : 0)));
+        const bazSp = K.getTwoDoorSpreadPct ? K.getTwoDoorSpreadPct(asset, 'BAZAAR', clock) : clock.bazaarSpreadPct;
+        const nobSp = K.getTwoDoorSpreadPct ? K.getTwoDoorSpreadPct(asset, 'NOBETCI', clock) : clock.nobetciSpreadPct;
+        const bnkSp = K.getTwoDoorSpreadPct ? K.getTwoDoorSpreadPct(asset, 'BANK', clock) : clock.bankSpreadPct;
+        const bazCost = Math.round(100000 * (bazSp / 200));
+        const nobCost = Math.round(100000 * (nobSp / 200));
+        const bankCost = Math.round(100000 * (bnkSp / 200 + (drawerOrderSide === 'BUY' ? 0.002 : 0)));
         doorHtml = `
           <div style="margin:8px 0">
-            <div style="font-size:11.6px;font-weight:800;color:var(--ink-400);margin-bottom:5px">İşlem Gişesini Seç (Gerçek Makas & Vergi Farkı):</div>
+            <div style="font-size:11.6px;font-weight:800;color:var(--ink-400);margin-bottom:5px">İşlem Gişesini Seç (${asset.id === 'bilezik-22-ayar' ? '22 Ayar İşçilik + Makas' : 'Gerçek Makas & Vergi Farkı'}):</div>
             <div class="ms-door-grid">
               <button type="button" class="ms-door-card ${selectedDoor === 'BAZAAR' ? 'selected' : ''}" data-door="BAZAAR">
                 <div style="display:flex;justify-content:space-between;font-size:12px">
                   <strong>Kapalıçarşı</strong>
                   <span class="${clock.grandBazaarOpen ? 'pos' : 'neg'}" style="font-weight:800">${clock.grandBazaarOpen ? 'Açık' : 'Kapalı'}</span>
                 </div>
-                <div style="font-size:11px;color:var(--ink-400);margin-top:2px">Makas %${clock.bazaarSpreadPct.toFixed(2)} · %0 Vergi (~${bazCost} ₺/100B)</div>
+                <div style="font-size:11px;color:var(--ink-400);margin-top:2px">Makas %${bazSp.toFixed(2)} · %0 Vergi (~${bazCost} ₺/100B)</div>
               </button>
               <button type="button" class="ms-door-card ${selectedDoor === 'NOBETCI' ? 'selected' : ''}" data-door="NOBETCI">
                 <div style="display:flex;justify-content:space-between;font-size:12px">
                   <strong>Nöbetçi Gişe</strong>
                   <span class="${clock.nobetciOpen ? 'pos' : 'neg'}" style="font-weight:800">${clock.nobetciOpen ? '10–22 Açık' : 'Kapalı'}</span>
                 </div>
-                <div style="font-size:11px;color:var(--ink-400);margin-top:2px">Makas %${clock.nobetciSpreadPct.toFixed(2)} · %0 Vergi (~${nobCost} ₺/100B)</div>
+                <div style="font-size:11px;color:var(--ink-400);margin-top:2px">Makas %${nobSp.toFixed(2)} · %0 Vergi (~${nobCost} ₺/100B)</div>
               </button>
               <button type="button" class="ms-door-card ${selectedDoor === 'BANK' ? 'selected' : ''}" data-door="BANK">
                 <div style="display:flex;justify-content:space-between;font-size:12px">
                   <strong>Mobil Banka</strong>
                   <span class="${clock.bankDaytimeTight ? 'pos' : 'warn-txt'}" style="font-weight:800">${clock.bankDaytimeTight ? 'Dar' : 'Gece Makası'}</span>
                 </div>
-                <div style="font-size:11px;color:var(--ink-400);margin-top:2px">Makas %${clock.bankSpreadPct.toFixed(2)} + %0,2 Vergi (~${bankCost} ₺/100B)</div>
+                <div style="font-size:11px;color:var(--ink-400);margin-top:2px">Makas %${bnkSp.toFixed(2)} + %0,2 Vergi (~${bankCost} ₺/100B)</div>
               </button>
             </div>
           </div>
@@ -7491,7 +7574,7 @@
                   <button type="button" class="ae-chip ${draftViopLeverage === lv ? 'active' : 'sub'}" data-viop-lev="${lv}">${lv}x Kaldıraç</button>
                 `).join('')}
               </div>
-              <span style="font-size:11.4px;font-weight:800;color:var(--cyan)">Hacim: ${fmtCompactTL(estNotional)}</span>
+              <span id="aeViopNotionalLbl" style="font-size:11.4px;font-weight:800;color:var(--cyan)">Hacim: ${fmtCompactTL(estNotional)}</span>
             </div>
           </div>
         `;
@@ -7507,10 +7590,13 @@
           </div>
         `;
       } else if (asset.subVenue === 'BES_ACTIVE') {
-        const estBonus = Math.min(79272, Math.round((draftOrderAmount || 0) * 0.20));
+        const remCap = K.getRemainingBesAnnualBonusTL ? K.getRemainingBesAnnualBonusTL(member) : 79272;
+        const estBonus = Math.min(remCap, Math.round((draftOrderAmount || 0) * 0.20));
         specialBannerHtml = `
-          <div class="ms-alert ok" style="margin:6px 0 8px;padding:8px 11px;font-size:11.8px">
-            🏛️ <strong>2026 10811 Kararı Aktif BES (%20 Devlet Katkısı):</strong> Bu yatırıma anında <strong>+${fmtTL(estBonus)}</strong> devlet katkısı hak ediş kumbarana yazılır (Yıllık tavan: 79.272 ₺).
+          <div id="aeBesBonusBanner" class="ms-alert ok" style="margin:6px 0 8px;padding:8px 11px;font-size:11.8px">
+            ${remCap > 0
+              ? `🏛️ <strong>2026 10811 Kararı Aktif BES (%20 Devlet Katkısı):</strong> Bu yatırıma anında <strong>+${fmtTL(estBonus)}</strong> devlet katkısı hak ediş kumbarana yazılır (Yıllık kalan tavan: ${fmtTL(remCap)}).`
+              : `🏛️ <strong>2026 BES Yıllık Devlet Katkısı Tavanı Dolu (79.272 ₺):</strong> Yeni yatırımlar fon getirisi üretmeye devam eder; ek devlet katkısı gelecek yıl tavanına devreder.`}
           </div>
         `;
       }
@@ -7540,15 +7626,34 @@
 
         let unitBidTL = asset.priceTL;
         if (asset.venue === 'TWO_DOOR') {
-          const sp = selectedDoor === 'BAZAAR' ? clock.bazaarSpreadPct : (selectedDoor === 'NOBETCI' ? clock.nobetciSpreadPct : clock.bankSpreadPct);
+          const sp = K.getTwoDoorSpreadPct
+            ? K.getTwoDoorSpreadPct(asset, selectedDoor, clock)
+            : (selectedDoor === 'BAZAAR' ? clock.bazaarSpreadPct : (selectedDoor === 'NOBETCI' ? clock.nobetciSpreadPct : clock.bankSpreadPct));
           unitBidTL = +(asset.priceTL * (1 - sp / 200)).toFixed(4);
         }
-        const sellFeeRate = asset.venue === 'BIST' ? 0.00084 : (asset.venue === 'GLOBAL_USD' ? 0.0015 : ((asset.venue === 'CRYPTO_24_7' || asset.venue === 'VIOP') ? 0.0010 : 0));
-        const grossSaleTL = effectiveSellQty * unitBidTL;
-        const estStopajRatio = (asset.stopajPct > 0 && !asset.isRateInstrument && unitBidTL > existingPos.avgCostTL)
-          ? ((unitBidTL - existingPos.avgCostTL) / unitBidTL) * (asset.stopajPct / 100)
-          : 0;
-        const estGross = Math.max(0, Math.round(grossSaleTL * (1 - sellFeeRate - estStopajRatio)));
+        const isViopPos = Boolean(asset.venue === 'VIOP' && existingPos.isViop);
+        const isShortViop = Boolean(isViopPos && existingPos.viopDirection === 'SHORT');
+        const computeCloseProceeds = (qtyToClose, execP) => {
+          if (isViopPos) {
+            const ratioC = Math.min(1, Math.max(0.0001, qtyToClose / Math.max(0.000001, existingPos.qty)));
+            const cMargin = (Number(existingPos.marginTL) || (existingPos.qty * existingPos.avgCostTL / Math.max(1, existingPos.viopLeverage || 1))) * ratioC;
+            const cNotional = (Number(existingPos.notionalTL) || (existingPos.qty * existingPos.avgCostTL)) * ratioC;
+            const dSign = isShortViop ? -1 : 1;
+            const rPnl = cNotional * ((execP - existingPos.avgCostTL) / Math.max(0.0001, existingPos.avgCostTL)) * dSign;
+            const vFee = cNotional * 0.0006;
+            const netCash = Math.max(0, Math.round(cMargin + rPnl - vFee));
+            return { proceeds: netCash, pnl: Math.round(netCash - cMargin) };
+          }
+          const sellFeeRate = asset.venue === 'BIST' ? 0.00084 : (asset.venue === 'GLOBAL_USD' ? 0.0015 : (asset.venue === 'CRYPTO_24_7' ? 0.0010 : 0));
+          const grossSaleTL = qtyToClose * execP;
+          const estStopajRatio = (asset.stopajPct > 0 && !asset.isRateInstrument && execP > existingPos.avgCostTL)
+            ? ((execP - existingPos.avgCostTL) / execP) * (asset.stopajPct / 100)
+            : 0;
+          const netCash = Math.max(0, Math.round(grossSaleTL * (1 - sellFeeRate - estStopajRatio)));
+          const pnl = Math.round(qtyToClose * (execP - (existingPos.avgCostTL || execP)));
+          return { proceeds: netCash, pnl };
+        };
+        const estGross = computeCloseProceeds(effectiveSellQty, unitBidTL).proceeds;
         const showPartialRatios = !isIntLot || Math.floor(availQty) >= 2;
 
         const fmtCompactLots = (q) => {
@@ -7574,26 +7679,28 @@
           }
           return snapped;
         };
-        const defaultCondSellP = drawerSellMode === 'TAKE_PROFIT'
-          ? snapStrictTrigger(asset.priceTL * 1.15, false)
-          : snapStrictTrigger(asset.priceTL * 0.92, true);
-        const activeSellTrigP = (draftTriggerPriceTL > 0 && ((drawerSellMode === 'TAKE_PROFIT' && draftTriggerPriceTL > asset.priceTL) || (drawerSellMode === 'STOP_LOSS' && draftTriggerPriceTL < asset.priceTL)))
+        const condMustBeAbove = isShortViop ? (drawerSellMode === 'STOP_LOSS') : (drawerSellMode === 'TAKE_PROFIT');
+        const defaultCondSellP = condMustBeAbove
+          ? snapStrictTrigger(asset.priceTL * (drawerSellMode === 'STOP_LOSS' ? 1.08 : 1.15), false)
+          : snapStrictTrigger(asset.priceTL * (drawerSellMode === 'STOP_LOSS' ? 0.92 : 0.90), true);
+        const activeSellTrigP = (draftTriggerPriceTL > 0 && ((condMustBeAbove && draftTriggerPriceTL > asset.priceTL) || (!condMustBeAbove && draftTriggerPriceTL < asset.priceTL)))
           ? draftTriggerPriceTL
           : defaultCondSellP;
-        const condEstProceedsTL = Math.round(effectiveSellQty * activeSellTrigP);
-        const condEstPnlTL = Math.round(effectiveSellQty * (activeSellTrigP - (existingPos.avgCostTL || activeSellTrigP)));
+        const condPreview = computeCloseProceeds(effectiveSellQty, activeSellTrigP);
+        const condEstProceedsTL = condPreview.proceeds;
+        const condEstPnlTL = condPreview.pnl;
 
         tabContentHtml = `
           ${ !asset.isRateInstrument ? `
             <div class="ae-seg" style="margin-bottom:10px">
-              <button type="button" class="ae-seg-btn" data-dside="BUY">Alım Yap</button>
-              <button type="button" class="ae-seg-btn active" data-dside="SELL" style="color:var(--red-ink)">Satış (${segAvailLbl})</button>
+              <button type="button" class="ae-seg-btn" data-dside="BUY">${isViopPos ? 'Pozisyon Ekle' : 'Alım Yap'}</button>
+              <button type="button" class="ae-seg-btn active" data-dside="SELL" style="color:var(--red-ink)">${isViopPos ? `Kapat (${existingPos.viopDirection} ${existingPos.viopLeverage || 1}x)` : `Satış (${segAvailLbl})`}</button>
             </div>
           ` : ''}
 
           ${supportsConditional ? `
             <div class="ae-wrap-pills" style="margin-bottom:8px">
-              <button type="button" class="ae-chip ${drawerSellMode === 'MARKET' ? 'active' : 'sub'}" data-sell-mode="MARKET">⚡ Anlık Sat</button>
+              <button type="button" class="ae-chip ${drawerSellMode === 'MARKET' ? 'active' : 'sub'}" data-sell-mode="MARKET">⚡ ${isViopPos ? 'Anlık Kapat' : 'Anlık Sat'}</button>
               <button type="button" class="ae-chip ${drawerSellMode === 'STOP_LOSS' ? 'active' : 'sub'}" data-sell-mode="STOP_LOSS">🛡️ Zarar Kes (Stop)</button>
               <button type="button" class="ae-chip ${drawerSellMode === 'TAKE_PROFIT' ? 'active' : 'sub'}" data-sell-mode="TAKE_PROFIT">🎯 Kâr Al (Hedef)</button>
             </div>
@@ -7602,21 +7709,25 @@
           ${doorHtml}
 
           <div class="ae-card" style="background:var(--surface-2)">
-            <div style="display:flex;justify-content:space-between;font-size:12.4px;margin-bottom:8px">
-              <span>Satılabilir: <strong>${availQty} ${isIntLot ? 'lot' : 'birim'}</strong> (Maliyet ${fmtUnitTL(existingPos.avgCostTL)})</span>
+            <div style="display:flex;justify-content:space-between;font-size:12.4px;margin-bottom:8px;gap:6px;flex-wrap:wrap">
+              <span>${isViopPos
+                ? `⚡ VİOP <strong>${existingPos.viopDirection} ${existingPos.viopLeverage || 1}x</strong> · Teminat: <strong>${fmtTL(existingPos.marginTL || 0)}</strong> (Giriş ${fmtUnitTL(existingPos.avgCostTL)})`
+                : `Satılabilir: <strong>${availQty} ${isIntLot ? 'lot' : 'birim'}</strong> (Maliyet ${fmtUnitTL(existingPos.avgCostTL)})`}</span>
               <strong class="${(existingSpotSnap?.pnlNetTL || 0) >= 0 ? 'pos' : 'neg'}">${(existingSpotSnap?.pnlNetTL || 0) >= 0 ? '+' : ''}${fmtTL(existingSpotSnap?.pnlNetTL || 0)}</strong>
             </div>
 
             ${drawerSellMode !== 'MARKET' && supportsConditional ? `
               <div style="margin-bottom:10px;padding:10px;border-radius:12px;background:var(--surface-1);border:1px solid ${drawerSellMode === 'STOP_LOSS' ? 'rgba(244,63,94,0.4)' : 'rgba(16,185,129,0.4)'}">
                 <label style="display:block;font-size:11.6px;font-weight:800;color:${drawerSellMode === 'STOP_LOSS' ? 'var(--red-ink)' : 'var(--green-ink)'};margin-bottom:5px">
-                  ${drawerSellMode === 'STOP_LOSS' ? '🛡️ Zarar Kes Tetik Fiyatı (Güncel fiyatın altında):' : '🎯 Kâr Al Hedef Fiyatı (Güncel fiyatın üstünde):'}
+                  ${drawerSellMode === 'STOP_LOSS'
+                    ? (isShortViop ? '🛡️ VİOP SHORT Zarar Kes Fiyatı (Güncel fiyatın üstünde):' : '🛡️ Zarar Kes Tetik Fiyatı (Güncel fiyatın altında):')
+                    : (isShortViop ? '🎯 VİOP SHORT Kâr Al Hedef Fiyatı (Güncel fiyatın altında):' : '🎯 Kâr Al Hedef Fiyatı (Güncel fiyatın üstünde):')}
                 </label>
                 <input id="aeCondTriggerInp" class="ae-input" type="number" inputmode="decimal" step="any" value="${activeSellTrigP}" style="font-weight:900;text-align:center;font-size:17px !important;padding:9px" />
                 <div class="ae-wrap-pills" style="margin-top:7px">
-                  ${drawerSellMode === 'STOP_LOSS'
-                    ? [-5, -8, -12, -15].map((p) => `<button type="button" class="ae-chip sub" data-trig-pct="${p}">%${p}</button>`).join('')
-                    : [10, 15, 25, 40].map((p) => `<button type="button" class="ae-chip sub" data-trig-pct="${p}">+%${p}</button>`).join('')}
+                  ${condMustBeAbove
+                    ? (drawerSellMode === 'STOP_LOSS' ? [5, 8, 12, 15] : [10, 15, 25, 40]).map((p) => `<button type="button" class="ae-chip sub" data-trig-pct="${p}">+%${p}</button>`).join('')
+                    : [-5, -8, -12, -15].map((p) => `<button type="button" class="ae-chip sub" data-trig-pct="${p}">%${p}</button>`).join('')}
                 </div>
               </div>
             ` : `
@@ -7714,7 +7825,7 @@
             </div>
           ` : ''}
 
-          ${supportsConditional ? `
+          ${supportsLimitBuy ? `
             <div class="ae-wrap-pills" style="margin-bottom:8px">
               <button type="button" class="ae-chip ${drawerBuyMode === 'MARKET' ? 'active' : 'sub'}" data-buy-mode="MARKET">⚡ Anlık (Piyasa)</button>
               <button type="button" class="ae-chip ${drawerBuyMode === 'LIMIT' ? 'active' : 'sub'}" data-buy-mode="LIMIT">🎯 Limit Emir (Hedef Fiyat)</button>
@@ -8025,7 +8136,7 @@
               return ra ? `<button type="button" class="ae-chip ${duelRivalKey === ra.key ? 'active' : 'sub'}" data-duel-rival="${esc(ra.key)}" style="padding:4px 9px;font-size:11.2px">${esc(ra.ticker)}</button>` : '';
             }).join('')}
           </div>
-          <input id="aeDuelSearchInp" class="ae-input" type="search" autocomplete="off" value="${esc(duelSearchQuery)}" placeholder="753 varlıktan rakip yaz (örn: NVDA, VOO, PGSUS, YAY)..." style="padding:7px 10px;font-size:12px" />
+          <input id="aeDuelSearchInp" class="ae-input" type="search" autocomplete="off" value="${esc(duelSearchQuery)}" placeholder="754 varlıktan rakip yaz (örn: NVDA, VOO, PGSUS, YAY)..." style="padding:7px 10px;font-size:12px" />
           ${searchHits.length > 0 ? `
             <div class="ae-wrap-pills" style="margin-top:6px">
               ${searchHits.map((sh) => `
@@ -8305,15 +8416,27 @@
         const effPct = avQ > 0 ? Math.min(100, Math.round((effQ / avQ) * 100)) : 0;
         let uBid = asset.priceTL;
         if (asset.venue === 'TWO_DOOR') {
-          const sp = selectedDoor === 'BAZAAR' ? clock.bazaarSpreadPct : (selectedDoor === 'NOBETCI' ? clock.nobetciSpreadPct : clock.bankSpreadPct);
+          const sp = K.getTwoDoorSpreadPct
+            ? K.getTwoDoorSpreadPct(asset, selectedDoor, clock)
+            : (selectedDoor === 'BAZAAR' ? clock.bazaarSpreadPct : (selectedDoor === 'NOBETCI' ? clock.nobetciSpreadPct : clock.bankSpreadPct));
           uBid = +(asset.priceTL * (1 - sp / 200)).toFixed(4);
         }
-        const sFee = asset.venue === 'BIST' ? 0.00084 : (asset.venue === 'GLOBAL_USD' ? 0.0015 : ((asset.venue === 'CRYPTO_24_7' || asset.venue === 'VIOP') ? 0.0010 : 0));
-        const gSale = effQ * uBid;
-        const eStop = (asset.stopajPct > 0 && !asset.isRateInstrument && uBid > existingPos.avgCostTL)
-          ? ((uBid - existingPos.avgCostTL) / uBid) * (asset.stopajPct / 100)
-          : 0;
-        const eGross = Math.max(0, Math.round(gSale * (1 - sFee - eStop)));
+        let eGross = 0;
+        if (asset.venue === 'VIOP' && existingPos.isViop) {
+          const rClose = Math.min(1, Math.max(0.0001, effQ / Math.max(0.000001, existingPos.qty)));
+          const cMargin = (Number(existingPos.marginTL) || (existingPos.qty * existingPos.avgCostTL / Math.max(1, existingPos.viopLeverage || 1))) * rClose;
+          const cNotional = (Number(existingPos.notionalTL) || (existingPos.qty * existingPos.avgCostTL)) * rClose;
+          const dSign = existingPos.viopDirection === 'SHORT' ? -1 : 1;
+          const rPnl = cNotional * ((uBid - existingPos.avgCostTL) / Math.max(0.0001, existingPos.avgCostTL)) * dSign;
+          eGross = Math.max(0, Math.round(cMargin + rPnl - cNotional * 0.0006));
+        } else {
+          const sFee = asset.venue === 'BIST' ? 0.00084 : (asset.venue === 'GLOBAL_USD' ? 0.0015 : (asset.venue === 'CRYPTO_24_7' ? 0.0010 : 0));
+          const gSale = effQ * uBid;
+          const eStop = (asset.stopajPct > 0 && !asset.isRateInstrument && uBid > existingPos.avgCostTL)
+            ? ((uBid - existingPos.avgCostTL) / uBid) * (asset.stopajPct / 100)
+            : 0;
+          eGross = Math.max(0, Math.round(gSale * (1 - sFee - eStop)));
+        }
 
         sheet.querySelectorAll('[data-sratio]').forEach((rb) => rb.classList.remove('active'));
         const prevEl = document.getElementById('aeSellPreviewLine');
@@ -8507,8 +8630,17 @@
       const isInt = asset.subVenue === 'BIST_STOCK';
       const effQ = isInt ? Math.min(Math.floor(avQ), Math.max(1, Math.floor(avQ * draftSellRatio))) : +(avQ * draftSellRatio).toFixed(6);
       const effPct = avQ > 0 ? Math.min(100, Math.round((effQ / avQ) * 100)) : 0;
-      const estProc = Math.round(effQ * trigVal);
-      const estPnl = Math.round(effQ * (trigVal - (existingPos.avgCostTL || trigVal)));
+      let estProc = Math.round(effQ * trigVal);
+      let estPnl = Math.round(effQ * (trigVal - (existingPos.avgCostTL || trigVal)));
+      if (asset.venue === 'VIOP' && existingPos.isViop) {
+        const rClose = Math.min(1, Math.max(0.0001, effQ / Math.max(0.000001, existingPos.qty)));
+        const cMargin = (Number(existingPos.marginTL) || (existingPos.qty * existingPos.avgCostTL / Math.max(1, existingPos.viopLeverage || 1))) * rClose;
+        const cNotional = (Number(existingPos.notionalTL) || (existingPos.qty * existingPos.avgCostTL)) * rClose;
+        const dSign = existingPos.viopDirection === 'SHORT' ? -1 : 1;
+        const rPnl = cNotional * ((trigVal - existingPos.avgCostTL) / Math.max(0.0001, existingPos.avgCostTL)) * dSign;
+        estProc = Math.max(0, Math.round(cMargin + rPnl - cNotional * 0.0006));
+        estPnl = Math.round(estProc - cMargin);
+      }
       prevEl.innerHTML = `Tetiklenince satılacak: <strong style="color:var(--ink-100)">${effQ} ${isInt ? 'lot' : 'birim'} (%${effPct})</strong> · Tahmini Tutar: <strong style="color:var(--ink-100)">~${fmtTL(estProc)}</strong> (<strong class="${estPnl >= 0 ? 'pos' : 'neg'}">${estPnl >= 0 ? '+' : ''}${fmtTL(estPnl)}</strong> maliyete göre)`;
     };
 

@@ -82,7 +82,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v20.0.0-ios
-          name: "AETHER v20.0.0 — Cyber-Fintech Neon Tema, Sınırsız Canlı Ekonomik Organizma (34 Tetik + Kombinasyon), 753 Türk & Küresel Varlık (Sarrafiye, 10 Döviz, TEFAS 30+, ABD $1 Parçalı, VİOP Long/Short, Eurobond, BES %20, Kripto 7/24), Gayrimenkul Karar Aracı & Sıfır Gömük Kaydırma (ARM64 iOS IPA)"
+          name: "AETHER v20.0.0 — Cyber-Fintech Neon Tema, Sınırsız Canlı Ekonomik Organizma (34 Tetik + Kombinasyon), 754 Türk & Küresel Varlık (Sarrafiye, 10 Döviz, TEFAS 30+, ABD $1 Parçalı, VİOP Long/Short, Eurobond, BES %20, Kripto 7/24), Gayrimenkul Karar Aracı & Sıfır Gömük Kaydırma (ARM64 iOS IPA)"
           files: AETHER-iOS.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
