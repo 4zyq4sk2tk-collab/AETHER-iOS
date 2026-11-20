@@ -51,7 +51,7 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
     if (self.isDaylightTheme) {
         return [UIColor colorWithRed:238.0/255.0 green:242.0/255.0 blue:247.0/255.0 alpha:1.0];
     }
-    return [UIColor colorWithRed:6.0/255.0 green:10.0/255.0 blue:18.0/255.0 alpha:1.0];
+    return [UIColor colorWithRed:5.0/255.0 green:8.0/255.0 blue:20.0/255.0 alpha:1.0];
 }
 
 - (void)applyNativeTheme:(NSString *)themeStr {
@@ -133,8 +133,8 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
     NSString *scheme = [url.scheme lowercaseString];
     if ([scheme isEqualToString:@"http"] || [scheme isEqualToString:@"https"]) {
         SFSafariViewController *sf = [[SFSafariViewController alloc] initWithURL:url];
-        sf.preferredBarTintColor = [UIColor colorWithRed:6.0/255.0 green:10.0/255.0 blue:18.0/255.0 alpha:1.0];
-        sf.preferredControlTintColor = [UIColor colorWithRed:245.0/255.0 green:158.0/255.0 blue:11.0/255.0 alpha:1.0];
+        sf.preferredBarTintColor = [UIColor colorWithRed:5.0/255.0 green:8.0/255.0 blue:20.0/255.0 alpha:1.0];
+        sf.preferredControlTintColor = [UIColor colorWithRed:0.0/255.0 green:229.0/255.0 blue:255.0/255.0 alpha:1.0];
         [self presentViewController:sf animated:YES completion:nil];
     } else {
         [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
@@ -437,8 +437,8 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
     NSURL *stageDir = [appSup URLByAppendingPathComponent:@"AETHER_StageWWW" isDirectory:YES];
     NSURL *stageIndex = [stageDir URLByAppendingPathComponent:@"index.html"];
 
-    NSString *bundleVer = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] ?: @"1900";
-    NSString *bundleShort = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"19.0.0";
+    NSString *bundleVer = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] ?: @"2000";
+    NSString *bundleShort = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"20.0.0";
     NSUserDefaults *ud = [NSUserDefaults standardUserDefaults];
     NSString *savedBundleVer = [ud stringForKey:@"aether_live_bundle_ver"];
 
@@ -490,7 +490,7 @@ static NSString * const kAetherNativeThemeKey = @"aether_native_theme_v14";
     NSMutableURLRequest *req = [NSMutableURLRequest requestWithURL:url
                                                        cachePolicy:NSURLRequestReloadIgnoringLocalCacheData
                                                    timeoutInterval:14.0];
-    [req setValue:@"AETHER-iOS-OTA/19.0" forHTTPHeaderField:@"User-Agent"];
+    [req setValue:@"AETHER-iOS-OTA/20.0" forHTTPHeaderField:@"User-Agent"];
     NSURLSessionDataTask *t = [[NSURLSession sharedSession] dataTaskWithRequest:req
                                                               completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
         if (!error && [response isKindOfClass:[NSHTTPURLResponse class]] && ((NSHTTPURLResponse *)response).statusCode == 200) {
@@ -653,7 +653,7 @@ createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
-    self.window.backgroundColor = [UIColor colorWithRed:6.0/255.0 green:10.0/255.0 blue:18.0/255.0 alpha:1.0];
+    self.window.backgroundColor = [UIColor colorWithRed:5.0/255.0 green:8.0/255.0 blue:20.0/255.0 alpha:1.0];
     self.window.rootViewController = [[AetherViewController alloc] init];
     [self.window makeKeyAndVisible];
     return YES;

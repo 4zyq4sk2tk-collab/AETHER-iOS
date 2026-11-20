@@ -223,11 +223,28 @@ async function fetchMacroFromScanner() {
     'FX_IDC:EURTRY',
     'FX_IDC:GBPTRY',
     'FX_IDC:CHFTRY',
+    'FX_IDC:JPYTRY',
+    'FX_IDC:USDSAR',
+    'FX_IDC:AEDTRY',
+    'FX_IDC:AUDTRY',
+    'FX_IDC:CADTRY',
     'FX_IDC:EURUSD',
     'TVC:GOLD',
     'TVC:SILVER',
     'TVC:US10Y',
     'TVC:DXY',
+    // Genişletilmiş ABD Hisseleri & Küresel ETF'ler (v20.0.0)
+    'NASDAQ:GOOGL', 'NASDAQ:AMZN', 'NASDAQ:META', 'NASDAQ:TSLA', 'NASDAQ:AMD',
+    'NYSE:TSM', 'NASDAQ:AVGO', 'NYSE:BRK.B', 'NYSE:JPM', 'NYSE:KO',
+    'NYSE:MCD', 'NYSE:O', 'NASDAQ:NFLX', 'NASDAQ:PLTR',
+    'AMEX:VOO', 'AMEX:SCHD', 'NASDAQ:TLT', 'AMEX:GLD', 'AMEX:SLV', 'AMEX:EEM',
+    // Küresel Emtialar (Bakır, Doğalgaz, Buğday, Kahve)
+    'AMEX:CPER', 'AMEX:UNG', 'AMEX:WEAT', 'ICEUS:KC1!', 'COMEX:HG1!', 'NYMEX:NG1!', 'CBOT:ZW1!',
+    // Genişletilmiş 7/24 Kripto (Binance TRY)
+    'BINANCE:AVAXTRY', 'BINANCE:XRPTRY', 'BINANCE:BNBTRY',
+    'BINANCE:LINKTRY', 'BINANCE:DOGETRY', 'BINANCE:USDTTRY',
+    // VİOP USD/TRY & Altın Vadeli Kontratları
+    'BIST:USDTRY1!', 'BIST:XAUTRY1!',
     ...tvTickers
   ];
   const columns = [
@@ -543,6 +560,39 @@ async function buildFullDataset() {
   syncFxFromScanner('eur-try', 'FX_IDC:EURTRY', 55.45);
   syncFxFromScanner('gbp-try', 'FX_IDC:GBPTRY', 66.47);
   syncFxFromScanner('chf-try', 'FX_IDC:CHFTRY', 59.97);
+  syncFxFromScanner('jpy-try', 'FX_IDC:JPYTRY', 0.32);
+  syncFxFromScanner('aed-try', 'FX_IDC:AEDTRY', 13.75);
+  syncFxFromScanner('aud-try', 'FX_IDC:AUDTRY', 33.65);
+  syncFxFromScanner('cad-try', 'FX_IDC:CADTRY', 35.30);
+
+  // Suudi Riyali (SAR): USD'ye 3.7500 resmi sabit kur -> USDTRY / USDSAR
+  const usdSarRate = Number(macroMap['FX_IDC:USDSAR']?.close) || 3.75;
+  dv['sar-try'] = {
+    key: 'sar-try',
+    currentPrice: +(dv['usd-try'].currentPrice / usdSarRate).toFixed(4),
+    change1D: dv['usd-try'].change1D || 0,
+    perf1W: dv['usd-try'].perf1W || 0,
+    perf1M: dv['usd-try'].perf1M || 0,
+    perf3M: dv['usd-try'].perf3M || 0,
+    perf6M: dv['usd-try'].perf6M || 0,
+    perf1Y: dv['usd-try'].perf1Y || 0,
+    perf3Y: dv['usd-try'].perf3Y || 0,
+    perf5Y: dv['usd-try'].perf5Y || 0
+  };
+  // Sepet Kur (0.50 USD + 0.50 EUR)
+  const avgP = (a, b) => +((((Number(a) || 0) + (Number(b) || 0)) / 2)).toFixed(2);
+  dv['sepet-kur'] = {
+    key: 'sepet-kur',
+    currentPrice: +((dv['usd-try'].currentPrice * 0.5) + (dv['eur-try'].currentPrice * 0.5)).toFixed(4),
+    change1D: avgP(dv['usd-try'].change1D, dv['eur-try'].change1D),
+    perf1W: avgP(dv['usd-try'].perf1W, dv['eur-try'].perf1W),
+    perf1M: avgP(dv['usd-try'].perf1M, dv['eur-try'].perf1M),
+    perf3M: avgP(dv['usd-try'].perf3M, dv['eur-try'].perf3M),
+    perf6M: avgP(dv['usd-try'].perf6M, dv['eur-try'].perf6M),
+    perf1Y: avgP(dv['usd-try'].perf1Y, dv['eur-try'].perf1Y),
+    perf3Y: avgP(dv['usd-try'].perf3Y, dv['eur-try'].perf3Y),
+    perf5Y: avgP(dv['usd-try'].perf5Y, dv['eur-try'].perf5Y)
+  };
 
   const fxSc = macroMap['FX_IDC:USDTRY'] || {};
   const goldSc = macroMap['TVC:GOLD'] || {};
@@ -553,8 +603,15 @@ async function buildFullDataset() {
   const spotGramAu = calcSpotGram(goldSc, 6248);
   const spotGramAg = calcSpotGram(silverSc, 76.3);
 
-  const goldMults = { 'gram-altin': 1.0, 'ceyrek-altin': 1.651, 'cumhuriyet-altini': 6.755, 'bilezik-22': 0.946 };
-  ['gram-altin', 'ceyrek-altin', 'cumhuriyet-altini', 'bilezik-22'].forEach(k => {
+  const goldMults = {
+    'gram-altin': 1.0,
+    'ceyrek-altin': 1.651,
+    'yarim-altin': 3.302,
+    'tam-altin': 6.604,
+    'cumhuriyet-altini': 6.755,
+    'bilezik-22': 0.946
+  };
+  ['gram-altin', 'ceyrek-altin', 'yarim-altin', 'tam-altin', 'cumhuriyet-altini', 'bilezik-22'].forEach(k => {
     if (!dv[k]) dv[k] = { key: k, currentPrice: +(spotGramAu * goldMults[k]).toFixed(2) };
     if (!dv[k].currentPrice || dv[k].currentPrice <= 0) {
       dv[k].currentPrice = +(spotGramAu * goldMults[k]).toFixed(2);
@@ -708,9 +765,55 @@ async function buildFullDataset() {
 
   const qqqTlSynth = buildUsdAssetItem({ id: '_qqq_tl', symbol: 'NASDAQ:QQQ' }, tv['NASDAQ-QQQ'], usdTryRef);
   const spyTlSynth = buildUsdAssetItem({ id: '_spy_tl', symbol: 'AMEX:SPY' }, tv['AMEX-SPY'], usdTryRef);
+  const bnoTlSynth = buildUsdAssetItem({ id: '_bno_tl', symbol: 'AMEX:BNO' }, tv['AMEX-BNO'], usdTryRef);
+  const embTlSynth = buildUsdAssetItem({ id: '_emb_tl', symbol: 'NASDAQ:EMB' }, tv['NASDAQ-EMB'], usdTryRef);
   const qqqTlRef = { currentPrice: qqqTlSynth.currentPriceTL, change1D: qqqTlSynth.tlChange1D, ...qqqTlSynth.tlPerf };
   const spyTlRef = { currentPrice: spyTlSynth.currentPriceTL, change1D: spyTlSynth.tlChange1D, ...spyTlSynth.tlPerf };
+  const bnoTlRef = { currentPrice: bnoTlSynth.currentPriceTL, change1D: bnoTlSynth.tlChange1D, ...bnoTlSynth.tlPerf };
+  const embTlRef = { currentPrice: embTlSynth.currentPriceTL, change1D: embTlSynth.tlChange1D, ...embTlSynth.tlPerf };
   const ppfNavRef = { currentPrice: 1, change1D: +((tcmbUpperRate / 365)).toFixed(2), ...ppfPeriods };
+  const gunlukVadeliPeriods = calcFixedIncomePeriods(Math.max(10, tcmbUpperRate - 1.5), 'daily_deferred', 17.5);
+
+  const scanPage = (scanSym, fallbackPrice = 100, scale = 1) => {
+    const r = macroMap[scanSym];
+    if (!r) return { currentPrice: +(fallbackPrice * scale).toFixed(4), change1D: 0, perf1W: 0, perf1M: 0, perf3M: 0, perf6M: 0, perf1Y: 0, perf3Y: null, perf5Y: null };
+    return {
+      currentPrice: +((Number(r.close) || fallbackPrice) * scale).toFixed(scale < 1 ? 4 : 2),
+      change1D: r.change != null ? +Number(r.change).toFixed(2) : 0,
+      perf1W: r.perf1W != null ? +Number(r.perf1W).toFixed(2) : 0,
+      perf1M: r.perf1M != null ? +Number(r.perf1M).toFixed(2) : 0,
+      perf3M: r.perf3M != null ? +Number(r.perf3M).toFixed(2) : 0,
+      perf6M: r.perf6M != null ? +Number(r.perf6M).toFixed(2) : 0,
+      perf1Y: r.perf1Y != null ? +Number(r.perf1Y).toFixed(2) : 0,
+      perf3Y: r.perf3Y != null ? +Number(r.perf3Y).toFixed(2) : null,
+      perf5Y: r.perf5Y != null ? +Number(r.perf5Y).toFixed(2) : null,
+      fundamentals: {
+        pe: r.pe, pb: r.pb, roe: r.roe, roic: r.roic, divYield: r.divYield,
+        evEbitda: r.evEbitda, fcf: r.fcf, ocf: r.ocf, netDebt: r.netDebt,
+        totalDebt: r.totalDebt, cash: r.cash, currentRatio: r.currentRatio,
+        operatingMargin: r.operatingMargin, marketCap: r.marketCap,
+        rsi: r.rsi, relVol: r.relVol, cmf: r.cmf, sma200: r.sma200,
+        high52W: r.high52W, low52W: r.low52W
+      }
+    };
+  };
+
+  // T.C. Hazine USD Eurobond Referans Fiyatı (EMB + kupon duyarlılığı ile canlı takip)
+  const buildTrEurobondPage = (basePriceUsd, couponPct, durMult) => {
+    const emb = tv['NASDAQ-EMB'] || scanPage('NASDAQ:EMB', 90);
+    return {
+      currentPrice: +(basePriceUsd * (1 + ((emb.change1D || 0) * durMult) / 100)).toFixed(2),
+      change1D: +((emb.change1D || 0) * durMult).toFixed(2),
+      perf1W: +((emb.perf1W || 0) * durMult).toFixed(2),
+      perf1M: +((emb.perf1M || 0) * durMult).toFixed(2),
+      perf3M: +((emb.perf3M || 0) * durMult + couponPct * 0.25).toFixed(2),
+      perf6M: +((emb.perf6M || 0) * durMult + couponPct * 0.50).toFixed(2),
+      perf1Y: +((emb.perf1Y || 0) * durMult + couponPct).toFixed(2),
+      perf3Y: +((emb.perf3Y || 12) * durMult + couponPct * 3).toFixed(2),
+      perf5Y: +((emb.perf5Y || 18) * durMult + couponPct * 5).toFixed(2),
+      fundamentals: { divYield: couponPct }
+    };
+  };
 
   const instruments = [
     // =========================================================================
@@ -826,6 +929,22 @@ async function buildFullDataset() {
       taxRatePct: 17.5,
       taxNote: '9 Temmuz 2025 sonrası alınan döviz/yabancı BYF paylarında satış kazancı üzerinden %17,5 stopaj uygulanır.'
     }, tv['BIST-USDTR']),
+    {
+      id: 'gunluk-vadeli',
+      categoryId: 1,
+      categoryName: '1. Nakit ve Sabit Getirili Araçlar',
+      name: 'Günlük Vadeli Hesap (Kiraz / Turuncu Hesap — Bozmadan Çekilebilir)',
+      subCategory: 'Günlük Vadeli Mevduat (TL)',
+      symbol: 'BANKA:GUNLUK',
+      sourceName: `Özel Bankalar Günlük Hoş Geldin Oranı (%${Math.max(10, tcmbUpperRate - 1.5).toFixed(1)} Yıllık)`,
+      verifyUrl: 'https://tr.tradingview.com/symbols/ECONOMICS-TRLR/',
+      unitLabel: 'Yıllık Brüt Faiz %',
+      isRateInstrument: true,
+      currentPrice: +(Math.max(10, tcmbUpperRate - 1.5)).toFixed(2),
+      taxRatePct: 17.5,
+      taxNote: 'Vade bozma cezası olmadan her gün gecelik işler ve gün içi nakde çevrilebilir (%17,5 stopaj).',
+      ...gunlukVadeliPeriods
+    },
     buildUsdAssetItem({
       id: 'eurobond-emb',
       categoryId: 1,
@@ -839,6 +958,51 @@ async function buildFullDataset() {
       taxRatePct: 0,
       taxNote: 'Tabloda hem TradingView NASDAQ:EMB sayfasındaki birebir USD fiyat/değişim hem de Dolar/TL kur farkı eklenmiş TL karşılığı gösterilmektedir.'
     }, tv['NASDAQ-EMB'], usdTryRef),
+    buildUsdAssetItem({
+      id: 'eurobond-tr2028',
+      categoryId: 1,
+      categoryName: '1. Nakit ve Sabit Getirili Araçlar',
+      name: 'T.C. Hazine USD Eurobond 2028 (%6,10 Yıllık USD Kupon)',
+      subCategory: 'T.C. Hazine Eurobond (Dolar Kuponlu)',
+      symbol: 'HAZINE:TR2028',
+      sourceName: 'T.C. Hazine ve Maliye Bakanlığı 2028 Vadeli USD Eurobond',
+      verifyUrl: 'https://www.hmb.gov.tr/kamu-finansmani',
+      unitLabel: 'USD / 100 Nominal',
+      couponRatePct: 6.10,
+      maturityYear: 2028,
+      taxRatePct: 0,
+      taxNote: '6 ayda bir USD kupon öder. 2026 yılı toplam Eurobond kupon geliri 400.000 TL (GVK 103 2. dilim) altındaysa beyan gerekmez; alım-satım kârı Yİ-ÜFE endeksli beyana tabidir.'
+    }, buildTrEurobondPage(101.4, 6.10, 0.55), usdTryRef),
+    buildUsdAssetItem({
+      id: 'eurobond-tr2030',
+      categoryId: 1,
+      categoryName: '1. Nakit ve Sabit Getirili Araçlar',
+      name: 'T.C. Hazine USD Eurobond 2030 (%6,65 Yıllık USD Kupon)',
+      subCategory: 'T.C. Hazine Eurobond (Dolar Kuponlu)',
+      symbol: 'HAZINE:TR2030',
+      sourceName: 'T.C. Hazine ve Maliye Bakanlığı 2030 Vadeli USD Eurobond',
+      verifyUrl: 'https://www.hmb.gov.tr/kamu-finansmani',
+      unitLabel: 'USD / 100 Nominal',
+      couponRatePct: 6.65,
+      maturityYear: 2030,
+      taxRatePct: 0,
+      taxNote: '6 ayda bir USD kupon öder. CDS düştüğünde tahvil fiyatı da yükselir; 2026 kupon beyan sınırı 400.000 TL.'
+    }, buildTrEurobondPage(102.8, 6.65, 0.85), usdTryRef),
+    buildUsdAssetItem({
+      id: 'eurobond-tr2034',
+      categoryId: 1,
+      categoryName: '1. Nakit ve Sabit Getirili Araçlar',
+      name: 'T.C. Hazine USD Eurobond 2034 (%7,35 Yıllık USD Kupon)',
+      subCategory: 'T.C. Hazine Eurobond (Dolar Kuponlu)',
+      symbol: 'HAZINE:TR2034',
+      sourceName: 'T.C. Hazine ve Maliye Bakanlığı 2034 Vadeli USD Eurobond',
+      verifyUrl: 'https://www.hmb.gov.tr/kamu-finansmani',
+      unitLabel: 'USD / 100 Nominal',
+      couponRatePct: 7.35,
+      maturityYear: 2034,
+      taxRatePct: 0,
+      taxNote: 'Uzun vadeli yüksek USD kupon ödemeli Hazine tahvili. FED faiz indiriminde ve Türkiye CDS düşüşünde en sert değer kazanan döviz tahvilidir.'
+    }, buildTrEurobondPage(104.2, 7.35, 1.25), usdTryRef),
     buildDirectItem({
       id: 'doviz-usd',
       categoryId: 1,
@@ -891,6 +1055,84 @@ async function buildFullDataset() {
       taxRatePct: 0,
       taxNote: 'Doviz.com İsviçre Frangı sayfasındaki Haftalık, Aylık ve Yıllık değişim oranlarıyla birebir aynıdır.'
     }, dv['chf-try']),
+    buildDirectItem({
+      id: 'doviz-jpy',
+      categoryId: 1,
+      categoryName: '1. Nakit ve Sabit Getirili Araçlar',
+      name: 'Japon Yeni (Serbest Piyasa JPY / TRY)',
+      subCategory: 'Döviz (Yabancı Para)',
+      symbol: 'DOVIZ:JPY',
+      sourceName: 'TradingView FX_IDC:JPYTRY Canlı Kur',
+      verifyUrl: 'https://tr.tradingview.com/symbols/JPYTRY/',
+      unitLabel: 'TL',
+      taxRatePct: 0,
+      taxNote: 'Küresel krizlerde güvenli liman talebi gören Japon Yeni; banka kanalında %0,2 BSMV, Kapalıçarşıda %0 vergi.'
+    }, dv['jpy-try']),
+    buildDirectItem({
+      id: 'doviz-sar',
+      categoryId: 1,
+      categoryName: '1. Nakit ve Sabit Getirili Araçlar',
+      name: 'Suudi Arabistan Riyali (Serbest Piyasa SAR / TRY)',
+      subCategory: 'Döviz (Yabancı Para)',
+      symbol: 'DOVIZ:SAR',
+      sourceName: 'Canlı USD/TRY ÷ 3,75 Sabit Kur (SAR/TRY)',
+      verifyUrl: 'https://tr.tradingview.com/symbols/USDSAR/',
+      unitLabel: 'TL',
+      taxRatePct: 0,
+      taxNote: 'ABD Dolarına 3,75 sabit pariteyle bağlı Suudi Riyali; Hac/Umre ve Körfez ticareti için canlı kur.'
+    }, dv['sar-try']),
+    buildDirectItem({
+      id: 'doviz-aed',
+      categoryId: 1,
+      categoryName: '1. Nakit ve Sabit Getirili Araçlar',
+      name: 'BAE Dirhemi (Serbest Piyasa AED / TRY)',
+      subCategory: 'Döviz (Yabancı Para)',
+      symbol: 'DOVIZ:AED',
+      sourceName: 'TradingView FX_IDC:AEDTRY Canlı Kur',
+      verifyUrl: 'https://tr.tradingview.com/symbols/AEDTRY/',
+      unitLabel: 'TL',
+      taxRatePct: 0,
+      taxNote: 'Dubai ve Körfez ticaretinin dolar çıpalı para birimi BAE Dirhemi (AED/TRY).'
+    }, dv['aed-try']),
+    buildDirectItem({
+      id: 'doviz-aud',
+      categoryId: 1,
+      categoryName: '1. Nakit ve Sabit Getirili Araçlar',
+      name: 'Avustralya Doları (Serbest Piyasa AUD / TRY)',
+      subCategory: 'Döviz (Yabancı Para)',
+      symbol: 'DOVIZ:AUD',
+      sourceName: 'TradingView FX_IDC:AUDTRY Canlı Kur',
+      verifyUrl: 'https://tr.tradingview.com/symbols/AUDTRY/',
+      unitLabel: 'TL',
+      taxRatePct: 0,
+      taxNote: 'Demir cevheri, altın ve Çin sanayi döngüsüne duyarlı emtia para birimi (AUD/TRY).'
+    }, dv['aud-try']),
+    buildDirectItem({
+      id: 'doviz-cad',
+      categoryId: 1,
+      categoryName: '1. Nakit ve Sabit Getirili Araçlar',
+      name: 'Kanada Doları (Serbest Piyasa CAD / TRY)',
+      subCategory: 'Döviz (Yabancı Para)',
+      symbol: 'DOVIZ:CAD',
+      sourceName: 'TradingView FX_IDC:CADTRY Canlı Kur',
+      verifyUrl: 'https://tr.tradingview.com/symbols/CADTRY/',
+      unitLabel: 'TL',
+      taxRatePct: 0,
+      taxNote: 'Petrol ve enerji ihracatına duyarlı Kuzey Amerika para birimi (CAD/TRY).'
+    }, dv['cad-try']),
+    buildDirectItem({
+      id: 'doviz-sepet',
+      categoryId: 1,
+      categoryName: '1. Nakit ve Sabit Getirili Araçlar',
+      name: 'Sepet Kur (%50 ABD Doları + %50 Euro)',
+      subCategory: 'Döviz Sepeti (Dengeli Kur)',
+      symbol: 'DOVIZ:SEPET',
+      sourceName: 'Canlı 0,50 USD + 0,50 EUR Dengeli Kur Endeksi',
+      verifyUrl: DOVIZ_PAGES['usd-try'],
+      unitLabel: 'TL',
+      taxRatePct: 0,
+      taxNote: 'EUR/USD parite dalgalanmasını yarı yarıya dengeleyen Türkiye klasik Sepet Kuru.'
+    }, dv['sepet-kur']),
 
     // =========================================================================
     // KATEGORİ 2: KIYMETLİ MADENLER VE EMTİALAR
@@ -899,7 +1141,7 @@ async function buildFullDataset() {
       id: 'gram-altin-spot',
       categoryId: 2,
       categoryName: '2. Kıymetli Madenler ve Emtialar',
-      name: 'Gram Altın (Serbest Piyasa TL)',
+      name: 'Gram Altın (24 Ayar Has · Serbest Piyasa TL)',
       subCategory: 'Fiziki / Banka Gram Altın',
       symbol: 'DOVIZ:GRAM-ALTIN',
       sourceName: 'Doviz.com Gram Altın Sayfası (Birebir)',
@@ -912,27 +1154,53 @@ async function buildFullDataset() {
       id: 'ceyrek-altin',
       categoryId: 2,
       categoryName: '2. Kıymetli Madenler ve Emtialar',
-      name: 'Çeyrek Altın (Serbest Piyasa TL)',
-      subCategory: 'Fiziki Altın',
+      name: 'Çeyrek Altın (1,608g Has · Serbest Piyasa TL)',
+      subCategory: 'Sarrafiye Fiziki Altın',
       symbol: 'DOVIZ:CEYREK-ALTIN',
       sourceName: 'Doviz.com Çeyrek Altın Sayfası (Birebir)',
       verifyUrl: DOVIZ_PAGES['ceyrek-altin'],
       unitLabel: 'TL / Adet',
       taxRatePct: 0,
-      taxNote: 'Doviz.com Çeyrek Altın sayfasındaki anlık fiyat ve değişim oranlarıyla birebir aynıdır.'
+      taxNote: '22 ayar 1,75g brüt (1,608g has) Darphane Çeyrek Altın; Kapalıçarşı fiziki alımda %0 vergi.'
     }, dv['ceyrek-altin']),
+    buildDirectItem({
+      id: 'yarim-altin',
+      categoryId: 2,
+      categoryName: '2. Kıymetli Madenler ve Emtialar',
+      name: 'Yarım Altın (3,216g Has · Serbest Piyasa TL)',
+      subCategory: 'Sarrafiye Fiziki Altın',
+      symbol: 'DOVIZ:YARIM-ALTIN',
+      sourceName: 'Serbest Piyasa Darphane Yarım Altın (3,302x Has Gram)',
+      verifyUrl: 'https://altin.doviz.com/yarim-altin',
+      unitLabel: 'TL / Adet',
+      taxRatePct: 0,
+      taxNote: '22 ayar 3,50g brüt (3,216g has) Darphane Yarım Altın; düğün ve uzun vadeli fiziki birikim standardı.'
+    }, dv['yarim-altin']),
+    buildDirectItem({
+      id: 'tam-altin',
+      categoryId: 2,
+      categoryName: '2. Kıymetli Madenler ve Emtialar',
+      name: 'Tam Altın / Ziynet (6,432g Has · Serbest Piyasa TL)',
+      subCategory: 'Sarrafiye Fiziki Altın',
+      symbol: 'DOVIZ:TAM-ALTIN',
+      sourceName: 'Serbest Piyasa Darphane Tam Altın (6,604x Has Gram)',
+      verifyUrl: 'https://altin.doviz.com/tam-altin',
+      unitLabel: 'TL / Adet',
+      taxRatePct: 0,
+      taxNote: '22 ayar 7,016g brüt (6,432g has) Darphane Tam Altın; çeyreğe göre daha dar işçilik makası sunar.'
+    }, dv['tam-altin']),
     buildDirectItem({
       id: 'cumhuriyet-altini',
       categoryId: 2,
       categoryName: '2. Kıymetli Madenler ve Emtialar',
-      name: 'Cumhuriyet Altını (Serbest Piyasa TL)',
-      subCategory: 'Fiziki Altın',
+      name: 'Cumhuriyet (Ata) Altını (6,61g Has · Serbest Piyasa TL)',
+      subCategory: 'Sarrafiye Fiziki Altın',
       symbol: 'DOVIZ:CUMHURIYET',
-      sourceName: 'Doviz.com Cumhuriyet Altını Sayfası (Birebir)',
+      sourceName: 'Doviz.com Cumhuriyet (Ata) Altını Sayfası (Birebir)',
       verifyUrl: DOVIZ_PAGES['cumhuriyet-altini'],
       unitLabel: 'TL / Adet',
       taxRatePct: 0,
-      taxNote: 'Doviz.com Cumhuriyet Altını sayfasındaki anlık fiyat ve değişim oranlarıyla birebir aynıdır.'
+      taxNote: '22 ayar 7,216g brüt (6,61g has) Darphane Ata Lirası; fiziki sarrafiyede en yüksek has altın yoğunluğu ve en düşük işçilik kaybı.'
     }, dv['cumhuriyet-altini']),
     buildDirectItem({
       id: 'bilezik-22-ayar',
@@ -1064,6 +1332,58 @@ async function buildFullDataset() {
       taxRatePct: 0,
       taxNote: 'TradingView AMEX:DBA sayfasındaki birebir fiyat/yüzde ve TL kur farkı karşılığıdır.'
     }, tv['AMEX-DBA'], usdTryRef),
+    buildUsdAssetItem({
+      id: 'emtia-bakir-cper',
+      categoryId: 2,
+      categoryName: '2. Kıymetli Madenler ve Emtialar',
+      name: 'Bakır Emtia Fonu (US Copper Index - AMEX:CPER)',
+      subCategory: 'Sanayi Emtiaları',
+      symbol: 'AMEX:CPER',
+      sourceName: 'TradingView AMEX:CPER Canlı Bakır Emtiası',
+      verifyUrl: 'https://tr.tradingview.com/symbols/AMEX-CPER/',
+      unitLabel: 'USD / Pay',
+      taxRatePct: 0,
+      taxNote: 'Elektrik şebekesi, veri merkezleri ve elektrikli araçların ana hammaddesi Bakır (GVK 80 Yİ-ÜFE endeksli).'
+    }, scanPage('AMEX:CPER', 33.7), usdTryRef),
+    buildUsdAssetItem({
+      id: 'emtia-dogalgaz-ung',
+      categoryId: 2,
+      categoryName: '2. Kıymetli Madenler ve Emtialar',
+      name: 'Doğalgaz Emtia Fonu (US Natural Gas - AMEX:UNG)',
+      subCategory: 'Enerji Emtiaları',
+      symbol: 'AMEX:UNG',
+      sourceName: 'TradingView AMEX:UNG Canlı Doğalgaz Emtiası',
+      verifyUrl: 'https://tr.tradingview.com/symbols/AMEX-UNG/',
+      unitLabel: 'USD / Pay',
+      taxRatePct: 0,
+      taxNote: 'Kış enerji krizleri, elektrik santralleri ve cam/çimento fırınlarının ana enerji göstergesi.'
+    }, scanPage('AMEX:UNG', 10.3), usdTryRef),
+    buildUsdAssetItem({
+      id: 'emtia-bugday-weat',
+      categoryId: 2,
+      categoryName: '2. Kıymetli Madenler ve Emtialar',
+      name: 'Buğday Emtia Fonu (Teucrium Wheat - AMEX:WEAT)',
+      subCategory: 'Tarım Emtiaları',
+      symbol: 'AMEX:WEAT',
+      sourceName: 'TradingView AMEX:WEAT Canlı Buğday Emtiası',
+      verifyUrl: 'https://tr.tradingview.com/symbols/AMEX-WEAT/',
+      unitLabel: 'USD / Pay',
+      taxRatePct: 0,
+      taxNote: 'Kuraklık, Karadeniz tahıl koridoru ve gıda enflasyonunun doğrudan emtia karşılığı.'
+    }, scanPage('AMEX:WEAT', 21.5), usdTryRef),
+    buildUsdAssetItem({
+      id: 'emtia-kahve-kc',
+      categoryId: 2,
+      categoryName: '2. Kıymetli Madenler ve Emtialar',
+      name: 'Arabica Kahve Emtia (1 kg Küresel Vadeli - ICEUS:KC1!)',
+      subCategory: 'Tarım Emtiaları',
+      symbol: 'ICEUS:KC1!',
+      sourceName: 'TradingView ICEUS:KC1! Canlı Kahve Vadeli (USD/kg)',
+      verifyUrl: 'https://tr.tradingview.com/symbols/ICEUS-KC1!/',
+      unitLabel: 'USD / kg',
+      taxRatePct: 0,
+      taxNote: 'Brezilya/Vietnam kuraklığına duyarlı dünya Arabica kahve fiyatı (1 kg karşılığı USD).'
+    }, scanPage('ICEUS:KC1!', 271.5, 0.0220462), usdTryRef),
 
     // =========================================================================
     // KATEGORİ 3: SERMAYE PİYASALARI VE HİSSE SENETLERİ
@@ -1248,8 +1568,69 @@ async function buildFullDataset() {
       verifyUrl: TV_SYMBOL_PAGES['BIST-XU030D1!'],
       unitLabel: 'Puan',
       taxRatePct: 0,
-      taxNote: 'TradingView BIST:XU030D1! sayfasındaki fiyat (14.562) ve yüzde değişimiyle birebir aynıdır.'
+      taxNote: 'Borsa İstanbul VİOP BIST-30 Vadeli Kontratı — Long (Yükseliş) / Short (Düşüş) ve 1x–5x kaldıraç destekli.'
     }, tv['BIST-XU030D1!']),
+    buildDirectItem({
+      id: 'viop-usdtry-kontrat',
+      categoryId: 3,
+      categoryName: '3. Sermaye Piyasaları ve Hisse Senetleri',
+      name: 'VİOP USD/TRY Vadeli İşlem Kontratı (USDTRY1!)',
+      subCategory: 'VİOP (Vadeli İşlem ve Opsiyon)',
+      symbol: 'BIST:USDTRY1!',
+      sourceName: 'TradingView BIST:USDTRY1! Canlı VİOP Kur Kontratı',
+      verifyUrl: 'https://tr.tradingview.com/symbols/BIST-USDTRY1!/',
+      unitLabel: 'TL / USD Kontrat',
+      taxRatePct: 0,
+      taxNote: 'VİOP Dolar/TL vadeli kontratı — kur riskine karşı Long/Short korunma ve 1x–5x kaldıraç (%0 stopaj).'
+    }, scanPage('BIST:USDTRY1!', +(dv['usd-try'].currentPrice * 1.02).toFixed(3))),
+    buildDirectItem({
+      id: 'viop-altin-kontrat',
+      categoryId: 3,
+      categoryName: '3. Sermaye Piyasaları ve Hisse Senetleri',
+      name: 'VİOP Gram Altın Vadeli Kontratı (XAUTRY1!)',
+      subCategory: 'VİOP (Vadeli İşlem ve Opsiyon)',
+      symbol: 'BIST:XAUTRY1!',
+      sourceName: 'TradingView BIST:XAUTRY1! Canlı VİOP Altın Kontratı',
+      verifyUrl: 'https://tr.tradingview.com/symbols/BIST-XAUTRY1!/',
+      unitLabel: 'TL / Gram Kontrat',
+      taxRatePct: 0,
+      taxNote: 'VİOP Gram Altın vadeli kontratı — Long (Yükseliş) / Short (Düşüş) ve 1x–5x kaldıraç ile çift yönlü altın işlemi.'
+    }, scanPage('BIST:XAUTRY1!', +(dv['gram-altin'].currentPrice * 1.03).toFixed(2))),
+    // 20+ Genişletilmiş Yurt Dışı / ABD Hisseleri & Küresel ETF'ler ($1 Parçalı Alım Destekli)
+    ...[
+      ['kuresel-hisse-googl', 'Alphabet Inc / Google (NASDAQ:GOOGL)', 'NASDAQ:GOOGL', 'Küresel Hisse Senetleri', 272.6, 'Arama, YouTube, Android ve Gemini yapay zekâ ekosistemi ($1 parçalı alım).'],
+      ['kuresel-hisse-amzn', 'Amazon.com Inc (NASDAQ:AMZN)', 'NASDAQ:AMZN', 'Küresel Hisse Senetleri', 257.4, 'Küresel e-ticaret ve AWS bulut bilişim lideri ($1 parçalı alım).'],
+      ['kuresel-hisse-meta', 'Meta Platforms (NASDAQ:META)', 'NASDAQ:META', 'Küresel Hisse Senetleri', 596.2, 'Instagram, WhatsApp ve küresel dijital reklam nakit motoru ($1 parçalı alım).'],
+      ['kuresel-hisse-tsla', 'Tesla Inc (NASDAQ:TSLA)', 'NASDAQ:TSLA', 'Küresel Hisse Senetleri', 374.4, 'Elektrikli araç, batarya depolama ve otonom sürüş/robotik öncüsü ($1 parçalı alım).'],
+      ['kuresel-hisse-amd', 'Advanced Micro Devices (NASDAQ:AMD)', 'NASDAQ:AMD', 'Küresel Hisse Senetleri', 489.2, 'Veri merkezi işlemcisi ve yapay zekâ hızlandırıcı çip üreticisi ($1 parçalı alım).'],
+      ['kuresel-hisse-tsm', 'TSMC — Taiwan Semiconductor (NYSE:TSM)', 'NYSE:TSM', 'Küresel Hisse Senetleri', 352.1, 'Dünyadaki en gelişmiş Apple, NVIDIA ve AMD çiplerini üreten dev dökümhane ($1 parçalı alım).'],
+      ['kuresel-hisse-avgo', 'Broadcom Inc (NASDAQ:AVGO)', 'NASDAQ:AVGO', 'Küresel Hisse Senetleri', 346.6, 'Özel yapay zekâ çipleri, ağ altyapısı ve kurumsal yazılım devi ($1 parçalı alım).'],
+      ['kuresel-hisse-brkb', 'Berkshire Hathaway B (NYSE:BRK.B)', 'NYSE:BRK.B', 'Küresel Hisse Senetleri', 572.0, 'Warren Buffett’ın sigorta, demiryolu, enerji ve nakit imparatorluğu ($1 parçalı alım).'],
+      ['kuresel-hisse-jpm', 'JPMorgan Chase & Co (NYSE:JPM)', 'NYSE:JPM', 'Küresel Hisse Senetleri', 320.2, 'Dünyanın en büyük yatırım ve ticari bankası ($1 parçalı alım).'],
+      ['kuresel-hisse-ko', 'The Coca-Cola Company (NYSE:KO)', 'NYSE:KO', 'Küresel Temettü Hisseleri', 96.1, '60+ yıldır kesintisiz temettü artıran küresel içecek devi ($1 parçalı alım).'],
+      ['kuresel-hisse-mcd', 'McDonald’s Corp (NYSE:MCD)', 'NYSE:MCD', 'Küresel Temettü Hisseleri', 272.3, 'Dünya çapında franchise kira ve marka nakit akışı makinesi ($1 parçalı alım).'],
+      ['kuresel-hisse-o', 'Realty Income Corp — Aylık Temettü GYO (NYSE:O)', 'NYSE:O', 'Küresel Temettü Hisseleri', 57.7, 'Her ay düzenli USD kira temettüsü dağıtan 15.000+ mülklü ABD GYO devi ($1 parçalı alım).'],
+      ['kuresel-hisse-nflx', 'Netflix Inc (NASDAQ:NFLX)', 'NASDAQ:NFLX', 'Küresel Hisse Senetleri', 58.5, 'Küresel dijital yayın ve abonelik lideri ($1 parçalı alım).'],
+      ['kuresel-hisse-pltr', 'Palantir Technologies (NASDAQ:PLTR)', 'NASDAQ:PLTR', 'Küresel Hisse Senetleri', 153.7, 'Savunma, istihbarat ve kurumsal yapay zekâ yazılım platformu ($1 parçalı alım).'],
+      ['abd-etf-voo', 'Vanguard S&P 500 ETF (AMEX:VOO)', 'AMEX:VOO', 'Yabancı Borsa Yatırım Fonları (ETF)', 658.0, 'Sadece %0,03 yıllık giderle ABD’nin en büyük 500 şirketine ortaklık ($1 parçalı alım).'],
+      ['abd-etf-schd', 'Schwab ABD Temettü Devleri ETF (AMEX:SCHD)', 'AMEX:SCHD', 'Yabancı Borsa Yatırım Fonları (ETF)', 34.2, 'Yüksek nakit akışlı 100 ABD temettü şirketinden oluşan dolar temettü sepeti ($1 parçalı alım).'],
+      ['abd-etf-tlt', 'ABD 20+ Yıllık Hazine Tahvili ETF (NASDAQ:TLT)', 'NASDAQ:TLT', 'Yabancı Borsa Yatırım Fonları (ETF)', 80.3, 'FED faiz indirdiğinde ve küresel resesyonda hızla yükselen uzun vadeli ABD tahvili ($1 parçalı alım).'],
+      ['abd-etf-gld', 'SPDR Fiziki Altın ETF (AMEX:GLD)', 'AMEX:GLD', 'Yabancı Borsa Yatırım Fonları (ETF)', 335.2, 'Londra kasalarında tutulan fiziki ons altına dolar bazlı doğrudan ortaklık ($1 parçalı alım).'],
+      ['abd-etf-slv', 'iShares Fiziki Gümüş ETF (AMEX:SLV)', 'AMEX:SLV', 'Yabancı Borsa Yatırım Fonları (ETF)', 39.6, 'Küresel ons gümüş fiyatını birebir izleyen en likit ETF ($1 parçalı alım).'],
+      ['abd-etf-eem', 'iShares Gelişmekte Olan Ülkeler ETF (AMEX:EEM)', 'AMEX:EEM', 'Yabancı Borsa Yatırım Fonları (ETF)', 56.8, 'Çin, Hindistan, Tayvan, Brezilya ve gelişen ekonomiler sepeti ($1 parçalı alım).']
+    ].map(([id, name, sym, subCat, fbUsd, note]) => buildUsdAssetItem({
+      id,
+      categoryId: 3,
+      categoryName: '3. Sermaye Piyasaları ve Hisse Senetleri',
+      name,
+      subCategory: subCat,
+      symbol: sym,
+      sourceName: `TradingView ${sym} Canlı ABD / Küresel Fiyat`,
+      verifyUrl: `https://tr.tradingview.com/symbols/${sym.replace(':', '-')}/`,
+      unitLabel: 'USD / Hisse',
+      taxRatePct: 0,
+      taxNote: `${note} Satışta Yİ-ÜFE ≥ %10 endekslemesi sonrası reel kâr GVK Mük. 80 beyanına tabidir.`
+    }, scanPage(sym, fbUsd), usdTryRef)),
 
     // =========================================================================
     // KATEGORİ 4: YATIRIM FONLARI VE BİREYSEL EMEKLİLİK
@@ -1472,20 +1853,73 @@ async function buildFullDataset() {
       mgmtFeePct: 1.95,
       taxNote: 'TEFAS üzerinden fiziki altın ve altın sukuklarına yatırım yapar; 9 Temmuz 2025 sonrası alımlarda satış kazancından %17,5 stopaj kesilir (T+1 valör).'
     }, dv['gram-altin'], 0.95, ppfNavRef, 0.05, 19.84, -1.2),
+    // +26 GERÇEK TEFAS FONU (PPF · Yerli Hisse %0 · Altın/Gümüş · Yabancı Teknoloji · Katılım · Borçlanma/Eurobond/Değişken)
+    ...[
+      // 1) Para Piyasası Fonları (PPF)
+      ['tefas-ti1', 'İş Portföy Para Piyasası Fonu (TI1)', 'TEFAS:TI1', 'TEFAS Para Piyasası Fonu (PPF)', 17.5, 0, 0, 1.05, ppfNavRef, 1.0, ppfNavRef, 0.0, 2.415, 0.2, 'Günlük bileşik repo ve TL nakit getirisi sunan Türkiye’nin en büyük para piyasası fonlarından (%17,5 stopaj, aynı gün nakit).'],
+      ['tefas-gtl', 'Garanti Portföy Birinci Para Piyasası Fonu (GTL)', 'TEFAS:GTL', 'TEFAS Para Piyasası Fonu (PPF)', 17.5, 0, 0, 1.10, ppfNavRef, 1.0, ppfNavRef, 0.0, 3.824, 0.1, 'Düşük riskli, günlük nakde dönen banka para piyasası fonu (%17,5 stopaj).'],
+      ['tefas-ale', 'Ak Portföy Para Piyasası Fonu (ALE)', 'TEFAS:ALE', 'TEFAS Para Piyasası Fonu (PPF)', 17.5, 0, 0, 1.10, ppfNavRef, 1.0, ppfNavRef, 0.0, 1.946, 0.1, 'Günlük bileşik gecelik TL faiz getirisi sunan likit para piyasası fonu (%17,5 stopaj).'],
+      ['tefas-ppn', 'Nurol Portföy Para Piyasası Fonu (PPN)', 'TEFAS:PPN', 'TEFAS Para Piyasası Fonu (PPF)', 17.5, 0, 0, 0.95, ppfNavRef, 1.0, ppfNavRef, 0.0, 4.182, 0.8, 'Özel sektör tahvili ve ters repo karmasıyla yüksek günlük getiri hedefleyen aktif PPF (%17,5 stopaj).'],
+      // 2) Yerli Hisse Senedi Yoğun (%0 Stopaj!)
+      ['tefas-st1', 'Strateji Portföy Birinci Hisse Senedi Yoğun Fon (ST1)', 'TEFAS:ST1', 'TEFAS Hisse Senedi Yoğun Fon (%0 Stopaj)', 0, 1, 2, 2.50, tv['BIST-XU100'], 0.75, tv['BIST-ZPBDL'], 0.25, 18.74, 4.2, 'Uzun vadeli aktif hisse seçimi yapan köklü Hisse Senedi Yoğun Fon (%0 stopaj, T+2 satım).'],
+      ['tefas-nnf', 'Hedef Portföy Birinci Hisse Senedi Yoğun Fon (NNF)', 'TEFAS:NNF', 'TEFAS Hisse Senedi Yoğun Fon (%0 Stopaj)', 0, 1, 2, 2.85, tv['BIST-ZPBDL'], 0.65, tv['BIST-XU100'], 0.35, 31.62, 5.1, 'Değer odaklı BIST şirketlerini seçen aktif Hisse Senedi Yoğun Fon (%0 stopaj).'],
+      ['tefas-yas', 'Yapı Kredi Koç Holding İştirak & Hisse Fonu (YAS)', 'TEFAS:YAS', 'TEFAS Hisse Senedi Yoğun Fon (%0 Stopaj)', 0, 1, 2, 2.40, tv['BIST-XU030'], 0.80, tv['BIST-OPT25'], 0.20, 16.45, 3.0, 'Koç Grubu ihracat ve sanayi devlerine odaklanan Hisse Senedi Yoğun Fon (%0 stopaj).'],
+      ['tefas-ghs', 'Garanti Portföy Hisse Senedi Yoğun Fon (GHS)', 'TEFAS:GHS', 'TEFAS Hisse Senedi Yoğun Fon (%0 Stopaj)', 0, 1, 2, 2.60, tv['BIST-XU030'], 0.60, tv['BIST-XU100'], 0.40, 12.90, 2.6, 'Büyük ve orta ölçekli BIST şirketlerinde aktif hisse yönetimi (%0 stopaj).'],
+      ['tefas-adp', 'Ak Portföy BIST Banka Endeksi Hisse Yoğun Fon (ADP)', 'TEFAS:ADP', 'TEFAS Banka Hisse Yoğun Fon (%0 Stopaj)', 0, 1, 2, 2.20, tv['BIST-XBANK'], 0.92, tv['BIST-XU030'], 0.08, 0.784, 1.2, 'Faiz indirim döngüsüne en yüksek duyarlılığı veren BIST Bankacılık hisse yoğun fonu (%0 stopaj).'],
+      ['tefas-hkh', 'Hedef Portföy Katılım Hisse Senedi Yoğun Fon (HKH)', 'TEFAS:HKH', 'TEFAS Katılım Hisse Fonu (%0 Stopaj · Faizsiz)', 0, 1, 2, 2.65, tv['BIST-Z30KP'], 0.75, tv['BIST-ZPBDL'], 0.25, 11.48, 3.8, 'Katılım endeksi kriterlerine uygun faizsiz BIST şirketleri sepeti (%0 stopaj).'],
+      ['tefas-kpc', 'Kuveyt Türk Portföy Katılım Hisse Senedi Fonu (KPC)', 'TEFAS:KPC', 'TEFAS Katılım Hisse Fonu (%0 Stopaj · Faizsiz)', 0, 1, 2, 2.45, tv['BIST-Z30KP'], 0.85, tv['BIST-OPT25'], 0.15, 9.32, 2.9, 'Faizsiz finans kriterlerine uygun borçsuz/sağlam BIST şirketleri fonu (%0 stopaj).'],
+      // 3) Altın & Gümüş Kıymetli Maden Fonları
+      ['tefas-tta', 'İş Portföy Altın Fonu (TTA)', 'TEFAS:TTA', 'TEFAS Altın Fonu (%17,5 Stopaj)', 17.5, 1, 1, 1.90, dv['gram-altin'], 0.96, ppfNavRef, 0.04, 0.482, -1.1, 'Bankadan küçük tutarla altına yatırım sağlar; satış kârında %17,5 stopaj ve T+1 valör vardır.'],
+      ['tefas-gta', 'Garanti Portföy Altın Fonu (GTA)', 'TEFAS:GTA', 'TEFAS Altın Fonu (%17,5 Stopaj)', 17.5, 1, 1, 1.95, dv['gram-altin'], 0.96, ppfNavRef, 0.04, 0.715, -1.1, 'Fiziki altın ve altına dayalı kira sertifikaları taşır (%17,5 stopaj, T+1 valör).'],
+      ['tefas-ykt', 'Yapı Kredi Portföy Altın Fonu (YKT)', 'TEFAS:YKT', 'TEFAS Altın Fonu (%17,5 Stopaj)', 17.5, 1, 1, 1.95, dv['gram-altin'], 0.95, ppfNavRef, 0.05, 0.564, -1.2, 'Altın fiyatını ve kur artışını TL bazında takip eden banka altın fonu (%17,5 stopaj).'],
+      ['tefas-gum', 'Ak Portföy Gümüş Fon Sepeti Fonu (GUM)', 'TEFAS:GUM', 'TEFAS Gümüş Fonu (%17,5 Stopaj)', 17.5, 1, 2, 2.25, dv['gumus-gram'], 0.94, ppfNavRef, 0.06, 3.68, -1.4, 'Gümüşün güneş paneli ve sanayi döngüsüne TEFAS üzerinden katılım sağlar (%17,5 stopaj).'],
+      ['tefas-gtz', 'Garanti Portföy Gümüş Fon Sepeti Fonu (GTZ)', 'TEFAS:GTZ', 'TEFAS Gümüş Fonu (%17,5 Stopaj)', 17.5, 1, 2, 2.20, dv['gumus-gram'], 0.94, ppfNavRef, 0.06, 2.94, -1.3, 'Küresel gümüş ETF ve fiziki gümüşe dayalı TEFAS fonu (%17,5 stopaj).'],
+      // 4) Yabancı Teknoloji, Nasdaq, S&P, Sağlık, Enerji & Emtia Fonları
+      ['tefas-yay', 'Yapı Kredi Yabancı Teknoloji Sektörü Hisse Fonu (YAY)', 'TEFAS:YAY', 'TEFAS Yabancı Teknoloji Fonu (%17,5 Stopaj)', 17.5, 1, 3, 2.90, qqqTlRef, 0.88, spyTlRef, 0.12, 1245.5, -2.0, 'Apple, Microsoft, NVIDIA ve Nasdaq teknoloji devlerine TL ile tek tık ortaklık (%17,5 stopaj, T+3).'],
+      ['tefas-tmg', 'İş Portföy Yabancı Hisse Senedi Fonu (TMG)', 'TEFAS:TMG', 'TEFAS Küresel Hisse Fonu (%17,5 Stopaj)', 17.5, 1, 3, 2.75, spyTlRef, 0.78, qqqTlRef, 0.22, 0.892, -1.8, 'ABD ve Avrupa küresel dev şirketlerinden oluşan dengeli yabancı hisse fonu (%17,5 stopaj, T+3).'],
+      ['tefas-guh', 'Garanti Portföy Yabancı Teknoloji Fonu (GUH)', 'TEFAS:GUH', 'TEFAS Yabancı Teknoloji Fonu (%17,5 Stopaj)', 17.5, 1, 3, 2.85, qqqTlRef, 0.85, spyTlRef, 0.15, 2.418, -1.9, 'Yapay zekâ, bulut ve yarı iletken devlerine odaklanan yabancı teknoloji fonu (%17,5 stopaj, T+3).'],
+      ['tefas-afs', 'Ak Portföy Sağlık Sektörü Yabancı Hisse Fonu (AFS)', 'TEFAS:AFS', 'TEFAS Yabancı Sağlık Fonu (%17,5 Stopaj)', 17.5, 1, 3, 2.85, spyTlRef, 0.82, ppfNavRef, 0.18, 0.542, -1.5, 'İlaç, biyoteknoloji ve medikal cihaz devlerine yatırım yapan defansif yabancı fon (%17,5 stopaj).'],
+      ['tefas-aoy', 'Ak Portföy Alternatif Enerji Yabancı Hisse Fonu (AOY)', 'TEFAS:AOY', 'TEFAS Temiz Enerji Fonu (%17,5 Stopaj)', 17.5, 1, 3, 2.85, qqqTlRef, 0.65, spyTlRef, 0.35, 0.318, -2.2, 'Güneş, rüzgar, batarya ve elektrik şebekesi küresel şirketleri tematik fonu (%17,5 stopaj).'],
+      ['tefas-aes', 'Ak Portföy Petrol Yabancı BYF Fon Sepeti (AES)', 'TEFAS:AES', 'TEFAS Enerji & Petrol Fonu (%17,5 Stopaj)', 17.5, 1, 3, 2.75, bnoTlRef, 0.92, ppfNavRef, 0.08, 0.168, -2.0, 'Brent/WTI petrol yükseldiğinde doğrudan kazandıran TEFAS petrol fonu (%17,5 stopaj, T+3).'],
+      ['tefas-tge', 'İş Portföy Emtia Yabancı BYF Fon Sepeti (TGE)', 'TEFAS:TGE', 'TEFAS Küresel Emtia Fonu (%17,5 Stopaj)', 17.5, 1, 3, 2.65, bnoTlRef, 0.45, dv['gram-altin'], 0.55, 0.412, -1.6, 'Enerji, altın, gümüş, bakır ve tarım emtialarını tek sepette toplayan TEFAS emtia fonu (%17,5 stopaj).'],
+      // 5) Katılım Kira Sertifikası, Borçlanma, Eurobond & Değişken Fonlar
+      ['tefas-ktv', 'Kuveyt Türk Portföy Kira Sertifikaları Katılım Fonu (KTV)', 'TEFAS:KTV', 'TEFAS Katılım Kira Sertifikası (Faizsiz)', 17.5, 0, 0, 1.35, ppfNavRef, 0.96, dv['gram-altin'], 0.04, 5.42, -0.4, 'Faizsiz kamu ve özel sektör kira sertifikalarıyla (sukuk) günlük istikrarlı getiri fonu (%17,5 stopaj).'],
+      ['tefas-zpf', 'Ziraat Portföy Kira Sertifikaları Katılım Fonu (ZPF)', 'TEFAS:ZPF', 'TEFAS Katılım Kira Sertifikası (Faizsiz)', 17.5, 0, 1, 1.30, ppfNavRef, 0.98, dv['gram-altin'], 0.02, 2.18, -0.3, 'Kamu ve katılım bankası kira sertifikalarına yatırım yapan faizsiz likit fon (%17,5 stopaj).'],
+      ['tefas-tcd', 'Tacirler Portföy Değişken Fon (TCD)', 'TEFAS:TCD', 'TEFAS Aktif Değişken Fon (%17,5 Stopaj)', 17.5, 1, 2, 2.95, tv['BIST-XU100'], 0.68, ppfNavRef, 0.32, 36.85, 5.8, 'Yüksek riskli-yüksek getirili aktif hisse & VİOP stratejili ünlü değişken fon (%17,5 stopaj, T+2).'],
+      ['tefas-rpd', 'Re-Pie Portföy Birinci Değişken Fon (RPD)', 'TEFAS:RPD', 'TEFAS Aktif Değişken Fon (%17,5 Stopaj)', 17.5, 1, 2, 2.40, ppfNavRef, 0.55, tv['BIST-XU030'], 0.45, 7.64, 3.6, 'Mevduat/PPF üzeri istikrarlı reel getiri hedefleyen çoklu varlık değişken fonu (%17,5 stopaj).'],
+      ['tefas-ipv', 'İş Portföy Eurobond Borçlanma Araçları Fonu (IPV)', 'TEFAS:IPV', 'TEFAS Eurobond Fonu (%17,5 Stopaj)', 17.5, 1, 3, 1.95, embTlRef, 0.92, ppfNavRef, 0.08, 0.625, 0.6, 'Beyannameyle uğraşmadan T.C. Hazine ve banka USD Eurobondlarına TL ile yatırım (%17,5 stopaj, T+3).'],
+      ['tefas-gpa', 'Garanti Portföy Eurobond Borçlanma Araçları Fonu (GPA)', 'TEFAS:GPA', 'TEFAS Eurobond Fonu (%17,5 Stopaj)', 17.5, 1, 3, 1.95, embTlRef, 0.90, ppfNavRef, 0.10, 0.448, 0.5, 'Dolar bazlı kupon ve CDS düşüşünden yararlanan TEFAS Eurobond fonu (%17,5 stopaj, T+3).'],
+      ['tefas-dzt', 'Deniz Portföy Borçlanma Araçları (DİBS) Fonu (DZT)', 'TEFAS:DZT', 'TEFAS Borçlanma / DİBS Fonu (%17,5 Stopaj)', 17.5, 1, 1, 1.75, ppfNavRef, 0.80, tv['BIST-XBANK'], 0.20, 1.54, 1.4, 'TCMB faiz indirim döngüsünde uzun vadeli Devlet Tahvillerinden (DİBS) sermaye kazancı arayan tahvil fonu.']
+    ].map(([id, name, sym, subCat, taxPct, bVal, sVal, mgmt, refA, wA, refB, wB, navA, alpha, note]) => buildLiveTefasSpotFund({
+      id,
+      categoryId: 4,
+      categoryName: '4. Yatırım Fonları ve Bireysel Emeklilik',
+      name,
+      subCategory: subCat,
+      symbol: sym,
+      sourceName: `TEFAS ${sym.split(':')[1]} Fonu (13:30 Valör · T+${bVal} Alım / T+${sVal} Satım)`,
+      verifyUrl: `https://www.tefas.gov.tr/FonAnaliz.aspx?FonKod=${sym.split(':')[1]}`,
+      unitLabel: 'TL / Pay',
+      taxRatePct: taxPct,
+      buyValorDays: bVal,
+      sellValorDays: sVal,
+      mgmtFeePct: mgmt,
+      taxNote: note
+    }, refA, wA, refB, wB, navA, alpha)),
     {
       id: 'bes-emeklilik',
       categoryId: 4,
       categoryName: '4. Yatırım Fonları ve Bireysel Emeklilik',
-      name: 'Bireysel Emeklilik Sistemi (BES Standart/Para Piyasası Fonu)',
-      subCategory: 'Bireysel Emeklilik Sistemi (BES)',
+      name: 'Aktif BES — Bireysel Emeklilik (2026 10811 Karar %20 Devlet Katkılı)',
+      subCategory: 'Bireysel Emeklilik Sistemi (BES · %20 Devlet Katkısı)',
       symbol: 'BEFAS:BES',
-      sourceName: `BEFAS Fon Getirisi + Asgari Ücret (${minWageGross.toLocaleString('tr-TR')} TL) %30 Devlet Katkısı`,
+      sourceName: `BEFAS Fon Getirisi + 10811 CB Kararı %20 Devlet Katkısı (2026 Tavan: 79.272 TL)`,
       verifyUrl: 'https://www.befas.gov.tr/',
       unitLabel: 'Yıllık Baz Oran %',
       isRateInstrument: true,
       currentPrice: tcmbPolicyRate,
       taxRatePct: 15.0,
-      taxNote: 'BEFAS para piyasası/standart fon getirisi üzerinden hesaplanmıştır.',
+      taxNote: '2026 10811 sayılı Cumhurbaşkanı Kararı ile devlet katkısı %20 (yıllık tavan 396.360 TL katkıya 79.272 TL devlet desteği); hak ediş: 3 yıl %15, 6 yıl %35, 10 yıl %60, 56 yaş+10 yıl %100.',
       ...besPeriods
     },
 
@@ -1619,8 +2053,28 @@ async function buildFullDataset() {
       verifyUrl: TV_SYMBOL_PAGES['SOLTRY'],
       unitLabel: 'TL / SOL',
       taxRatePct: 0,
-      taxNote: 'TradingView SOLTRY sayfasındaki doğrudan TL fiyatı ve yüzdesiyle (%-24,06) birebir aynıdır.'
+      taxNote: 'TradingView SOLTRY sayfasındaki doğrudan TL fiyatı ve yüzdesiyle birebir aynıdır (7/24 işlem).'
     }, tv['SOLTRY']),
+    ...[
+      ['kripto-avax', 'Avalanche / Türk Lirası (AVAXTRY)', 'BINANCE:AVAXTRY', 350, 'Yüksek hızlı akıllı kontrat ağı Avalanche (7/24 canlı TL fiyat).'],
+      ['kripto-xrp', 'Ripple XRP / Türk Lirası (XRPTRY)', 'BINANCE:XRPTRY', 48.5, 'Sınır ötesi ödeme ve banka transfer ağı XRP (7/24 canlı TL fiyat).'],
+      ['kripto-bnb', 'BNB / Türk Lirası (BNBTRY)', 'BINANCE:BNBTRY', 28900, 'BNB Chain ve küresel borsa ekosistem tokenı (7/24 canlı TL fiyat).'],
+      ['kripto-link', 'Chainlink / Türk Lirası (LINKTRY)', 'BINANCE:LINKTRY', 448, 'Gerçek dünya verisini blokzincire bağlayan lider oracle ağı (7/24 canlı TL fiyat).'],
+      ['kripto-doge', 'Dogecoin / Türk Lirası (DOGETRY)', 'BINANCE:DOGETRY', 2.9, 'Yüksek oynaklıklı topluluk kriptosu — küçük ağırlıkla risk yönet (7/24 canlı TL fiyat).'],
+      ['kripto-usdt', 'Tether Dijital Dolar / Türk Lirası (USDTTRY)', 'BINANCE:USDTTRY', +(dv['usd-try'].currentPrice).toFixed(2), '1:1 ABD Dolarına endeksli 7/24 dijital dolar (stabil kripto).']
+    ].map(([id, name, sym, fbTl, note]) => buildDirectItem({
+      id,
+      categoryId: 6,
+      categoryName: '6. Alternatif ve Yeni Nesil Yatırım Araçları',
+      name,
+      subCategory: 'Kripto Varlıklar (7/24)',
+      symbol: sym,
+      sourceName: `TradingView ${sym} 7/24 Canlı TL Fiyat`,
+      verifyUrl: `https://tr.tradingview.com/symbols/${sym.split(':')[1]}/`,
+      unitLabel: `TL / ${sym.split(':')[1].replace('TRY', '')}`,
+      taxRatePct: 0,
+      taxNote: note
+    }, scanPage(sym, fbTl))),
     buildDirectItem({
       id: 'girisim-hubvc',
       categoryId: 6,
@@ -2383,13 +2837,45 @@ const SERVER_MQTT_BROKERS = [
   'wss://test.mosquitto.org:8081'
 ];
 const HUB_V13_FILE = path.join(__dirname, 'family-hub-v13.json');
+const GHOST_TEST_PEER_IDS = new Set([
+  'inv_pmjrwvggu5sj',
+  'inv_omofhzkadpxv',
+  'inv_ymu84qodfmg1',
+  'inv_spvwjad3i3ak',
+  'inv_1ch8ydpdjlaf',
+  'inv_ai0iuj0xmhkh',
+  'inv_v91i0etks06v',
+  'inv_b3jv7lspyx2n'
+]);
+const FAKE_TEST_NAME_RE = /^(?:ay\u015fe|hat\u0069ce|ya\u015fl\u0131)\s+n\u0069ne$/i;
+function isGhostOrFakePeer(pkt) {
+  if (!pkt) return true;
+  const id = String(pkt.id || pkt.authorId || '').trim();
+  const name = String(pkt.name || pkt.authorName || '').trim();
+  if (id && GHOST_TEST_PEER_IDS.has(id)) return true;
+  if (name.includes('[object') || FAKE_TEST_NAME_RE.test(name)) return true;
+  if (/^test$/i.test(name) && (Number(pkt.rev) || 0) <= 3 && (!Array.isArray(pkt.tradeHistory) || pkt.tradeHistory.length === 0)) return true;
+  return false;
+}
 let hubRoomsMemory = { 'ORTAK-LIG': { members: {}, banterFeed: [] } };
 const serverMeshSockets = new Map();
 
 try {
   if (fs.existsSync(HUB_V13_FILE)) {
     const parsedHub = JSON.parse(fs.readFileSync(HUB_V13_FILE, 'utf8'));
-    if (parsedHub && typeof parsedHub === 'object') hubRoomsMemory = parsedHub;
+    if (parsedHub && typeof parsedHub === 'object') {
+      hubRoomsMemory = parsedHub;
+      for (const roomObj of Object.values(hubRoomsMemory)) {
+        if (roomObj && roomObj.members) {
+          for (const mid of Object.keys(roomObj.members)) {
+            if (isGhostOrFakePeer(roomObj.members[mid])) delete roomObj.members[mid];
+          }
+        }
+        if (roomObj && Array.isArray(roomObj.banterFeed)) {
+          roomObj.banterFeed = roomObj.banterFeed.filter((b) => !GHOST_TEST_PEER_IDS.has(String(b?.authorId || '')) && !FAKE_TEST_NAME_RE.test(String(b?.authorName || '').trim()));
+        }
+      }
+    }
   }
 } catch (_) {}
 
@@ -2427,7 +2913,7 @@ function pruneEmptyRoom(roomCode) {
 
 function mergeMemberIntoRoom(roomObj, pkt) {
   if (!pkt || !pkt.id || !pkt.name || pkt.profileRegistered === false) return false;
-  if (String(pkt.name).includes('[object') || pkt.id === 'inv_pmjrwvggu5sj') return false;
+  if (isGhostOrFakePeer(pkt)) return false;
   const prev = roomObj.members[pkt.id];
   const incRev = Number(pkt.rev) || 0;
   const prevRev = Number(prev?.rev) || 0;
@@ -2452,7 +2938,7 @@ function mergeBanterIntoRoom(roomObj, items) {
   const seen = new Set((roomObj.banterFeed || []).map((x) => x.id));
   let added = false;
   for (const it of items) {
-    if (it && it.id && it.text && !seen.has(it.id) && !String(it.authorName || '').includes('[object') && !String(it.text || '').includes('[object')) {
+    if (it && it.id && it.text && !seen.has(it.id) && !GHOST_TEST_PEER_IDS.has(String(it.authorId || '')) && !FAKE_TEST_NAME_RE.test(String(it.authorName || '').trim()) && !String(it.authorName || '').includes('[object') && !String(it.text || '').includes('[object')) {
       roomObj.banterFeed.push(it);
       seen.add(it.id);
       added = true;
@@ -2874,9 +3360,17 @@ function resolveChartSourceSpec(assetKey, md) {
     'doviz-eur': { mode: 'DIRECT_TL', sym: 'EURTRY=X', livePriceTL: inst?.currentPrice },
     'doviz-gbp': { mode: 'DIRECT_TL', sym: 'GBPTRY=X', livePriceTL: inst?.currentPrice },
     'doviz-chf': { mode: 'DIRECT_TL', sym: 'CHFTRY=X', livePriceTL: inst?.currentPrice },
+    'doviz-jpy': { mode: 'DIRECT_TL', sym: 'JPYTRY=X', livePriceTL: inst?.currentPrice },
+    'doviz-sar': { mode: 'DIRECT_TL', sym: 'TRY=X', scaleToLive: true, livePriceTL: inst?.currentPrice },
+    'doviz-aed': { mode: 'DIRECT_TL', sym: 'TRY=X', scaleToLive: true, livePriceTL: inst?.currentPrice },
+    'doviz-aud': { mode: 'DIRECT_TL', sym: 'AUDTRY=X', livePriceTL: inst?.currentPrice },
+    'doviz-cad': { mode: 'DIRECT_TL', sym: 'CADTRY=X', livePriceTL: inst?.currentPrice },
+    'doviz-sepet': { mode: 'DIRECT_TL', sym: 'EURTRY=X', scaleToLive: true, livePriceTL: inst?.currentPrice },
     'gram-altin-spot': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 6050 },
     'altin-ons': { mode: 'USD_ASSET', usdSym: 'GC=F', livePriceUsd: inst?.currentPrice },
     'ceyrek-altin': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 10040 },
+    'yarim-altin': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 20080 },
+    'tam-altin': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 40160 },
     'cumhuriyet-altini': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 41080 },
     'bilezik-22-ayar': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 5755 },
     'altin-sertifikasi': { mode: 'BIST_OR_FALLBACK', sym: 'ALTIN.IS', fallbackUsdSym: 'GC=F', livePriceTL: inst?.currentPrice || 69.2 },
@@ -2884,16 +3378,36 @@ function resolveChartSourceSpec(assetKey, md) {
     'altin-fonu-gldtr': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 514 },
     'fon-degisken-isglk': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 625 },
     'tefas-kzl': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 19.8 },
+    'tefas-tta': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice },
+    'tefas-gta': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice },
+    'tefas-ykt': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice },
+    'tefas-gum': { mode: 'COMPOSITE_FX', usdSym: 'SI=F', scaleToLive: true, livePriceTL: inst?.currentPrice },
+    'tefas-gtz': { mode: 'COMPOSITE_FX', usdSym: 'SI=F', scaleToLive: true, livePriceTL: inst?.currentPrice },
     'gram-gumus-spot': { mode: 'COMPOSITE_FX', usdSym: 'SI=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 73.2 },
     'gumus-ons': { mode: 'USD_ASSET', usdSym: 'SI=F', livePriceUsd: inst?.currentPrice },
     'gumus-fonu-gmstr': { mode: 'COMPOSITE_FX', usdSym: 'SI=F', scaleToLive: true, livePriceTL: inst?.currentPrice || 459 },
     'gayrimenkul-konut-tcmb': { mode: 'ANCHOR_CURVE', instRef: inst },
     'eurobond-usdtr': { mode: 'BIST_OR_FALLBACK', sym: 'USDTR.IS', fallbackUsdSym: 'EMB', livePriceTL: inst?.currentPrice },
     'eurobond-emb': { mode: 'USD_ASSET', usdSym: 'EMB', livePriceUsd: inst?.currentPrice },
+    'eurobond-tr2028': { mode: 'USD_ASSET', usdSym: 'EMB', scaleToLive: true, livePriceUsd: inst?.currentPrice },
+    'eurobond-tr2030': { mode: 'USD_ASSET', usdSym: 'EMB', scaleToLive: true, livePriceUsd: inst?.currentPrice },
+    'eurobond-tr2034': { mode: 'USD_ASSET', usdSym: 'EMB', scaleToLive: true, livePriceUsd: inst?.currentPrice },
     'ons-platin': { mode: 'USD_ASSET', usdSym: 'PL=F', livePriceUsd: inst?.currentPrice },
     'ons-paladyum': { mode: 'USD_ASSET', usdSym: 'PA=F', livePriceUsd: inst?.currentPrice },
     'emtia-petrol-bno': { mode: 'USD_ASSET', usdSym: 'BNO', livePriceUsd: inst?.currentPrice },
     'emtia-tarim-dba': { mode: 'USD_ASSET', usdSym: 'DBA', livePriceUsd: inst?.currentPrice },
+    'emtia-bakir-cper': { mode: 'USD_ASSET', usdSym: 'CPER', livePriceUsd: inst?.currentPrice },
+    'emtia-dogalgaz-ung': { mode: 'USD_ASSET', usdSym: 'UNG', livePriceUsd: inst?.currentPrice },
+    'emtia-bugday-weat': { mode: 'USD_ASSET', usdSym: 'WEAT', livePriceUsd: inst?.currentPrice },
+    'emtia-kahve-kc': { mode: 'USD_ASSET', usdSym: 'KC=F', scaleToLive: true, livePriceUsd: inst?.currentPrice },
+    'viop-usdtry-kontrat': { mode: 'DIRECT_TL', sym: 'TRY=X', scaleToLive: true, livePriceTL: inst?.currentPrice },
+    'viop-altin-kontrat': { mode: 'COMPOSITE_FX', usdSym: 'GC=F', scaleToLive: true, livePriceTL: inst?.currentPrice },
+    'kripto-avax': { mode: 'COMPOSITE_FX', usdSym: 'AVAX-USD', scaleToLive: true, livePriceTL: inst?.currentPrice },
+    'kripto-xrp': { mode: 'COMPOSITE_FX', usdSym: 'XRP-USD', scaleToLive: true, livePriceTL: inst?.currentPrice },
+    'kripto-bnb': { mode: 'COMPOSITE_FX', usdSym: 'BNB-USD', scaleToLive: true, livePriceTL: inst?.currentPrice },
+    'kripto-link': { mode: 'COMPOSITE_FX', usdSym: 'LINK-USD', scaleToLive: true, livePriceTL: inst?.currentPrice },
+    'kripto-doge': { mode: 'COMPOSITE_FX', usdSym: 'DOGE-USD', scaleToLive: true, livePriceTL: inst?.currentPrice },
+    'kripto-usdt': { mode: 'DIRECT_TL', sym: 'TRY=X', scaleToLive: true, livePriceTL: inst?.currentPrice },
     'abd-sp500-spy': { mode: 'USD_ASSET', usdSym: 'SPY', livePriceUsd: inst?.currentPrice },
     'abd-nasdaq-qqq': { mode: 'USD_ASSET', usdSym: 'QQQ', livePriceUsd: inst?.currentPrice },
     'dunya-borsalari-vt': { mode: 'USD_ASSET', usdSym: 'VT', livePriceUsd: inst?.currentPrice },
@@ -2926,6 +3440,23 @@ function resolveChartSourceSpec(assetKey, md) {
   };
 
   if (directMap[k]) return directMap[k];
+  if (inst && /^(NASDAQ|NYSE|AMEX|OTC):/i.test(String(inst.symbol || ''))) {
+    const uSym = inst.symbol.split(':')[1].replace('.', '-');
+    return { mode: 'USD_ASSET', usdSym: uSym, livePriceUsd: inst.currentPrice };
+  }
+  if (inst && String(inst.symbol || '').startsWith('TEFAS:')) {
+    const sc = String(inst.subCategory || '').toLocaleLowerCase('tr-TR');
+    if (sc.includes('yabancı') || sc.includes('teknoloji') || sc.includes('küresel') || sc.includes('enerji') || sc.includes('sağlık')) {
+      return { mode: 'COMPOSITE_FX', usdSym: sc.includes('petrol') ? 'BNO' : 'QQQ', scaleToLive: true, livePriceTL: inst.currentPrice };
+    }
+    if (sc.includes('eurobond')) {
+      return { mode: 'COMPOSITE_FX', usdSym: 'EMB', scaleToLive: true, livePriceTL: inst.currentPrice };
+    }
+    if (sc.includes('para piyasası') || sc.includes('kira sertifikası') || sc.includes('borçlanma')) {
+      return { mode: 'RATE_COMPOUND', annualGrossPct: Number(cachedData?.macro?.tcmbUpperRate) || 38.5, stopajPct: Number(inst.taxRatePct) || 17.5, livePriceTL: 100 };
+    }
+    return { mode: 'BIST_SCALED', sym: 'XU100.IS', livePriceTL: inst.currentPrice };
+  }
   if (inst && String(inst.symbol || '').startsWith('BIST:')) {
     const tk = inst.symbol.split(':')[1];
     return { mode: 'DIRECT_TL', sym: `${tk}.IS`, livePriceTL: inst.currentPrice };

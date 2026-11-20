@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aether-1m-native-v19-0-0';
+const CACHE_NAME = 'aether-1m-native-v20-0-0';
 const CORE_ASSETS = [
   './',
   './index.html',

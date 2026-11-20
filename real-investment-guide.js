@@ -2500,6 +2500,7 @@
       }
 
       const isResmiGazete = /RESMİ GAZETE|TEBLİĞ|STOPAJ|CUMHURBAŞKANI KARARI/.test(tUp);
+      const orgIds = matchOrganismTriggersFromText(`${t} ${streetImpact}`);
       combined.push({
         id: nid,
         badge: isResmiGazete ? 'Resmi Gazete' : (n.cat === 'kap_bist' ? 'KAP & Borsa' : (n.cat === 'hammadde_dunya' ? 'Hammadde & Dünya' : 'Resmi & Makro')),
@@ -2509,7 +2510,8 @@
         source: n.source || 'Piyasa Akışı',
         streetImpact,
         analystRule,
-        linkedKeys
+        linkedKeys,
+        organismTriggerIds: orgIds.length > 0 ? orgIds : ['tcmb_rate_hike']
       });
     }
 
@@ -2520,6 +2522,7 @@
       if (seenIds.has(hid)) continue;
       seenIds.add(hid);
       const tickers = (h.detectedTickers || []).filter((tk) => K.getAsset(tk));
+      const hOrgIds = matchOrganismTriggersFromText(`${ht} ${h.whyItMatters || ''}`);
       combined.push({
         id: hid,
         badge: String(h.badge || 'Mutfak İstihbaratı').replace(/^[^\wÇĞİÖŞÜçğıöşü]+/u, '').trim(),
@@ -2529,7 +2532,8 @@
         source: h.pubDate || 'KAP / Resmi Tarama',
         streetImpact: h.whyItMatters,
         analystRule: 'Uzman Teyidi: İyi KAP haberi düştüğünde tahtada CMF > +0,10 ve hacim > 1,15x ise gerçek kurumsal alımdır; CMF negatifse küçük yatırımcıya mal dağıtımı olabilir!',
-        linkedKeys: tickers.length > 0 ? tickers.map((tk) => K.getAsset(tk).key) : ['bist-100', 'kira-sertifikasi-sukuk']
+        linkedKeys: tickers.length > 0 ? tickers.map((tk) => K.getAsset(tk).key) : ['bist-100', 'kira-sertifikasi-sukuk'],
+        organismTriggerIds: hOrgIds.length > 0 ? hOrgIds : ['ipo_liquidity_wave']
       });
     }
 
@@ -3796,19 +3800,29 @@
           .map((x) => x.key);
         relatedKeys = peers;
       } else if (asset.isForeignUsd) {
-        shortDesc = `Dolar bazında işlem gören küresel yatırım aracı (${asset.symbol}).`;
-        howItWorks = 'Hem yurt dışındaki dolar fiyatından hem de içerideki Dolar/TL kurundan aynı anda beslenir.';
-        expertEdge = 'Satışta alıştan bu yana Yİ-ÜFE üretici enflasyonu %10’u aşmışsa TL maliyetin enflasyonla yükseltilir; kur farkı köpüğüne değil reel kazanca beyan vergisi hesaplanır.';
+        shortDesc = asset.taxNote || `Dolar bazında işlem gören küresel yatırım aracı (${asset.symbol}).`;
+        howItWorks = asset.subVenue === 'TR_EUROBOND'
+          ? `6 ayda bir düzenli USD kupon öder (yıllık %${asset.couponRatePct || 6.5}); ayrıca Türkiye CDS primi düştükçe tahvilin ana para değeri de USD bazında yükselir.`
+          : 'Hem yurt dışındaki dolar fiyatından hem de içerideki Dolar/TL kurundan aynı anda beslenir. $1 parçalı hisse desteğiyle istediğin tutarla ortak olabilirsin.';
+        expertEdge = asset.subVenue === 'TR_EUROBOND'
+          ? '2026 yılı toplam Eurobond kupon geliri 400.000 TL altındaysa beyan gerekmez; erken satışta alım-satım kârı Yİ-ÜFE endeksli beyana tabidir.'
+          : 'Satışta alıştan bu yana Yİ-ÜFE üretici enflasyonu %10’u aşmışsa TL maliyetin enflasyonla yükseltilir; kur farkı köpüğüne değil reel kazanca beyan vergisi hesaplanır.';
         trapWatch = 'Küresel F/K zirvelerinde tüm parayla tek kademede girmek.';
-        rawInputs = ['Küresel Dolar Fiyatı', 'Dolar / TL Kuru', 'GVK Mükerrer 80 Yİ-ÜFE Endekslemesi'];
-        risesWhen = 'Küresel piyasada yükselirken kur desteklediğinde.';
-        fallsWhen = 'Küresel borsalarda satış dalgası yaşandığında.';
+        rawInputs = asset.subVenue === 'TR_EUROBOND'
+          ? ['Türkiye 5Y CDS Risk Primi', 'ABD 10Y Tahvil Faizi', 'Dolar / TL Kuru']
+          : ['Küresel Dolar Fiyatı', 'Dolar / TL Kuru', 'GVK Mükerrer 80 Yİ-ÜFE Endekslemesi'];
+        risesWhen = asset.subVenue === 'TR_EUROBOND' ? 'Türkiye CDS’i düşerken, FED faiz indirirken veya kur artarken.' : 'Küresel piyasada yükselirken kur desteklediğinde.';
+        fallsWhen = asset.subVenue === 'TR_EUROBOND' ? 'ABD tahvil faizleri veya ülke risk primi (CDS) yükseldiğinde.' : 'Küresel borsalarda satış dalgası yaşandığında.';
         relatedKeys = ['abd-sp500-spy', 'abd-nasdaq-qqq', 'doviz-usd'];
       } else {
-        shortDesc = `${asset.categoryName.replace(/^\d+\.\s*/, '')} grubunda gerçek yatırım aracı.`;
-        howItWorks = 'Piyasadaki arz-talep, kur ve likidite koşullarına göre anlık fiyatlanır.';
+        shortDesc = asset.taxNote || `${asset.subCategory || asset.categoryName.replace(/^\d+\.\s*/, '')} — canlı fiyatlı gerçek yatırım aracı.`;
+        howItWorks = asset.venue === 'VIOP'
+          ? 'VİOP vadeli kontratta hem yükselişe (LONG) hem düşüşe (SHORT) 1x–5x kaldıraçla işlem açabilirsin; kâr ve zarar kaldıraç oranında büyür.'
+          : (asset.venue === 'TEFAS'
+            ? `TEFAS üzerinde profesyonel portföy yöneticileri tarafından yönetilen fon (${asset.stopajPct === 0 ? '%0 stopaj' : '%' + asset.stopajPct + ' stopaj'}, T+${asset.buyValorDays || 1} alım / T+${asset.sellValorDays || 2} satım valörü).`
+            : 'Piyasadaki arz-talep, kur ve likidite koşullarına göre anlık fiyatlanır.');
         expertEdge = 'Alım-satım makası, stopaj oranı ve alternatif sabit getiri fırsat maliyeti birlikte tartılır.';
-        trapWatch = 'Sürü coşkusuyla likidite zirvesinde yakalanmak.';
+        trapWatch = asset.venue === 'VIOP' ? 'Yüksek kaldıraçla (5x) terste kalıp teminat çağrısına (Margin Call) düşmek!' : 'Sürü coşkusuyla likidite zirvesinde yakalanmak.';
         rawInputs = ['Küresel Likidite', 'Kur ve Faiz Dengesi'];
         risesWhen = 'Talep ve para girişi hızlandığında.';
         fallsWhen = 'Risk iştahı daraldığında.';
@@ -3819,15 +3833,19 @@
     if (asset.venue === 'BIST') {
       executionRule = `Hafta içi 10:00–18:00 arası anında eşleşir (kapalı saatte girilen emir sabah 10:00 açılış ziline yazılır; 09:50–10:00 ve 18:01–18:05 eşleşmesinde iptal kilitlenir). Satışta para gerçek T+2 takas kuralıyla 2 iş günü sonra çekilebilir nakde döner.${asset.stopajPct > 0 ? ` Satış kârından %${asset.stopajPct} stopaj kesilir.` : ' Gerçek kişi pay/hisse yoğun BYF alım-satım kazancında %0 stopaj uygulanır.'}`;
     } else if (asset.venue === 'TEFAS') {
-      executionRule = `İş günleri 13:30 valör sınırından önce verilen emir gününde işlenir; 13:30 sonrası alım ve bozum emirleri +1/+2 iş günü valör bekler. Stopaj: %${asset.stopajPct}.`;
+      executionRule = `İş günleri 13:30 valör sınırından önce verilen emir gününde işlenir; 13:30 sonrası alım ve bozum emirleri +${asset.buyValorDays || 1}/+${asset.sellValorDays || 2} iş günü valör bekler. Stopaj: %${asset.stopajPct}.`;
     } else if (asset.venue === 'TWO_DOOR') {
       executionRule = `Üç gerçek gişe arasında seçim yaparsın: Kapalıçarşı (Pzt–Cmt 09:30–18:30, %0,40 dar makas, %0 vergi), Nöbetçi Döviz/Kuyumcu (Her gün 10:00–22:00, %1,45 makas, %0 vergi) ve Mobil Banka (7/24 açık; 17:30 sonrası ve hafta sonu makas %3,60 açılır + alımda %0,2 kambiyo vergisi kesilir).`;
     } else if (asset.subVenue === 'TERM_DEPOSIT') {
-      executionRule = `Vade sonuna kadar (32/181/366 gün) kilitlenir. 6 aya kadar %17,5, 1 yıla kadar %15, 1 yıl üstü %10 stopaj kesilir. Vadeden önce bozarsan biriken faizin tamamı yanar!`;
+      executionRule = `Vade sonuna kadar (32/92/181/365 gün) kilitlenir. 6 aya kadar %17,5, 1 yıla kadar %15, 1 yıl üstü %10 stopaj kesilir. Vadeden önce bozarsan biriken faizin tamamı yanar!`;
+    } else if (asset.subVenue === 'DAILY_RATE') {
+      executionRule = `Günlük Vadeli (Kiraz/Turuncu Hesap): Her gün gecelik işler, vade bozma cezası olmadan dilediğin an nakde dönebilirsin (%17,5 stopaj).`;
+    } else if (asset.subVenue === 'BES_ACTIVE') {
+      executionRule = `2026 10811 Kararı Aktif BES: Yatırılan her katkı payına +%20 devlet katkısı (yıllık tavan 79.272 ₺) eklenir! Hak ediş: 3 yıl %15 · 6 yıl %35 · 10 yıl %60 · 56 yaş + 10 yıl %100.`;
     } else if (asset.isGvk80) {
-      executionRule = `ABD/Avrupa borsaları hafta sonu kapalıdır. Satış anında alıştan bu yana Yİ-ÜFE üretici enflasyonu %10'u geçtiyse TL maliyetin enflasyonla yükseltilir; kalan reel kazanç üzerinden GVK Mükerrer 80 beyan vergisi karşılığı ayrılır.`;
+      executionRule = `$1 Parçalı Hisse Destekli · ABD/Avrupa borsaları hafta sonu kapalıdır. Satış anında alıştan bu yana Yİ-ÜFE üretici enflasyonu %10'u geçtiyse TL maliyetin enflasyonla yükseltilir; kalan reel kazanç üzerinden GVK Mükerrer 80 beyan vergisi karşılığı ayrılır.`;
     } else if (asset.venue === 'VIOP') {
-      executionRule = `Hafta içi 09:30–18:15 gündüz ve 19:00–23:00 akşam seansında işlem görür; saat 15:00 günlük teminat tamamlama (Margin Call) kontrol saatidir.`;
+      executionRule = `VİOP Long (Yükselişe) / Short (Düşüşe) ve 1x–5x kaldıraç desteklidir! Hafta içi 09:30–18:15 gündüz ve 19:00–23:00 akşam seansında işlem görür; saat 15:00 günlük teminat çağrısı (Margin Call) penceresidir.`;
     } else {
       executionRule = `7/24 kesintisiz anlık piyasa fiyatıyla işlem görür (%0,10 işlem komisyonu).`;
     }
@@ -6823,10 +6841,1160 @@
     ];
   }
 
+  // ============================================================================
+  // AETHER v20.0.0 — CANLI EKONOMİ ORGANİZMASI (34 GERÇEK DÜNYA TETİĞİ · SINIRSIZ
+  // KOMBİNASYON · 1./2./3. HALKA · VARLIK BAĞ HARİTASI · GAYRİMENKUL KARAR ARACI)
+  // ============================================================================
+
+  const ORGANISM_CHANNELS = [
+    {
+      id: 'refinery_oil',
+      label: 'Rafineri & Petrol',
+      icon: '🛢️',
+      assetKeys: ['bist-tuprs', 'emtia-petrol-bno', 'tefas-aes'],
+      upPlain: 'Petrol/mazot yükselince rafineri stok kârı ve enerji geliri açılır.',
+      downPlain: 'Petrol düşerken enerji emtiası ve stok değerlemesi yavaşlar.',
+      upPro: 'Akdeniz dizel/jet crack spread + stok değerleme kârı USD bazında genişler.',
+      downPro: 'Ham petrol düşüşü envanter değerleme baskısı ve enerji ETF gerilemesi yaratır.'
+    },
+    {
+      id: 'airlines_travel',
+      label: 'Havacılık & Turizm',
+      icon: '✈️',
+      assetKeys: ['bist-thyao', 'bist-pgsus', 'bist-tavhl'],
+      upPlain: 'Ucuz yakıt, barış veya turist akını uçakları doldurup kârı uçurur.',
+      downPlain: 'Savaş gerilimi veya pahalı jet yakıtı uçakların masrafını artırıp doluluğu keser.',
+      upPro: 'CASK (koltuk maliyeti) gerilerken RASK ve yolcu doluluk (LF) yukarı taşınır.',
+      downPro: 'Jet yakıtı cironun ~%30’udur; hava sahası riski ve yakıt şoku FAVÖK marjını daraltır.'
+    },
+    {
+      id: 'banks_credit',
+      label: 'Bankalar & Kredi',
+      icon: '🏦',
+      assetKeys: ['bist-garan', 'bist-akbnk', 'tefas-adp', 'kuresel-hisse-jpm'],
+      upPlain: 'Faiz inerken ve yabancı fon gelirken krediler canlanır, bankalar ilk koşar.',
+      downPlain: 'Sert faiz artışı veya krizde kredi maliyetleri şişer, tahsilat riski büyür.',
+      upPro: 'Mevduat-kredi vade uyumsuzluğu sayesinde faiz indiriminde NIM genişler, tahvil portföyü değerlenir.',
+      downPro: 'Sıkı para politikası fonlama maliyetini yükseltip kredi büyümesini ve marjı baskılar.'
+    },
+    {
+      id: 'insurance_float',
+      label: 'Sigorta Kasaları (Float)',
+      icon: '☂️',
+      assetKeys: ['bist-tursg', 'bist-ansgr', 'bist-agesa'],
+      upPlain: 'Peşin toplanan poliçe parası yüksek faizde büyür; sigorta yüksek faizde gülümser.',
+      downPlain: 'Faizler hızla inerse veya büyük afet/hasar çıkarsa kâr ivmesi yavaşlar.',
+      upPro: 'Teknik karşılık nakit havuzu (Float) yüksek TLREF/Sukuk faizinde dev finansal gelir üretir.',
+      downPro: 'Faiz düşüşü yatırım gelirini azaltır, yüksek hasar/prim oranı bileşik rasyoyu bozar.'
+    },
+    {
+      id: 'real_estate_gyo',
+      label: 'Konut & GYO',
+      icon: '🏢',
+      assetKeys: ['gayrimenkul-konut-ekgyo', 'gayrimenkul-ticari-isgyo', 'gayrimenkul-gyo-fonu-optgy', 'kuresel-hisse-o'],
+      upPlain: 'Konut kredisi ucuzladığında ev alan çoğalır, GYO projeleri hızla satılır.',
+      downPlain: 'Kredi faizi tavan yaptığında ev satışları donar, GYO iskontosu derinleşir.',
+      upPro: 'Düşen kredi faizi talep esnekliğini tetikler, NAD (Net Aktif Değer) iskontosu kapanır.',
+      downPro: 'Yüksek reel faiz konut finansmanını kilitler ve borçlu geliştiricileri sıkıştırır.'
+    },
+    {
+      id: 'construction_steel_cement',
+      label: 'Çimento, Çelik & Şantiye',
+      icon: '🏗️',
+      assetKeys: ['bist-oyakc', 'bist-eregl', 'bist-sise', 'bist-enkai'],
+      upPlain: 'Kentsel dönüşüm, Çin teşviki veya ucuz enerji şantiyeleri ve fabrikaları tam gaz çalıştırır.',
+      downPlain: 'Doğalgaz/elektrik fırın masrafı patlarsa veya inşaat durursa marj bıçak gibi kesilir.',
+      upPro: 'HRC çelik makası, klinker tonajı ve altyapı harcamaları kapasite kullanımını yukarı çeker.',
+      downPro: 'Yüksek enerji/petrokok girdisi ve Çin kaynaklı ucuz çelik ihracatı brüt marjı ezer.'
+    },
+    {
+      id: 'exporters_auto',
+      label: 'İhracatçı & Otomotiv',
+      icon: '🚢',
+      assetKeys: ['bist-froto', 'bist-toaso', 'bist-arclk', 'bist-kchol'],
+      upPlain: 'Döviz/Euro yükselip Avrupa sipariş verdiğinde ihracatçının kasası dövizle dolar.',
+      downPlain: 'Avrupa durgunluğa girerse veya gümrük duvarı yükselirse siparişler yavaşlar.',
+      upPro: 'EUR gelir / TL işçilik makası ve Avrupa PMI toparlanması ihracat FAVÖK’ünü büyütür.',
+      downPro: 'AB sanayi daralması, tarife engeli ve reel değerlenen TL ihracatçı rekabetçiliğini aşındırır.'
+    },
+    {
+      id: 'defense_tech',
+      label: 'Savunma & Stratejik Teknoloji',
+      icon: '🛡️',
+      assetKeys: ['bist-asels', 'halka-arz-altny', 'kuresel-hisse-pltr'],
+      upPlain: 'Dünyada gerilim ve güvenlik harcaması arttıkça radar, İHA ve savunma siparişleri rekor kırar.',
+      downPlain: 'Barış ortamında risk primi düşerken kısa vadede kâr realizasyonu görülebilir.',
+      upPro: 'Çok yıllı USD/EUR bakiye sipariş (Backlog) ve devlet bütçesi döngüsü geliri güvenceye alır.',
+      downPro: 'Jeopolitik tansiyonun düşmesi yüksek çarpanlı savunma hisselerinde kısa vadeli soğuma getirir.'
+    },
+    {
+      id: 'food_retail',
+      label: 'Peşin Kasalı Market & Perakende',
+      icon: '🛒',
+      assetKeys: ['reel-perakende-bimas', 'reel-perakende-mgros', 'bist-sokm', 'kuresel-hisse-ko'],
+      upPlain: 'Enflasyon veya ücret artışı olduğunda raftaki etiket hızla güncellenir, peşin kasa büyür.',
+      downPlain: 'Sıkı kemer sıkma ve alım gücü daralması sepet büyümesini yavaşlatır.',
+      upPro: 'Negatif işletme sermayesi ve günlük nakit dönüşü enflasyona karşı doğal kalkan oluşturur.',
+      downPro: 'Reel harcanabilir gelir daralması ve elektrik/nakliye gideri net kâr marjını sınırlar.'
+    },
+    {
+      id: 'agro_drought_risk',
+      label: 'Tarım, Buğday & Gıda Emtiası',
+      icon: '🌾',
+      assetKeys: ['emtia-tarim-dba', 'emtia-bugday-weat', 'emtia-kahve-kc'],
+      upPlain: 'Kuraklık, sıcak hava veya tahıl koridoru krizi buğday, kahve ve tarım fiyatlarını sıçratır.',
+      downPlain: 'Bol yağış ve rekor hasat tarım emtia fiyatlarını sakinleştirir.',
+      upPro: 'Arz şoku vadeli tarım kontratlarını (CBOT/ICE) yukarı iter, 3–6 ay sonra mutfak TÜFE’ye yansır.',
+      downPro: 'Güçlü rekolte ve sakin gübre/enerji maliyeti tarımsal emtia primlerini geri verir.'
+    },
+    {
+      id: 'grid_energy_solar',
+      label: 'Elektrik Şebekesi, Trafo & Güneş',
+      icon: '⚡',
+      assetKeys: ['reel-enerji-astor', 'reel-enerji-cwene', 'bist-enjsa', 'tefas-aoy'],
+      upPlain: 'Yapay zekâ veri merkezleri ve elektrikli araçlar arttıkça dev trafo ve güneş paneli şart olur.',
+      downPlain: 'Bakır/gümüş hammaddesi aşırı pahalanır veya yüksek faiz yatırımı ertelerse hız keser.',
+      upPro: 'Küresel şebeke modernizasyonu (GTİP 8504.23 trafo) ve yenilenebilir CAPEX talep patlaması yaratır.',
+      downPro: 'Proje finansmanı faizi yükseldiğinde ve bakır girdisi şiştiğinde marj daralır.'
+    },
+    {
+      id: 'gold_metals',
+      label: 'Fiziki Altın, Gümüş & Sarrafiye',
+      icon: '🪙',
+      assetKeys: ['gram-altin-spot', 'ceyrek-altin', 'cumhuriyet-altini', 'gram-gumus-spot', 'abd-etf-gld', 'tefas-kzl'],
+      upPlain: 'Savaş, enflasyon, kur artışı veya FED faiz indirimi geldiğinde herkes güvenli liman altına koşar.',
+      downPlain: 'Barış ortamı ve yüksek ABD reel faizi altının hızını geçici olarak soğutur.',
+      upPro: 'Düşen ABD reel faizi + merkez bankası fiziki alımı + USD/TRY çarpanı çift motor yaratır.',
+      downPro: 'Yükselen ABD 10Y reel getirisi ve güçlü DXY altının fırsat maliyetini artırır.'
+    },
+    {
+      id: 'fx_usd_eur',
+      label: 'Döviz & Eurobond Zırhı',
+      icon: '💵',
+      assetKeys: ['doviz-usd', 'doviz-eur', 'doviz-sepet', 'eurobond-tr2030', 'eurobond-emb'],
+      upPlain: 'Belirsizlik veya kur hareketinde döviz ve USD kuponlu Eurobond alım gücünü korur.',
+      downPlain: 'Yüksek TL reel faizi ve yabancı girişi kuru yatay tutar, TL sabit getiri öne geçer.',
+      upPro: 'Kur şokunda döviz zırh olur; CDS düştüğünde ise T.C. Eurobondları hem USD kupon hem fiyat artışı yazar.',
+      downPro: 'Güçlü TL carry-trade ortamında boş döviz tutmak yüksek TL faizine göre fırsat maliyeti doğurur.'
+    },
+    {
+      id: 'fixed_sukuk_bond',
+      label: '%0 Vergili Sukuk, DİBS & PPF',
+      icon: '💧',
+      assetKeys: ['kira-sertifikasi-sukuk', 'dibs-tahvil', 'para-piyasasi-fonu', 'gunluk-vadeli', 'bes-emeklilik', 'abd-etf-tlt'],
+      upPlain: 'Faiz yüksekken risksiz aylık gelir verir; faiz inmeye başlarken uzun tahvil (DİBS/TLT) ekstra değer kazanır.',
+      downPlain: 'Enflasyon beklenmedik şekilde fırlarsa sabit TL getirinin alım gücü zorlanır.',
+      upPro: 'Yüksek reel faizde %0 stopajlı Kamu Sukuk/PPF nakdi korur; faiz indiriminde durasyon (DİBS/TLT) sermaye kazancı üretir.',
+      downPro: 'Enflasyon şoku ve yeniden fiyatlama tahvil fiyatını (negatif durasyon) aşağı çeker.'
+    },
+    {
+      id: 'us_ai_semis',
+      label: 'ABD Yapay Zekâ & Çip Devleri',
+      icon: '🤖',
+      assetKeys: ['kuresel-hisse-nvda', 'kuresel-hisse-msft', 'kuresel-hisse-tsm', 'kuresel-hisse-amd', 'kuresel-hisse-avgo', 'abd-nasdaq-qqq', 'tefas-aft'],
+      upPlain: 'Yapay zekâ yatırımları ve ucuz dolar (FED indirimi) teknoloji ve çip devlerini uçurur.',
+      downPlain: 'Yüksek ABD tahvil faizi, ticaret savaşı veya değerleme soğuması önce pahalı teknolojiyi vurur.',
+      upPro: 'Hyperscaler CAPEX harcamaları ve düşük iskonto oranı (US10Y) yüksek büyüme çarpanlarını destekler.',
+      downPro: 'Çip ihracat kısıtları, tarife savaşı ve yükselen ABD 10Y faizi uzun durasyonlu büyüme hisselerini ezer.'
+    },
+    {
+      id: 'us_broad_defensive',
+      label: 'ABD Dev Şirketler & Temettü ETF',
+      icon: '🇺🇸',
+      assetKeys: ['abd-sp500-spy', 'abd-etf-voo', 'kuresel-hisse-brkb', 'kuresel-hisse-aapl', 'kuresel-hisse-mcd', 'abd-etf-schd', 'tefas-afa'],
+      upPlain: 'Küresel büyüme ve dengeli faiz ortamında ABD devleri dolar bazında istikrarlı büyür.',
+      downPlain: 'Küresel ticaret savaşı veya sert resesyon korkusunda dünya borsaları nefes almak için geri çekilir.',
+      upPro: 'Yüksek ROIC’li S&P 500 ve Buffett tarzı nakit kaleleri uzun vadede USD + kur bileşik getirisi üretir.',
+      downPro: 'Küresel tarife misillemeleri ve daralan kâr marjları küresel endeks çarpanlarını sıkıştırır.'
+    },
+    {
+      id: 'crypto_risk',
+      label: '7/24 Kripto & Dijital Varlıklar',
+      icon: '₿',
+      assetKeys: ['kripto-btc', 'kripto-eth', 'kripto-sol', 'kripto-avax', 'kripto-link'],
+      upPlain: 'FED para musluğunu açtığında ve kurumsal ETF akını hızlandığında kripto en hızlı tepkiyi verir.',
+      downPlain: 'Kriz, şahin FED veya kaldıraç tasfiyesinde en sert düşüş önce kriptoda yaşanır.',
+      upPro: 'Küresel M2 likidite genişlemesi ve spot ETF net girişleri yüksek beta kripto varlıkları yukarı taşır.',
+      downPro: 'Likidite sıkılaşması ve zorunlu kaldıraç (long squeeze) tasfiyeleri çift haneli geri çekilme yaratır.'
+    },
+    {
+      id: 'commodities_industrial',
+      label: 'Bakır, Doğalgaz & Küresel Emtia',
+      icon: '⚙️',
+      assetKeys: ['emtia-bakir-cper', 'emtia-dogalgaz-ung', 'ons-platin', 'tefas-tge', 'abd-etf-eem'],
+      upPlain: 'Çin fabrikaları gaza bastığında, elektrikli araçlar ve şebeke büyüdüğünde bakır ve sanayi metalleri sıçrar.',
+      downPlain: 'Küresel resesyon ve ticaret savaşı fabrika çarklarını yavaşlatıp sanayi metallerini aşağı çeker.',
+      upPro: 'Dr. Copper (Bakır) küresel imalat PMI ve Çin altyapı teşvikinin en saf öncü göstergesidir.',
+      downPro: 'Küresel talep daralması ve güçlü Dolar (DXY) sanayi metalleri üzerinde doğrudan baskı kurar.'
+    }
+  ];
+
+  const ORGANISM_TRIGGERS = [
+    // --- 1. JEOPOLİTİK & SAVAŞ ---
+    {
+      id: 'war_mideast',
+      cat: 'Jeopolitik',
+      icon: '⚔️',
+      title: 'Bölgesel Savaş & Hürmüz Gerilimi',
+      shortTitle: 'Savaş Gerilimi',
+      keywords: ['savaş', 'savas', 'çatışma', 'catisma', 'füze', 'fuze', 'hürmüz', 'hurmuz', 'ortadoğu', 'ortadogu', 'iran', 'israil', 'gerilim', 'kriz', 'jeopolitik'],
+      plainImmediate: 'Tankerler tedirgin olur: İlk dakikada Petrol ve Altın fırlar, uçak ve turizm hisseleri hızla geri çekilir.',
+      proImmediate: 'Jeopolitik risk primi (GPR) sıçrar; Brent ve XAUUSD yukarı boşluk açarken havacılık, EM tahvilleri ve yüksek beta risk varlıkları satılır.',
+      masterMove: 'İlk şokta herkes yalnız altına bakarken, 2. halkada savunma sanayii (ASELS, PLTR) siparişleri büyür; petrol kalıcı yükselirse 3 ay sonra market rafı ve tarım enflasyonu hızlanır.',
+      vec: { gold_metals: 9, defense_tech: 9, refinery_oil: 7, fx_usd_eur: 5, airlines_travel: -9, banks_credit: -5, real_estate_gyo: -4, crypto_risk: -5, us_broad_defensive: -3 }
+    },
+    {
+      id: 'strait_redsea',
+      cat: 'Jeopolitik',
+      icon: '🚢',
+      title: 'Kızıldeniz / Boğaz & Navlun Krizi',
+      shortTitle: 'Navlun Krizi',
+      keywords: ['kızıldeniz', 'kizildeniz', 'süveyş', 'suveys', 'boğaz', 'bogaz', 'navlun', 'gemi', 'konteyner', 'lojistik', 'tedarik'],
+      plainImmediate: 'Gemiler Afrika’yı dolaşmak zorunda kalır: Nakliye 3 kat pahalanır, rafineri ve Avrupa’ya yakın Türk ihracatçısı avantaj kazanır!',
+      proImmediate: 'Baltık/Şanghay konteyner navlun endeksi patlar; Asya tedariki uzarken yakın coğrafya (Nearshoring) Türk sanayisi ve enerji navlunu öne çıkar.',
+      masterMove: 'Herkes nakliye pahalılığından korkarken, 2. halkada Avrupalı devler Çin yerine 3 günde tırla mal gelen Türk fabrikalarına (FROTO, ARCLK, tekstil/çelik) sipariş kaydırır!',
+      vec: { refinery_oil: 6, gold_metals: 5, exporters_auto: 5, food_retail: 3, agro_drought_risk: 4, airlines_travel: -4, us_broad_defensive: -2 }
+    },
+    {
+      id: 'peace_ceasefire',
+      cat: 'Jeopolitik',
+      icon: '🕊️',
+      title: 'Bölgesel Ateşkes & Barış Anlaşması',
+      shortTitle: 'Barış & Ateşkes',
+      keywords: ['barış', 'baris', 'ateşkes', 'ateskes', 'anlaşma', 'anlasma', 'yumuşama', 'yeniden inşa'],
+      plainImmediate: 'Korku dağılır: Uçaklar tam kapasite uçar, çimento-çelik yeniden inşa umuduyla fırlar, altındaki savaş primi gevşer.',
+      proImmediate: 'Jeopolitik risk primi çözülür; havacılık, turizm, çimento/çelik (yeniden inşa) ve BIST bankaları sert ralli yaparken petrol ve altın prim verir.',
+      masterMove: 'İlk gün havayolları koşar; 2. halkada asıl dev ihale savaş sonrası bölgeyi yeniden kuracak çimento, cam, çelik ve müteahhitlik (OYAKC, ENKAI, EREGL, SISE) kasasına akar!',
+      vec: { airlines_travel: 9, construction_steel_cement: 8, banks_credit: 6, exporters_auto: 5, real_estate_gyo: 4, refinery_oil: -5, gold_metals: -4, defense_tech: -4 }
+    },
+    {
+      id: 'us_tariffs_tradewar',
+      cat: 'Jeopolitik',
+      icon: '🛃',
+      title: 'ABD Gümrük Tarifeleri & Ticaret Savaşı',
+      shortTitle: 'Tarife Savaşı',
+      keywords: ['tarife', 'gümrük', 'gumruk', 'ticaret savaşı', 'trump', 'vergi duvarı', 'ambargo', 'kota'],
+      plainImmediate: 'Ülkeler birbirine gümrük duvarı örer: Küresel ticaret yavaşlar, güvenli liman Altın ve Dolar güçlenir; Çin/çip ihracatçıları sarsılır.',
+      proImmediate: 'Tarife şoku ithal enflasyonu tetikler, DXY güçlenir; Çin/EM (EEM) ve küresel tedarik zinciri bağımlı teknoloji/otomotiv hisseleri baskılanır.',
+      masterMove: 'Tarifeler Çin’i zorlarken, 2. halkada ABD iç pazarına üretim yapan şirketler ile düşük tarifeli alternatif üretim üsleri ve fiziki altın uzun vadede kazanır.',
+      vec: { gold_metals: 7, fx_usd_eur: 6, fixed_sukuk_bond: 3, us_ai_semis: -6, commodities_industrial: -6, exporters_auto: -5, us_broad_defensive: -4, crypto_risk: -3 }
+    },
+    {
+      id: 'nato_defense_boom',
+      cat: 'Jeopolitik',
+      icon: '🛰️',
+      title: 'Küresel Savunma & İHA Bütçe Patlaması',
+      shortTitle: 'Savunma Patlaması',
+      keywords: ['savunma', 'nato', 'iha', 'siha', 'radar', 'aselsan', 'ordu', 'silah', 'bütçe', 'mühimmat'],
+      plainImmediate: 'Ülkeler güvenlik harcamasını artırır: Savunma elektroniği, İHA, uydu ve yapay zekâ istihbarat şirketlerine yıllarca sürecek sipariş yağar.',
+      proImmediate: 'Avrupa/NATO GSYH savunma payının %3+’a çıkmasıyla ASELS, ALTNY, PLTR gibi firmaların USD bazlı bakiye sipariş (backlog) görünürlüğü katlanır.',
+      masterMove: 'Sadece nihai savunma şirketleri değil; 2. halkada özel alaşım çelik, çip (TSM/NVDA) ve siber güvenlik altyapısı da sessizce rekor kâr yazar.',
+      vec: { defense_tech: 10, us_ai_semis: 4, commodities_industrial: 3, gold_metals: 3 }
+    },
+
+    // --- 2. ENERJİ & EMTİA ---
+    {
+      id: 'oil_spike',
+      cat: 'Enerji & Emtia',
+      icon: '🛢️',
+      title: 'Petrol Sıçraması (+%35 Brent · Mazot Şoku)',
+      shortTitle: 'Petrol Sıçraması',
+      keywords: ['petrol', 'brent', 'mazot', 'benzin', 'akaryakıt', 'akaryakit', 'opec', 'varil', 'enerji art'],
+      plainImmediate: 'Varil fiyatı fırlar: Petrol/rafineri (TUPRS) kazanırken uçak yakıtı pahalandığı için havayolları (THYAO/PGSUS) anında sıkışır.',
+      proImmediate: 'Brent +%35 şokunda rafineri stok kazancı ve enerji fonları (BNO, AES) ralli yapar; havayolu CASK ve cari açık baskısıyla faiz indirimi gecikir.',
+      masterMove: 'Mazot pahalanınca domatesi tarladan markete getiren kamyonun da masrafı artar! 2 ay sonra gıda enflasyonu yükselir, faiz yüksek kalır -> Sigorta ve %0 Sukuk güçlenir.',
+      vec: { refinery_oil: 10, gold_metals: 4, fx_usd_eur: 4, insurance_float: 3, airlines_travel: -9, banks_credit: -4, exporters_auto: -3, food_retail: -2, construction_steel_cement: -3 }
+    },
+    {
+      id: 'oil_crash',
+      cat: 'Enerji & Emtia',
+      icon: '⛽',
+      title: 'Petrol Çöküşü (-%30 Brent · Ucuz Yakıt)',
+      shortTitle: 'Petrol Düşüşü',
+      keywords: ['petrol düş', 'ucuz petrol', 'ucuz yakıt', 'mazot düş', 'enerji ucuz', 'petrol çök'],
+      plainImmediate: 'Mazot ve uçak yakıtı ucuzlar: Havayolları bayram eder, Türkiye’nin enerji faturası düşer, enflasyon ve faiz rahatlar!',
+      proImmediate: 'Enerji ithalatçısı Türkiye’de cari açık hızla daralır; THYAO/PGSUS marjları patlar, dezenflasyon hızlandığı için DİBS ve Bankalar ralli yapar.',
+      masterMove: 'Ucuz petrol Türkiye için gizli faiz indirimidir! 2. halkada enerji faturası hafifleyen cam, çimento ve nakliye şirketleri sessizce kâr patlaması yapar.',
+      vec: { airlines_travel: 10, banks_credit: 6, fixed_sukuk_bond: 5, construction_steel_cement: 5, food_retail: 4, exporters_auto: 4, refinery_oil: -8, commodities_industrial: -4 }
+    },
+    {
+      id: 'natgas_spike',
+      cat: 'Enerji & Emtia',
+      icon: '🔥',
+      title: 'Doğalgaz & Kış Enerji Krizi',
+      shortTitle: 'Doğalgaz Krizi',
+      keywords: ['doğalgaz', 'dogalgaz', 'gaz', 'kış', 'kis', 'botaş', 'botas', 'ttf', 'elektrik zam', 'enerji kriz'],
+      plainImmediate: 'Kış sert geçip gaz pahalanınca doğalgaz emtiası ve güneş/elektrik üreticileri güçlenir; fırınları 24 saat yanan cam/çimento zorlanır.',
+      proImmediate: 'TTF/NYMEX doğalgaz sıçraması PTF elektrik fiyatını yukarı çeker; yenilenebilir üreticiler primlenirken yoğun gaz kullanan cam, seramik ve gübre marjı sıkışır.',
+      masterMove: 'Avrupa’da doğalgaz krizi çıkınca Avrupalı cam/çelik fabrikaları fırın kapatır; 2. halkada enerjisi daha ucuz olan güneş paneli (GES) yatırımları ve alternatif tedarik hızlanır.',
+      vec: { commodities_industrial: 7, refinery_oil: 6, grid_energy_solar: 5, gold_metals: 3, construction_steel_cement: -7, food_retail: -2 }
+    },
+    {
+      id: 'gold_surge',
+      cat: 'Enerji & Emtia',
+      icon: '🪙',
+      title: 'Küresel Altın Rallisi (Merkez Bankaları Alımda)',
+      shortTitle: 'Altın Rallisi',
+      keywords: ['altın', 'altin', 'ons', 'çeyrek', 'ceyrek', 'sarrafiye', 'darphane', 'merkez bankası altın'],
+      plainImmediate: 'Dünya merkez bankaları kağıt para yerine fiziki altın toplar: Gram, Çeyrek, Ata altını ve Gümüş hızlı yükselir!',
+      proImmediate: 'XAUUSD rekor kırarken fiziki altın/sarrafiye (%0 vergi), GLD ve altın maden/fonları parlar; ALTIN.S1 hava parası makası açılabilir, fiziki kapı öne çıkar.',
+      masterMove: 'Altın sert koştuğunda kalabalık geç kalıp pahalı sertifikaya (ALTIN.S1) saldırır; 2. halkada usta yatırımcı fiziki makasa bakar ve arkadan koşan Gümüş’ü (altın/gümüş rasyosu) izler.',
+      vec: { gold_metals: 10, commodities_industrial: 5, fx_usd_eur: 3, fixed_sukuk_bond: -2 }
+    },
+    {
+      id: 'copper_ev_boom',
+      cat: 'Enerji & Emtia',
+      icon: '🔌',
+      title: 'Bakır & Batarya Metali Sıkışması',
+      shortTitle: 'Bakır & Şebeke',
+      keywords: ['bakır', 'bakir', 'maden', 'lityum', 'batarya', 'kablo', 'şebeke', 'sebeke', 'trafo'],
+      plainImmediate: 'Her elektrikli araba, rüzgar türbini ve yapay zekâ binası tonlarca bakır ister: Bakır ve elektrik altyapı devleri öne çıkar!',
+      proImmediate: 'Maden arz açığı karşısında veri merkezi + EV talebi COMEX Bakır (CPER) ve şebeke/trafo üreticilerini (ASTOR, ENJSA) yapısal yukarı taşır.',
+      masterMove: 'Bakırın lakabı "Ekonomi Doktoru"dur: Bakır yükseliyorsa dünya sanayisi ısınıyor demektir; 2. halkada kablocular, trafo üreticileri ve Avustralya Doları (AUD) güçlenir.',
+      vec: { commodities_industrial: 10, grid_energy_solar: 7, us_ai_semis: 5, gold_metals: 4 }
+    },
+    {
+      id: 'wheat_drought',
+      cat: 'Enerji & Emtia',
+      icon: '☀️',
+      title: 'Kuraklık, Baraj Düşüşü & Buğday Krizi',
+      shortTitle: 'Kuraklık & Gıda',
+      keywords: ['kuraklık', 'kuraklik', 'baraj', 'su', 'yağış', 'yagis', 'buğday', 'bugday', 'tarım', 'tarim', 'gıda', 'gida', 'hasat'],
+      plainImmediate: 'Yağmur yağmaz, barajlar düşer: Buğday ve tarım emtiaları yükselir; ucuz su elektriği (HES) azaldığı için faturalar artar.',
+      proImmediate: 'DSİ baraj doluluğu düşünce HES üretimi daralıp doğalgaz santralleri devreye girer; 3–6 ay gecikmeyle gıda TÜFE sıçrar, TCMB faizi yüksek tutar.',
+      masterMove: 'Kuraklıkta borçlu gıda fabrikası hammaddeye para yetiştiremez; 2. halkada raf fiyatını anında güncelleyen peşin kasalı marketler (BIMAS/MGROS) ve tarım fonları (DBA/WEAT) ayakta kalır.',
+      vec: { agro_drought_risk: 10, food_retail: 5, fixed_sukuk_bond: 3, insurance_float: 2, banks_credit: -3, airlines_travel: -2 }
+    },
+    {
+      id: 'coffee_agro_shock',
+      cat: 'Enerji & Emtia',
+      icon: '☕',
+      title: 'Küresel Kahve, Kakao & Gıda Tedarik Şoku',
+      shortTitle: 'Kahve & Tarım Şoku',
+      keywords: ['kahve', 'kakao', 'şeker', 'seker', 'brezilya', 'el nino', 'iklim', 'rekolte'],
+      plainImmediate: 'Brezilya’da don/kuraklık olunca dünya kahve ve tarım fiyatları fırlar; kafe zincirlerinin maliyetleri şişerken emtia yatırımcısı kazanır.',
+      proImmediate: 'El Niño kaynaklı arz daralması ICE Kahve (KC1!) ve DBA tarım sepetini sert yukarı taşır; sabit menülü restoran zincirleri marj baskısı yaşar.',
+      masterMove: 'Tarım şoku küresel gıda enflasyonunu inatçı kılar; 2. halkada güçlü marka fiyatlama gücüne sahip küresel devler (KO, MCD) zammı yansıtıp nakit akışını korur.',
+      vec: { agro_drought_risk: 9, food_retail: 3, us_broad_defensive: 2, gold_metals: 2 }
+    },
+    {
+      id: 'silver_solar_squeeze',
+      cat: 'Enerji & Emtia',
+      icon: '🥈',
+      title: 'Gümüş & Güneş Paneli (GES) Arz Darboğazı',
+      shortTitle: 'Gümüş & GES Şoku',
+      keywords: ['gümüş', 'gumus', 'güneş', 'gunes', 'ges', 'panel', 'solar', 'yenilenebilir'],
+      plainImmediate: 'Güneş panellerinin içinde bolca gümüş vardır: GES patlaması yaşandığında Gümüş altından bile hızlı koşabilir!',
+      proImmediate: 'Fotovoltaik hücre talebi küresel gümüş arzının %20+’sini emerken XAGUSD (SLV, Gram Gümüş) yüksek betalı yükseliş gösterir.',
+      masterMove: 'Gümüş hem altın gibi güvenli liman hem bakır gibi sanayi metalidir; 2. halkada altın/gümüş rasyosu 80’in üstündeyken gümüşün yetişme rallisi çok sert olur.',
+      vec: { gold_metals: 9, grid_energy_solar: 8, commodities_industrial: 6 }
+    },
+
+    // --- 3. MERKEZ BANKALARI, FAİZ & KUR ---
+    {
+      id: 'tcmb_rate_cut',
+      cat: 'Faiz & Kur',
+      icon: '📉',
+      title: 'TCMB Faiz İndirim Döngüsü (Bahar Başlangıcı)',
+      shortTitle: 'TCMB Faiz İndirimi',
+      keywords: ['faiz indir', 'faiz düş', 'tcmb indir', 'ppk indir', 'gevşeme', 'ucuz kredi', 'bahar'],
+      plainImmediate: 'Kredi ucuzlamaya başlar: Bankalar, Konut GYO’ları, Otomotiv ve Borsa İstanbul canlanır; mevduat faizi yavaşça düşer.',
+      proImmediate: 'TCMB politika faizi inerken bankaların net faiz marjı (NIM) genişler, uzun vadeli %0 vergili DİBS tahvilleri değerlenir, GYO iskontoları kapanır.',
+      masterMove: 'PPF faizi her indirimde ertesi gün düşer! 2. halkada usta yatırımcı faiz inmeden hemen önce uzun vadeli sabit %0 DİBS/Sukuk ile GYO/Banka tohumunu ekmiş olur.',
+      vec: { banks_credit: 10, real_estate_gyo: 10, construction_steel_cement: 7, exporters_auto: 6, fixed_sukuk_bond: 4, insurance_float: -4 }
+    },
+    {
+      id: 'tcmb_rate_hike',
+      cat: 'Faiz & Kur',
+      icon: '📈',
+      title: 'TCMB Sert Faiz Artışı & Sıkı Para (Nakit Kral)',
+      shortTitle: 'TCMB Faiz Artışı',
+      keywords: ['faiz art', 'sıkı para', 'siki para', 'tcmb art', 'ppk art', 'kredi sık', 'mevduat yüksek'],
+      plainImmediate: 'Kredi pahalanır, mevduat ve Sukuk getirisi parlar: Sigorta kasaları ve %0 vergili Kamu Sukuk kazanırken borçlu şirketler sıkışır.',
+      proImmediate: 'Pozitif reel TL faizi kuru sakinleştirir; Kamu Sukuk, PPF, Günlük Vadeli ve nakit havuzlu Sigorta (TURSG) parlar; borçlu sanayi ve GYO baskılanır.',
+      masterMove: 'Herkes borsadan kaçarken borcu sıfır, kasası nakit dolu fabrikalar da ucuza düşer; 2. halkada %0 Sukuk geliriyle her ay bu ucuz kaleleri kademeli toplamak servet kurar.',
+      vec: { fixed_sukuk_bond: 9, insurance_float: 9, food_retail: 3, real_estate_gyo: -9, banks_credit: -5, construction_steel_cement: -6, exporters_auto: -3 }
+    },
+    {
+      id: 'fed_rate_cut',
+      cat: 'Faiz & Kur',
+      icon: '🇺🇸',
+      title: 'FED Faiz İndirimi & Küresel Dolar Bolluğu',
+      shortTitle: 'FED Faiz İndirimi',
+      keywords: ['fed indir', 'fed faiz düş', 'powell', 'dolar bol', 'abd faiz düş', 'likidite'],
+      plainImmediate: 'Dünyanın para musluğu açılır: Altın, Gümüş, Bitcoin, ABD Teknoloji hisseleri ve T.C. Eurobondları aynı anda nefes alır!',
+      proImmediate: 'ABD 10Y tahvil faizi ve DXY geriler; uzun tahvil (TLT), Altın (GLD), Nasdaq (QQQ/NVDA), Kripto (BTC) ve gelişen ülke Eurobond/hisseleri (EEM/EMB) ralli yapar.',
+      masterMove: 'FED indirdiğinde küresel fonlar yüksek getiri aramak için Türkiye gibi gelişen piyasalara akar; 2. halkada BIST-30 devleri ve T.C. 2034 Eurobond çifte kazanç yazar!',
+      vec: { us_ai_semis: 9, gold_metals: 8, crypto_risk: 9, us_broad_defensive: 7, fixed_sukuk_bond: 7, fx_usd_eur: 5, banks_credit: 5, commodities_industrial: 6 }
+    },
+    {
+      id: 'fed_hawkish_dxy',
+      cat: 'Faiz & Kur',
+      icon: '🦅',
+      title: 'FED Şahin Duruş & ABD 10Y / DXY Sıçraması',
+      shortTitle: 'Şahin FED & DXY',
+      keywords: ['fed art', 'şahin fed', 'sahin fed', 'dxy', 'abd 10y', 'tahvil faizi art', 'dolar güçlen'],
+      plainImmediate: 'Dünyada dolar kıtlaşır ve pahalanır: Önce kripto ve pahalı teknoloji hisseleri sarsılır; Nakit Dolar ve savunmacı devler (BRK.B) korur.',
+      proImmediate: 'US10Y sıçraması tüm varlıkların iskonto oranını yükseltir; yüksek beta kripto, TLT ve pahalı teknoloji satış yerken USD/TRY ve nakit kaleleri direnir.',
+      masterMove: 'Şahin FED fırtınasında panik satışıyla ucuzlayan nakit üreten ABD devleri (GOOGL, MSFT, SCHD) ve dolar kuponlu Eurobondlar 2. halkada en büyük uzun vadeli fırsatı verir.',
+      vec: { fx_usd_eur: 7, insurance_float: 3, crypto_risk: -9, us_ai_semis: -7, fixed_sukuk_bond: -5, gold_metals: -4, commodities_industrial: -5, us_broad_defensive: -4 }
+    },
+    {
+      id: 'usdtry_shock',
+      cat: 'Faiz & Kur',
+      icon: '💵',
+      title: 'Dolar/TL Hızlı Yükselişi (Kur Şoku)',
+      shortTitle: 'Dolar/TL Şoku',
+      keywords: ['dolar art', 'dolar fırl', 'kur şok', 'kur art', 'tl değer kaybet', 'devalüasyon', 'döviz yüksel'],
+      plainImmediate: 'Boş TL nakdin alım gücü hızla erir: Altın, Döviz, ABD hisseleri, Eurobond ve döviz kazanan ihracatçılar (FROTO, THYAO, ASELS) kalkan olur!',
+      proImmediate: 'USD/TRY sıçramasında FX/Altın/USD ETF/Eurobond birebir TL kazancı yazar; net döviz fazlası olan ihracatçılar pozitif, döviz borçlusu iç piyasa şirketleri negatif ayrışır.',
+      masterMove: 'Kur şokundan 2 gün sonra herkes döviz bürosunda yüksek makas öderken, 2. halkada bilançosunda net döviz fazlası bulunan ucuz ihracatçı fabrikalar hem kur hem kâr artışı yazar.',
+      vec: { fx_usd_eur: 10, gold_metals: 10, us_broad_defensive: 8, us_ai_semis: 8, exporters_auto: 8, defense_tech: 7, refinery_oil: 6, crypto_risk: 6, fixed_sukuk_bond: -6, banks_credit: -4 }
+    },
+    {
+      id: 'eur_usd_rally',
+      cat: 'Faiz & Kur',
+      icon: '💶',
+      title: 'Euro/Dolar Paritesi Yükselişi (EUR Güçleniyor)',
+      shortTitle: 'Euro Parite Rallisi',
+      keywords: ['euro', 'parite', 'eur/usd', 'eurusd', 'avrupa para'],
+      plainImmediate: 'Türk fabrikaları hammaddeyi Dolarla alıp Avrupa’ya Euro ile satar: Euro güçlenince ihracatçının kasasında ekstra kâr oluşur!',
+      proImmediate: 'EUR/USD yükselişi USD maliyet / EUR gelir yapısına sahip otomotiv ve beyaz eşya devlerinde (FROTO, TOASO, ARCLK, SISE) brüt marjı doğrudan genişletir.',
+      masterMove: 'Sadece Euro almak yerine, 2. halkada Euro geliri yüksek Türk sanayi devlerine ortak olmak hem parite kazancı hem temettü akışı sağlar.',
+      vec: { exporters_auto: 9, fx_usd_eur: 6, gold_metals: 5, construction_steel_cement: 4, commodities_industrial: 4 }
+    },
+    {
+      id: 'credit_upgrade_cds',
+      cat: 'Faiz & Kur',
+      icon: '🏆',
+      title: 'Türkiye Kredi Notu Artışı & CDS 200 Altı',
+      shortTitle: 'Not Artışı & Yabancı',
+      keywords: ['kredi notu', 'moody', 'fitch', 's&p', 'cds', 'yabancı yatırımcı', 'yabanci fon', 'not art'],
+      plainImmediate: 'Dünyanın dev fonları Türkiye’ye güvenip para getirir: İlk kapı olan Bankalar, Holdingler (KCHOL, SAHOL) ve T.C. Eurobondları sıçrar!',
+      proImmediate: '5Y CDS 200 bp altına indikçe pasif/aktif yabancı fonlar en likit BIST-30 (GARAN, AKBNK, KCHOL, THYAO, BIMAS) ve uzun vadeli DİBS/Eurobond alır.',
+      masterMove: 'Yabancı girişinde borsa işlem hacmi 2–3 katına çıkar; 2. halkada bu hacimden komisyon toplayan aracı kurumlar (ISMEN) ve holding NAD iskontosu sessizce patlar!',
+      vec: { banks_credit: 10, fixed_sukuk_bond: 8, real_estate_gyo: 7, airlines_travel: 6, exporters_auto: 6, food_retail: 5, fx_usd_eur: -3 }
+    },
+    {
+      id: 'inflation_hot',
+      cat: 'Faiz & Kur',
+      icon: '🔥',
+      title: 'Beklenti Üstü TÜFE / Mutfak Enflasyonu',
+      shortTitle: 'Yüksek Enflasyon',
+      keywords: ['enflasyon', 'tüfe', 'tufe', 'zam', 'pahalılık', 'fiyat art', 'mutfak'],
+      plainImmediate: 'Paranın alım gücü hızla düşer: Etiketini anında güncelleyen marketler, fiziki altın ve %0 Sukuk korur; faiz indirimi ertelenir.',
+      proImmediate: 'Yapışkan hizmet/gıda TÜFE’si TCMB’yi sıkı tutar; reel varlıklar (Altın, BIMAS/MGROS) ve yüksek faizden beslenen Sigorta/Sukuk öne çıkar, uzun tahvil zorlanır.',
+      masterMove: 'Enflasyonda en sessiz tuzak "kağıt kârı"dır (TMS-29): 2. halkada stokla büyüyen sahte kârlardan uzak durup kasasına gerçek nakit giren şirketleri seçmek gerekir.',
+      vec: { gold_metals: 8, food_retail: 7, insurance_float: 6, fx_usd_eur: 5, fixed_sukuk_bond: -3, banks_credit: -4, real_estate_gyo: -3 }
+    },
+
+    // --- 4. REEL SEKTÖR, KONUT & TÜKETİM ---
+    {
+      id: 'urban_renewal_steel',
+      cat: 'Reel Sektör',
+      icon: '🧱',
+      title: 'Kentsel Dönüşüm & Altyapı Seferberliği',
+      shortTitle: 'Kentsel Dönüşüm',
+      keywords: ['kentsel', 'dönüşüm', 'donusum', 'inşaat', 'insaat', 'çimento', 'cimento', 'çelik', 'celik', 'demir', 'şantiye', 'altyapı'],
+      plainImmediate: 'Yüz binlerce bina yenilenir: Çimento, demir-çelik, cam, kablo ve Konut GYO fabrikaları yıllarca tam kapasite çalışır!',
+      proImmediate: 'Kamu destekli kentsel dönüşüm ve altyapı bütçesi OYAKC, NUHCM, EREGL, SISE, EKGYO gibi üreticilerde hacim ve fiyatlama gücünü destekler.',
+      masterMove: 'Bina bitince içi de döşenir! 2. halkada 12–18 ay sonra beyaz eşya, mobilya (ARCLK, YATAS) ve ev sigortaları (TURSG) dalga dalga satış rekoru kırar.',
+      vec: { construction_steel_cement: 10, real_estate_gyo: 9, grid_energy_solar: 5, banks_credit: 4, insurance_float: 4 }
+    },
+    {
+      id: 'tourism_record',
+      cat: 'Reel Sektör',
+      icon: '🏖️',
+      title: 'Rekor Turizm Sezonu (65M+ Turist Akını)',
+      shortTitle: 'Turizm Rekoru',
+      keywords: ['turizm', 'turist', 'otel', 'tatil', 'uçak', 'ucak', 'havalimanı', 'yaz sezonu', 'antalya'],
+      plainImmediate: 'Ülkeye milyarlarca Euro/Dolar sıcak nakit girer: Havayolları, havalimanları, içecek/gıda ve perakende satışları rekor kırar!',
+      proImmediate: 'Turizm cari açığı kapatıp kuru dengeler; THYAO, PGSUS, TAVHL, CCOLA, BIMAS/MGROS yaz çeyreğinde rekor FAVÖK ve nakit akışı yazar.',
+      masterMove: 'Yazın gelen döviz akını TCMB rezervlerini güçlendirir; 2. halkada kur istikrarı enflasyonu yavaşlatıp sonbaharda faiz indiriminin kapısını aralar.',
+      vec: { airlines_travel: 10, food_retail: 6, banks_credit: 4, fixed_sukuk_bond: 3, fx_usd_eur: -3 }
+    },
+    {
+      id: 'min_wage_consumption',
+      cat: 'Reel Sektör',
+      icon: '🛍️',
+      title: 'Ücret Artışı & İç Tüketim Canlanması',
+      shortTitle: 'İç Tüketim Artışı',
+      keywords: ['asgari', 'ücret', 'ucret', 'maaş', 'maas', 'tüketim', 'tuketim', 'alışveriş', 'alisveris', 'perakende'],
+      plainImmediate: 'Halkın cebine nakit girdiğinde ilk durak market, giyim, yeme-içme ve iletişim olur; ancak emek yoğun fabrikaların maaş gideri de artar.',
+      proImmediate: 'Ücret artışı ilk çeyrekte gıda perakendesi (BIMAS, MGROS, TABGD) cirosunu sıçratır; yüksek personel giderli tekstil/hizmet şirketlerinde marj baskısı yaratabilir.',
+      masterMove: 'İç talep hızlanınca enflasyon yapışkanlaşabilir; 2. halkada düşük maliyetle yüksek ciro çeviren indirim marketleri ve nakit zengini tüketim markaları ayrışır.',
+      vec: { food_retail: 8, real_estate_gyo: 3, gold_metals: 3, exporters_auto: -3, fixed_sukuk_bond: -2 }
+    },
+    {
+      id: 'eu_recession',
+      cat: 'Reel Sektör',
+      icon: '🌧️',
+      title: 'Avrupa Ekonomisinde Durgunluk (AB PMI Düşük)',
+      shortTitle: 'Avrupa Durgunluğu',
+      keywords: ['avrupa durgun', 'avrupa kriz', 'almanya kriz', 'ab resesyon', 'pmi düşük', 'ihracat düş'],
+      plainImmediate: 'Türkiye’nin en büyük müşterisi Avrupa kemer sıkarsa, Avrupa’ya araba ve beyaz eşya satan fabrikaların siparişleri yavaşlar.',
+      proImmediate: 'Euro Bölgesi imalat PMI < 47 iken otomotiv, beyaz eşya ve çelik ihracatçılarında (FROTO, TOASO, ARCLK, EREGL) hacim zayıflar; ECB faiz indirimine yönelir.',
+      masterMove: 'Avrupa durgunluğa girdiğinde ECB faiz indirmek zorunda kalır; 2. halkada küresel likidite artışı altın, ABD teknoloji ve iç pazara odaklı defansif marketleri destekler.',
+      vec: { gold_metals: 5, fixed_sukuk_bond: 4, food_retail: 3, exporters_auto: -9, construction_steel_cement: -5, commodities_industrial: -5 }
+    },
+    {
+      id: 'eu_recovery',
+      cat: 'Reel Sektör',
+      icon: '🌤️',
+      title: 'Avrupa Sanayi Toparlanması & Sipariş Akını',
+      shortTitle: 'Avrupa Toparlanması',
+      keywords: ['avrupa toparlan', 'almanya büyü', 'ab büyüme', 'pmi yüksel', 'ihracat rekor'],
+      plainImmediate: 'Avrupa fabrikaları yeniden hızlanınca Bursa, Kocaeli ve İstanbul’daki Türk otomotiv, makine ve çelik ihracatçılarına sipariş yağar!',
+      proImmediate: 'AB PMI > 50 geçişi Türk ihracatçılarında (FROTO, TOASO, ARCLK, EGEEN, SISE) kapasite kullanımını ve Euro nakit girişini hızlandırır.',
+      masterMove: 'İhracat tonajı artmadan 45 gün önce TİM il ihracat ve OSD otomotiv verisi bunu ele verir; 2. halkada ihracat lojistiği ve liman/hava kargo da birlikte büyür.',
+      vec: { exporters_auto: 10, construction_steel_cement: 6, airlines_travel: 5, commodities_industrial: 5, banks_credit: 4 }
+    },
+    {
+      id: 'china_stimulus',
+      cat: 'Reel Sektör',
+      icon: '🐉',
+      title: 'Çin Dev Ekonomik Teşvik Paketi',
+      shortTitle: 'Çin Dev Teşviki',
+      keywords: ['çin', 'cin', 'teşvik', 'tesvik', 'pekın', 'pekin', 'demir cevheri', 'asya'],
+      plainImmediate: 'Dünyanın fabrikası Çin gaza basınca Bakır, Demir-Çelik, Petrol ve Gelişen Ülke borsaları hızla yukarı fırlar!',
+      proImmediate: 'Çin mali/parasal teşviki küresel emtia talebini ateşler; Bakır (CPER), Çelik (EREGL), EEM ETF, lüks tüketim (LVMH) ve AUD güçlenir.',
+      masterMove: 'Çin teşviki dünya çelik fiyatını (HRC) yukarı çekince Çin’in ucuz çelik baskısı kalkar; 2. halkada Türk demir-çelik devleri (EREGL/ISDMR) nefes alıp marj açar!',
+      vec: { commodities_industrial: 10, construction_steel_cement: 8, refinery_oil: 6, us_broad_defensive: 4, gold_metals: 4, grid_energy_solar: 4 }
+    },
+    {
+      id: 'housing_mortgage_campaign',
+      cat: 'Reel Sektör',
+      icon: '🏠',
+      title: 'Düşük Faizli Konut Kredisi Kampanyası',
+      shortTitle: 'Konut Kredisi Kampanyası',
+      keywords: ['konut kredisi', 'ev al', 'ev fiyat', 'emlak', 'gyo', 'kira', 'tapu', 'mortgage'],
+      plainImmediate: 'Ev taksitleri erişilebilir olunca ertelenmiş konut talebi patlar: Konut GYO’ları, Çimento, Seramik ve Bankalar hızla canlanır!',
+      proImmediate: 'Sübvanse konut finansmanı konut satış adetlerini sıçratır; EKGYO, ISGYO, OPTGY, OYAKC ve konut kredisi büyüten bankalar pozitif ayrışır.',
+      masterMove: 'Ev satışları patladıktan 6 ay sonra eve giren herkes buzdolabı, koltuk ve boya alır; 2. halkada beyaz eşya ve ev eşyası satışları dalga halinde yükselir.',
+      vec: { real_estate_gyo: 10, construction_steel_cement: 8, banks_credit: 7, exporters_auto: 3 }
+    },
+
+    // --- 5. TEKNOLOJİ, YAPAY ZEKÂ, KRİPTO & SERMAYE ---
+    {
+      id: 'ai_chip_boom',
+      cat: 'Teknoloji & Sermaye',
+      icon: '🤖',
+      title: 'Yapay Zekâ & Veri Merkezi Çip Patlaması',
+      shortTitle: 'Yapay Zekâ Patlaması',
+      keywords: ['yapay zeka', 'yapay zekâ', 'ai', 'çip', 'cip', 'nvidia', 'veri merkezi', 'teknoloji', 'semiconductor', 'gpu'],
+      plainImmediate: 'Dev veri merkezleri kurulur: NVIDIA, TSMC, AMD, Microsoft ve ABD Teknoloji fonları (AFT/YAY/QQQ) uçuşa geçer!',
+      proImmediate: 'Hyperscaler AI altyapı harcamaları GPU/ASIC (NVDA, TSM, AVGO, AMD) ve bulut devlerinin (MSFT, GOOGL, AMZN) gelir büyümesini hızlandırır.',
+      masterMove: 'Her yapay zekâ veri merkezi bir şehir kadar elektrik tüketir! 2. halkada çipler kadar dev güç trafosu (ASTOR), Bakır (CPER) ve elektrik şebekesi (ENJSA) altın çağ yaşar!',
+      vec: { us_ai_semis: 10, grid_energy_solar: 8, commodities_industrial: 7, us_broad_defensive: 6, crypto_risk: 4 }
+    },
+    {
+      id: 'ai_bubble_cooloff',
+      cat: 'Teknoloji & Sermaye',
+      icon: '🧊',
+      title: 'ABD Teknoloji & Yapay Zekâ Değerleme Soğuması',
+      shortTitle: 'Teknoloji Düzeltmesi',
+      keywords: ['balon', 'teknoloji düş', 'nasdaq düş', 'düzeltme', 'duzeltme', 'çöküş', 'sakinleş'],
+      plainImmediate: 'Çok hızlı koşan pahalı teknoloji hisseleri soluklanırken para güvenli temettü devlerine (KO, BRK.B, SCHD), Altın’a ve Tahvil’e kaçar!',
+      proImmediate: 'Yüksek F/K’lı teknoloji rotasyonunda Nasdaq/yarı iletkenler geri çekilir; değer/temettü (BRK.B, SCHD, KO), TLT ve fiziki altın koruma sağlar.',
+      masterMove: 'Fırtınada teknoloji satılırken kârı ve nakdi gerçekten büyüyen devler de ucuzlar; 2. halkada kademeli Limit emirle kaliteli devleri toplamak uzun vadede kazandırır.',
+      vec: { gold_metals: 6, fixed_sukuk_bond: 6, us_broad_defensive: 3, us_ai_semis: -10, crypto_risk: -7 }
+    },
+    {
+      id: 'ev_battery_shift',
+      cat: 'Teknoloji & Sermaye',
+      icon: '🔋',
+      title: 'Elektrikli Araç (EV) & Otonom Sürüş Hızlanması',
+      shortTitle: 'Elektrikli Araç Dalgası',
+      keywords: ['elektrikli', 'ev', 'tesla', 'batarya', 'otonom', 'şarj', 'sarj', 'togg', 'otomobil'],
+      plainImmediate: 'Elektrikli arabalar yollara yayılır: Tesla, batarya metalleri (Bakır/Gümüş), şarj/trafo şebekesi ve modern otomotiv üreticileri öne çıkar!',
+      proImmediate: 'EV penetrasyonu araç başı bakır ve yarı iletken tüketimini 3 kat artırır; TSLA, NVDA, TSM, CPER, ASTOR ve elektrikli ticari araç üreten FROTO desteklenir.',
+      masterMove: 'Elektrikli araçlar benzin tüketimini uzun vadede yavaşlatırken elektrik şebekesini zorlar; 2. halkada eski yakıttan şebeke/trafo/batarya depolama altyapısına sermaye kayar.',
+      vec: { us_ai_semis: 7, grid_energy_solar: 8, commodities_industrial: 7, exporters_auto: 5, refinery_oil: -4 }
+    },
+    {
+      id: 'crypto_etf_reg',
+      cat: 'Teknoloji & Sermaye',
+      icon: '₿',
+      title: 'Kripto Kurumsal ETF Akını & Net Regülasyon',
+      shortTitle: 'Kripto ETF Akını',
+      keywords: ['kripto', 'bitcoin', 'btc', 'ethereum', 'eth', 'solana', 'etf', 'blokzincir', 'regülasyon'],
+      plainImmediate: 'Dev emeklilik ve yatırım fonları onaylı ETF’lerle Bitcoin ve büyük kriptolara girer: 7/24 Kripto piyasası güçlü ivme yakalar!',
+      proImmediate: 'Spot BTC/ETH ETF net kurumsal girişleri arz şoku oluşturur; BTC, ETH, SOL, LINK ve küresel risk iştahı (Nasdaq) pozitif ivmelenir.',
+      masterMove: 'Kripto rallisinde herkes en riskli küçük coinlere atlar; 2. halkada disiplinli yatırımcı portföyün küçük bir payıyla BTC/ETH’de kalıp kârı altın/sukukla mühürler.',
+      vec: { crypto_risk: 10, us_ai_semis: 4, gold_metals: 2 }
+    },
+    {
+      id: 'crypto_leverage_wash',
+      cat: 'Teknoloji & Sermaye',
+      icon: '🌊',
+      title: 'Kripto Kaldıraç Tasfiyesi & Likidite Şoku',
+      shortTitle: 'Kripto Tasfiye Şoku',
+      keywords: ['tasfiye', 'kaldıraç', 'kaldirac', 'kripto düş', 'likidasyon', 'panik'],
+      plainImmediate: 'Borçla (kaldıraçla) kripto alanlar zincirleme stop olur: Kripto sert düşerken Dijital Dolar (USDT), Altın ve Sukuk soğukkanlı liman olur.',
+      proImmediate: 'Long squeeze tasfiye şelalesi yüksek beta kriptolarda %15–30 geri çekilme yaratır; nakit, USDT, Altın ve %0 Sukuk portföyü korur.',
+      masterMove: 'Kaldıraçsız spotta küçük ağırlıkla bekleyen kişi zorla satmak zorunda kalmaz; 2. halkada kaldıraç temizlendikten sonra piyasa çok daha sağlıklı zemine oturur.',
+      vec: { gold_metals: 5, fixed_sukuk_bond: 5, fx_usd_eur: 4, crypto_risk: -10, us_ai_semis: -3 }
+    },
+    {
+      id: 'ipo_liquidity_wave',
+      cat: 'Teknoloji & Sermaye',
+      icon: '🏛️',
+      title: 'Borsa Halka Arz & Yatırımcı Likidite Dalgası',
+      shortTitle: 'Borsa Likidite Dalgası',
+      keywords: ['halka arz', 'ipo', 'borsa hacim', 'geri alım', 'temettü', 'temettu', 'bist ralli', 'yatırımcı sayısı'],
+      plainImmediate: 'Milyonlarca yeni hesap borsaya girer: Aracı kurumlar, yerli hisse fonları (%0 vergi), bankalar ve popüler BIST şirketlerinde hacim patlar!',
+      proImmediate: 'Bireysel yatırımcı girişi ve şirket pay geri alımları BIST hacmini ve TEFAS Hisse Yoğun Fon (MAC, IIH, ST1, NNF) girişlerini hızlandırır.',
+      masterMove: 'Kalabalık heyecanla hikayeli sığ tahtalara koşarken, 2. halkada asıl istikrarlı kârı işlem hacminden pay alan aracı kurumlar (ISMEN) ve kasası sağlam temettü şirketleri yazar.',
+      vec: { banks_credit: 7, exporters_auto: 5, food_retail: 5, defense_tech: 5, real_estate_gyo: 5, construction_steel_cement: 4 }
+    }
+  ];
+
+  // Çift / Çoklu Olay Etkileşim Sinerjileri (Organizmanın Doğrusal Olmayan Zekâsı!)
+  const ORGANISM_SYNERGIES = [
+    {
+      requires: ['war_mideast', 'oil_spike'],
+      title: '🔥 Çifte Enerji & Jeopolitik Stagflasyon Şoku',
+      plain: 'Savaş ve petrol artışı aynı anda vurduğunda hem uçaklar hem enflasyon çifte darbe yer; Altın, Rafineri ve Savunma üçlü süper kalkan olur!',
+      pro: 'Arz yönlü petrol şoku + jeopolitik risk primi küresel stagflasyon yaratır; XAUUSD, Brent/TUPRS ve ASELS/PLTR en yüksek pozitif kovaryansı verir.',
+      boost: { gold_metals: 4, refinery_oil: 4, defense_tech: 4, airlines_travel: -4, banks_credit: -3 }
+    },
+    {
+      requires: ['tcmb_rate_cut', 'housing_mortgage_campaign'],
+      title: '🏗️ Süper Konut & Kredi Baharı Sinerjisi',
+      plain: 'Faiz indirimi üzerine bir de konut kredisi kampanyası gelirse ev, GYO, çimento ve bankalar çifte motorla koşar!',
+      pro: 'Politika faizi düşüşü + sübvanse mortgage talebi NAD iskontolu GYO’lar (EKGYO/ISGYO), çimento (OYAKC) ve bankalarda çarpan genişlemesi yaratır.',
+      boost: { real_estate_gyo: 5, construction_steel_cement: 4, banks_credit: 4 }
+    },
+    {
+      requires: ['ai_chip_boom', 'copper_ev_boom'],
+      title: '⚡ Veri Merkezi & Elektrik Şebekesi Süper Döngüsü',
+      plain: 'Yapay zekâ + bakır sıkışması birleştiğinde sadece çip değil, elektriği taşıyan trafo ve bakır madenleri de altın çağa girer!',
+      pro: 'AI veri merkezi güç yoğunluğu + bakır arz açığı NVDA/TSM yanında ASTOR, CPER ve şebeke/GES zincirinde çok yıllı kâr büyümesi üretir.',
+      boost: { us_ai_semis: 3, grid_energy_solar: 5, commodities_industrial: 4 }
+    },
+    {
+      requires: ['oil_crash', 'tourism_record'],
+      title: '✈️ Havacılık Altın Çağı Sinerjisi',
+      plain: 'Hem uçak yakıtı ucuz hem turist rekor kırıyorsa havayollarının (THYAO, PGSUS) kasasına tarihin en büyük kârı akar!',
+      pro: 'Düşen yakıt CASK + rekor RASK ve yolcu doluluğu Türk havacılık hisselerinde olağanüstü FAVÖK marjı genişlemesi yaratır.',
+      boost: { airlines_travel: 6, food_retail: 2, banks_credit: 2 }
+    },
+    {
+      requires: ['fed_rate_cut', 'gold_surge'],
+      title: '✨ Küresel Likidite & Kıymetli Maden Patlaması',
+      plain: 'FED faiz indirirken merkez bankaları da altın topluyorsa Altın, Gümüş ve Kripto durdurulamaz bir dalga yakalar!',
+      pro: 'Düşen reel faiz + yapısal merkez bankası altın talebi kıymetli madenler (Altın/Gümüş) ve BTC’de güçlü boğa rejimini tetikler.',
+      boost: { gold_metals: 5, crypto_risk: 4, commodities_industrial: 3 }
+    },
+    {
+      requires: ['usdtry_shock', 'eur_usd_rally'],
+      title: '🚢 İhracatçı Çifte Kur Motoru',
+      plain: 'Hem Dolar/TL hem Euro yükselince Avrupa’ya ihracat yapan Türk fabrikaları iki taraftan birden kur kârı yazar!',
+      pro: 'EUR/TRY çarpanı hızla açılırken EUR gelirli otomotiv/sanayi (FROTO, TOASO, ARCLK, ASELS) marj ve kâr patlaması yapar.',
+      boost: { exporters_auto: 5, fx_usd_eur: 3, defense_tech: 3 }
+    },
+    {
+      requires: ['wheat_drought', 'oil_spike'],
+      title: '🌾 Mazot + Kuraklık = Mutfak Enflasyonu Çift Darbesi',
+      plain: 'Tarlada su yok, kamyonda mazot pahalı! 3 ay sonra gıda fiyatları sıçrar; tarım emtiası ve peşin kasalı marketler koruma kalkanı olur.',
+      pro: 'Enerji + tarım arz şoku gıda TÜFE’sini inatçı kılar; DBA/WEAT, BIMAS/MGROS ve Altın reel alım gücünü savunur.',
+      boost: { agro_drought_risk: 5, food_retail: 3, gold_metals: 3, banks_credit: -3 }
+    },
+    {
+      requires: ['tcmb_rate_cut', 'credit_upgrade_cds'],
+      title: '🏆 Yabancı Akını + Faiz Baharı Süper Rallisi',
+      plain: 'Not artışı yabancı fonları getirirken faiz de inmeye başlarsa BIST-30 devleri, Bankalar ve Tahviller tarihi yükseliş yakalar!',
+      pro: 'Düşen ülke CDS’i + faiz indirim döngüsü yabancı sermaye girişini hızlandırır; XBANK, KCHOL, DİBS ve Eurobond aynı anda değerlenir.',
+      boost: { banks_credit: 5, fixed_sukuk_bond: 4, real_estate_gyo: 4, exporters_auto: 3 }
+    }
+  ];
+
+  function normalizeTrSearch(s) {
+    return String(s || '')
+      .toLocaleLowerCase('tr-TR')
+      .replace(/ı/g, 'i')
+      .replace(/ğ/g, 'g')
+      .replace(/ü/g, 'u')
+      .replace(/ş/g, 's')
+      .replace(/ö/g, 'o')
+      .replace(/ç/g, 'c')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function matchOrganismTriggersFromText(text) {
+    const q = normalizeTrSearch(text);
+    if (!q || q.length < 2) return [];
+    const scored = [];
+    for (const tr of ORGANISM_TRIGGERS) {
+      let score = 0;
+      const hay = normalizeTrSearch(`${tr.title} ${tr.shortTitle} ${tr.cat}`);
+      for (const kw of tr.keywords) {
+        const nkw = normalizeTrSearch(kw);
+        if (!nkw) continue;
+        if (q.includes(nkw)) score += (nkw.length >= 5 ? 6 : 4);
+      }
+      const words = q.split(' ').filter((w) => w.length >= 3);
+      for (const w of words) {
+        if (hay.includes(w)) score += 2;
+      }
+      if (score > 0) scored.push({ id: tr.id, score });
+    }
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, 4).map((x) => x.id);
+  }
+
+  function mapAssetToOrganismChannels(asset) {
+    if (!asset) return ['us_broad_defensive'];
+    const id = String(asset.id || asset.key || '');
+    const sec = String(asset.bistRow?.sector || asset.sector || asset.subCategory || '').toLocaleLowerCase('tr-TR');
+    const name = String(asset.name || '').toLocaleLowerCase('tr-TR');
+
+    if (id.includes('altin') || id.includes('gumus') || id.includes('bilezik') || id.includes('ceyrek') || id.includes('yarim') || id.includes('tam-') || id.includes('cumhuriyet') || id === 'abd-etf-gld' || id === 'abd-etf-slv' || ['tefas-kzl', 'tefas-tta', 'tefas-gta', 'tefas-ykt', 'tefas-gum', 'tefas-gtz'].includes(id)) {
+      return ['gold_metals', 'fx_usd_eur'];
+    }
+    if (id.startsWith('doviz-') || id === 'viop-usdtry-kontrat' || id === 'kripto-usdt') {
+      return ['fx_usd_eur', 'gold_metals'];
+    }
+    if (id.startsWith('eurobond-') || ['tefas-ipv', 'tefas-gpa'].includes(id)) {
+      return ['fx_usd_eur', 'fixed_sukuk_bond'];
+    }
+    if (asset.isRateInstrument || ['tefas-ti1', 'tefas-gtl', 'tefas-ale', 'tefas-ppn', 'tefas-ktv', 'tefas-zpf', 'tefas-dzt', 'abd-etf-tlt'].includes(id)) {
+      return ['fixed_sukuk_bond'];
+    }
+    if (asset.venue === 'CRYPTO_24_7' || id.startsWith('kripto-')) {
+      return ['crypto_risk', 'us_ai_semis'];
+    }
+    if (['emtia-petrol-bno', 'tefas-aes'].includes(id) || sec.includes('petrol') || sec.includes('rafineri') || id === 'bist-tuprs') {
+      return ['refinery_oil', 'commodities_industrial'];
+    }
+    if (['emtia-tarim-dba', 'emtia-bugday-weat', 'emtia-kahve-kc'].includes(id)) {
+      return ['agro_drought_risk', 'commodities_industrial'];
+    }
+    if (['emtia-bakir-cper', 'emtia-dogalgaz-ung', 'ons-platin', 'ons-paladyum', 'tefas-tge'].includes(id)) {
+      return ['commodities_industrial', 'grid_energy_solar'];
+    }
+    if (['kuresel-hisse-nvda', 'kuresel-hisse-msft', 'kuresel-hisse-googl', 'kuresel-hisse-amzn', 'kuresel-hisse-meta', 'kuresel-hisse-tsla', 'kuresel-hisse-amd', 'kuresel-hisse-tsm', 'kuresel-hisse-avgo', 'kuresel-hisse-nflx', 'abd-nasdaq-qqq', 'fon-tematik-yari-iletken-soxx', 'tefas-aft', 'tefas-yay', 'tefas-guh'].includes(id)) {
+      return ['us_ai_semis', 'fx_usd_eur'];
+    }
+    if (id === 'kuresel-hisse-pltr' || sec.includes('savunma') || id === 'bist-asels' || id === 'halka-arz-altny') {
+      return ['defense_tech', 'exporters_auto'];
+    }
+    if (id === 'kuresel-hisse-o') {
+      return ['real_estate_gyo', 'us_broad_defensive'];
+    }
+    if (id === 'kuresel-hisse-jpm') {
+      return ['banks_credit', 'us_broad_defensive'];
+    }
+    if (asset.isForeignUsd || ['tefas-afa', 'tefas-tmg', 'tefas-afs', 'tefas-aoy'].includes(id)) {
+      return ['us_broad_defensive', 'fx_usd_eur'];
+    }
+    if (sec.includes('banka') || id === 'bist-banka' || id === 'tefas-adp' || id === 'fon-yerli-banka-zplib') {
+      return ['banks_credit', 'real_estate_gyo'];
+    }
+    if (sec.includes('sigorta') || sec.includes('emeklilik')) {
+      return ['insurance_float', 'fixed_sukuk_bond'];
+    }
+    if (sec.includes('havacılık') || sec.includes('havacilik') || sec.includes('turizm') || id === 'bist-thyao' || id === 'bist-pgsus' || id === 'bist-tavhl') {
+      return ['airlines_travel', 'exporters_auto'];
+    }
+    if (sec.includes('gyo') || sec.includes('gayrimenkul') || id.startsWith('gayrimenkul-')) {
+      return ['real_estate_gyo', 'construction_steel_cement'];
+    }
+    if (sec.includes('çimento') || sec.includes('cimento') || sec.includes('çelik') || sec.includes('celik') || sec.includes('cam') || sec.includes('metal') || sec.includes('inşaat') || sec.includes('insaat')) {
+      return ['construction_steel_cement', 'commodities_industrial'];
+    }
+    if (sec.includes('otomotiv') || sec.includes('beyaz eşya') || sec.includes('beyaz esya') || sec.includes('holding') || sec.includes('makine')) {
+      return ['exporters_auto', 'banks_credit'];
+    }
+    if (sec.includes('enerji') || sec.includes('elektrik') || sec.includes('güneş') || sec.includes('gunes') || name.includes('trafo')) {
+      return ['grid_energy_solar', 'commodities_industrial'];
+    }
+    if (sec.includes('perakende') || sec.includes('market') || sec.includes('gıda') || sec.includes('gida') || sec.includes('içecek')) {
+      return ['food_retail', 'agro_drought_risk'];
+    }
+    return ['exporters_auto', 'banks_credit'];
+  }
+
+  function simulateOrganismReaction(selectedIds = [], freeTextQuery = '') {
+    const K = global.AetherKernelV10;
+    if (!K) return null;
+    const rawIds = Array.isArray(selectedIds) ? selectedIds.filter(Boolean) : [];
+    const matchedFromQuery = freeTextQuery ? matchOrganismTriggersFromText(freeTextQuery) : [];
+    const activeIds = Array.from(new Set([...rawIds, ...matchedFromQuery]));
+    const activeTriggers = activeIds
+      .map((id) => ORGANISM_TRIGGERS.find((t) => t.id === id))
+      .filter(Boolean);
+
+    // Eğer hiç seçim yoksa canlı güncel gündem varsayılanı: Petrol + TCMB Faiz
+    const effectiveTriggers = activeTriggers.length > 0
+      ? activeTriggers
+      : [ORGANISM_TRIGGERS.find((t) => t.id === 'oil_spike'), ORGANISM_TRIGGERS.find((t) => t.id === 'tcmb_rate_cut')].filter(Boolean);
+
+    const activeIdSet = new Set(effectiveTriggers.map((t) => t.id));
+    const channelScores = {};
+    for (const ch of ORGANISM_CHANNELS) channelScores[ch.id] = 0;
+
+    for (const tr of effectiveTriggers) {
+      for (const [chId, val] of Object.entries(tr.vec || {})) {
+        if (channelScores[chId] != null) channelScores[chId] += val;
+      }
+    }
+
+    // Doğrusal olmayan çoklu-olay sinerjileri uygula
+    const activeSynergies = [];
+    for (const syn of ORGANISM_SYNERGIES) {
+      if (syn.requires.every((r) => activeIdSet.has(r))) {
+        activeSynergies.push(syn);
+        for (const [chId, val] of Object.entries(syn.boost || {})) {
+          if (channelScores[chId] != null) channelScores[chId] += val;
+        }
+      }
+    }
+
+    const scaleDiv = Math.max(1, Math.sqrt(effectiveTriggers.length));
+    const scoredChannels = ORGANISM_CHANNELS.map((ch) => {
+      const rawScore = channelScores[ch.id] || 0;
+      const estPct = Math.max(-35, Math.min(45, +(rawScore * 2.1 / scaleDiv).toFixed(1)));
+      return { ...ch, rawScore, estPct };
+    });
+
+    const winnersChannels = scoredChannels.filter((c) => c.rawScore >= 2).sort((a, b) => b.rawScore - a.rawScore).slice(0, 6);
+    const losersChannels = scoredChannels.filter((c) => c.rawScore <= -2).sort((a, b) => a.rawScore - b.rawScore).slice(0, 5);
+
+    // 2. Halka: Canlı varlık kartlarına dönüştür (753 varlıklık gerçek katalogdan!)
+    const buildAssetCards = (channels, isWinner) => {
+      const out = [];
+      const seen = new Set();
+      for (const ch of channels) {
+        let pickedForChannel = 0;
+        for (const key of ch.assetKeys) {
+          if (pickedForChannel >= 2) break;
+          const a = K.getAsset(key);
+          if (!a || seen.has(a.key)) continue;
+          seen.add(a.key);
+          pickedForChannel++;
+          out.push({
+            assetKey: a.key,
+            ticker: a.ticker,
+            name: a.name,
+            priceTL: a.priceTL,
+            isRateInstrument: a.isRateInstrument,
+            annualGrossRatePct: a.annualGrossRatePct,
+            change1D: a.change1D,
+            channelLabel: ch.label,
+            channelIcon: ch.icon,
+            estPct: ch.estPct,
+            plainWhy: isWinner ? ch.upPlain : ch.downPlain,
+            proWhy: isWinner ? ch.upPro : ch.downPro
+          });
+        }
+      }
+      return out.slice(0, isWinner ? 8 : 6);
+    };
+
+    const ring2Winners = buildAssetCards(winnersChannels, true);
+    const ring2Losers = buildAssetCards(losersChannels, false);
+
+    // 1. Halka (Anlık Tepki) ve 3. Halka (Gizli 2. Derece Usta Hamlesi)
+    const ring1ImmediatePlain = activeSynergies.length > 0
+      ? activeSynergies[0].plain
+      : effectiveTriggers.map((t) => `${t.icon} ${t.plainImmediate}`).join(' ');
+    const ring1ImmediatePro = activeSynergies.length > 0
+      ? `${activeSynergies[0].pro} | ${effectiveTriggers.map((t) => t.proImmediate).join(' ')}`
+      : effectiveTriggers.map((t) => `${t.shortTitle}: ${t.proImmediate}`).join(' · ');
+
+    const ring3MasterMoves = effectiveTriggers.map((t) => ({
+      icon: t.icon,
+      title: t.shortTitle,
+      text: t.masterMove
+    }));
+
+    // Kullanıcının GERÇEK 1.000.000 ₺ Portföyüne Canlı Etki!
+    const me = K.getActiveMember();
+    const snap = K.evaluateMemberPortfolio(me);
+    const kitchenInflationShiftPct = Math.max(0, +(
+      (activeIdSet.has('oil_spike') ? 4.5 : 0) +
+      (activeIdSet.has('usdtry_shock') ? 7.5 : 0) +
+      (activeIdSet.has('wheat_drought') ? 5.0 : 0) +
+      (activeIdSet.has('inflation_hot') ? 5.5 : 0) +
+      (activeIdSet.has('war_mideast') ? 3.5 : 0) +
+      (activeIdSet.has('strait_redsea') ? 2.5 : 0) -
+      (activeIdSet.has('oil_crash') ? 3.0 : 0)
+    ).toFixed(1));
+
+    let portfolioDeltaTL = 0;
+    const holdingImpacts = [];
+    for (const sp of snap.spotItems) {
+      const a = K.getAsset(sp.assetKey);
+      const chIds = mapAssetToOrganismChannels(a);
+      const avgPct = chIds.reduce((s, cid) => s + (scoredChannels.find((x) => x.id === cid)?.estPct || 0), 0) / Math.max(1, chIds.length);
+      let adjPct = avgPct;
+      if (sp.isViop) {
+        const dirSign = sp.viopDirection === 'SHORT' ? -1 : 1;
+        adjPct = Math.max(-95, Math.min(180, +(avgPct * dirSign * (sp.viopLeverage || 1)).toFixed(1)));
+      }
+      const dTL = Math.round(sp.netValTL * (adjPct / 100));
+      portfolioDeltaTL += dTL;
+      holdingImpacts.push({ assetKey: sp.assetKey, ticker: sp.ticker, name: sp.name, estPct: +adjPct.toFixed(1), deltaTL: dTL });
+    }
+    for (const tr of snap.tranches) {
+      const fixedPct = scoredChannels.find((x) => x.id === 'fixed_sukuk_bond')?.estPct || 0;
+      const dTL = Math.round(tr.accruedNetValueTL * (fixedPct * 0.25 / 100));
+      portfolioDeltaTL += dTL;
+      holdingImpacts.push({ assetKey: tr.assetKey, ticker: tr.assetKey === 'kira-sertifikasi-sukuk' ? 'SUKUK' : 'SABİT', name: tr.name, estPct: +(fixedPct * 0.25).toFixed(1), deltaTL: dTL });
+    }
+    holdingImpacts.sort((a, b) => Math.abs(b.deltaTL) - Math.abs(a.deltaTL));
+
+    const postNominalTL = Math.max(0, Math.round(snap.totalNetWorthTL + portfolioDeltaTL));
+    const postRealTL = Math.round(postNominalTL / (1 + kitchenInflationShiftPct / 100));
+    const realDeltaTL = postRealTL - Math.round(snap.totalNetWorthTL);
+
+    return {
+      activeTriggers: effectiveTriggers,
+      activeSynergies,
+      matchedFromQuery,
+      comboCountLabel: effectiveTriggers.length > 1 ? `${effectiveTriggers.length} Olay Birleşimi` : 'Tekil Gündem Şoku',
+      ring1ImmediatePlain,
+      ring1ImmediatePro,
+      ring2Winners,
+      ring2Losers,
+      ring3MasterMoves,
+      portfolioImpact: {
+        currentNetWorthTL: Math.round(snap.totalNetWorthTL),
+        nominalDeltaTL: Math.round(portfolioDeltaTL),
+        postNominalTL,
+        kitchenInflationShiftPct,
+        realDeltaTL,
+        holdingImpacts: holdingImpacts.slice(0, 6)
+      }
+    };
+  }
+
+  function getOrganismReflexChallenge(seed = 1) {
+    const s = Math.abs(Number(seed) || 1);
+    const t1 = ORGANISM_TRIGGERS[s % ORGANISM_TRIGGERS.length];
+    const t2 = (s % 2 === 0) ? ORGANISM_TRIGGERS[(s * 7 + 5) % ORGANISM_TRIGGERS.length] : null;
+    const ids = t2 && t2.id !== t1.id ? [t1.id, t2.id] : [t1.id];
+    const sim = simulateOrganismReaction(ids, '');
+    if (!sim || sim.ring2Winners.length === 0) return null;
+
+    const askLoser = (s % 3 === 0) && sim.ring2Losers.length > 0;
+    const correctAsset = askLoser ? sim.ring2Losers[0] : sim.ring2Winners[0];
+    const oppositePool = askLoser ? sim.ring2Winners : sim.ring2Losers;
+    const decoy1 = oppositePool[0] || { ticker: 'SUKUK', name: 'Hazine Kamu Sukuk', channelLabel: 'Sabit Getiri', plainWhy: 'Bu olayda daha dengeli/ters yönde hareket eder.' };
+    const decoy2 = oppositePool[1] || (askLoser ? sim.ring2Winners[1] : sim.ring2Losers[1]) || { ticker: 'TL NAKİT', name: 'Boş TL Nakit', channelLabel: 'Vadesiz Nakit', plainWhy: 'Olaydan doğrudan pozitif/negatif ana taşıyıcı olarak ayrışmaz.' };
+
+    const rawChoices = [
+      { id: 'A', label: `${correctAsset.channelIcon || '🎯'} ${correctAsset.name} (${correctAsset.channelLabel})`, isCorrect: true, why: correctAsset.plainWhy },
+      { id: 'B', label: `${decoy1.channelIcon || '⚖️'} ${decoy1.name} (${decoy1.channelLabel})`, isCorrect: false, why: decoy1.plainWhy },
+      { id: 'C', label: `${decoy2.channelIcon || '🧭'} ${decoy2.name} (${decoy2.channelLabel})`, isCorrect: false, why: decoy2.plainWhy }
+    ];
+    // Deterministik karıştırma
+    const rot = s % 3;
+    const choices = [rawChoices[rot], rawChoices[(rot + 1) % 3], rawChoices[(rot + 2) % 3]].map((c, idx) => ({
+      ...c,
+      id: ['A', 'B', 'C'][idx]
+    }));
+
+    return {
+      seed: s,
+      triggerIds: ids,
+      scenarioTitle: sim.activeTriggers.map((t) => `${t.icon} ${t.shortTitle}`).join('  +  '),
+      question: askLoser
+        ? 'Bu gündem yaşandığında sence İLK HANGİ TARAF EN ÇOK ZORLANIR?'
+        : 'Bu gündem yaşandığında sence İLK HANGİ TARAF EN ÇOK GÜÇLENİR?',
+      choices,
+      masterTakeaway: sim.ring3MasterMoves[0]?.text || sim.ring1ImmediatePlain
+    };
+  }
+
+  function getAssetOrganismMap(assetOrKey) {
+    const K = global.AetherKernelV10;
+    if (!K) return null;
+    const asset = typeof assetOrKey === 'string' ? K.getAsset(assetOrKey) : assetOrKey;
+    if (!asset) return null;
+
+    const chIds = mapAssetToOrganismChannels(asset);
+    const primaryCh = ORGANISM_CHANNELS.find((c) => c.id === chIds[0]) || ORGANISM_CHANNELS[0];
+
+    const triggerScores = ORGANISM_TRIGGERS.map((tr) => {
+      let score = 0;
+      for (let i = 0; i < chIds.length; i++) {
+        const w = i === 0 ? 1.0 : 0.45;
+        score += (Number(tr.vec?.[chIds[i]]) || 0) * w;
+      }
+      return { trigger: tr, score };
+    });
+
+    const boosters = triggerScores
+      .filter((x) => x.score > 1.5)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 4)
+      .map((x) => ({
+        triggerId: x.trigger.id,
+        icon: x.trigger.icon,
+        title: x.trigger.shortTitle,
+        plainWhy: x.trigger.plainImmediate,
+        strength: Math.min(5, Math.max(1, Math.round(x.score / 2.2)))
+      }));
+
+    const headwinds = triggerScores
+      .filter((x) => x.score < -1.5)
+      .sort((a, b) => a.score - b.score)
+      .slice(0, 4)
+      .map((x) => ({
+        triggerId: x.trigger.id,
+        icon: x.trigger.icon,
+        title: x.trigger.shortTitle,
+        plainWhy: x.trigger.plainImmediate,
+        strength: Math.min(5, Math.max(1, Math.round(Math.abs(x.score) / 2.2)))
+      }));
+
+    // Kardeş (birlikte hareket eden) ve Zıt / Dengeleyici Kalkan varlıklar
+    const allyKeys = [];
+    for (const cid of chIds) {
+      const ch = ORGANISM_CHANNELS.find((c) => c.id === cid);
+      if (ch) {
+        for (const k of ch.assetKeys) {
+          if (k !== asset.key && !allyKeys.includes(k) && K.getAsset(k)) allyKeys.push(k);
+        }
+      }
+    }
+
+    const hedgeCandidates = chIds[0] === 'gold_metals'
+      ? ['kira-sertifikasi-sukuk', 'bist-garan', 'bist-thyao', 'abd-sp500-spy']
+      : (chIds[0] === 'fixed_sukuk_bond'
+        ? ['gram-altin-spot', 'bist-tuprs', 'abd-sp500-spy', 'bist-froto']
+        : (chIds[0] === 'airlines_travel'
+          ? ['bist-tuprs', 'emtia-petrol-bno', 'gram-altin-spot', 'kira-sertifikasi-sukuk']
+          : ['gram-altin-spot', 'kira-sertifikasi-sukuk', 'doviz-sepet', 'abd-etf-tlt']));
+
+    const hedgeAssets = hedgeCandidates
+      .filter((k) => k !== asset.key && K.getAsset(k))
+      .slice(0, 4)
+      .map((k) => K.getAsset(k));
+
+    return {
+      assetKey: asset.key,
+      channelLabel: primaryCh.label,
+      channelIcon: primaryCh.icon,
+      upPlain: primaryCh.upPlain,
+      downPlain: primaryCh.downPlain,
+      boosters,
+      headwinds,
+      allyAssets: allyKeys.slice(0, 4).map((k) => K.getAsset(k)).filter(Boolean),
+      hedgeAssets
+    };
+  }
+
+  // ============================================================================
+  // GERÇEK HAYAT GAYRİMENKUL (EV / ARSA / KİRA / KONUT KREDİSİ) KARAR ARACI
+  // ============================================================================
+  function simulateRealEstateDecision(params = {}) {
+    const K = global.AetherKernelV10;
+    const md = K?.getMarketData ? K.getMarketData() : {};
+    const tcmbHpiYoy = Number(md?.macro?.tcmbHpiYoy) || 25.1;
+    const tcmbPriceToRentMonths = Number(md?.macro?.tcmbPriceToRent) || 125;
+
+    const propertyPriceTL = Math.max(500000, Number(params.propertyPriceTL) || 5000000);
+    const downPaymentTL = Math.max(0, Math.min(propertyPriceTL, Number(params.downPaymentTL ?? 1500000)));
+    const loanPrincipalTL = Math.max(0, propertyPriceTL - downPaymentTL);
+    const monthlyRatePct = Math.max(0.5, Math.min(6.0, Number(params.mortgageMonthlyRatePct ?? 2.89)));
+    const termMonths = Math.max(12, Math.min(180, Number(params.termMonths ?? 120)));
+    const monthlyRentTL = Math.max(3000, Number(params.monthlyRentTL ?? 25000));
+    const annualHomeGrowthPct = Math.max(0, Math.min(80, Number(params.annualHomeGrowthPct ?? Math.round(tcmbHpiYoy))));
+    const altAnnualNetYieldPct = Math.max(5, Math.min(80, Number(params.altAnnualNetYieldPct ?? 35)));
+    const horizonYears = Math.max(1, Math.min(15, Number(params.horizonYears ?? 5)));
+
+    // Gerçek Türkiye tapu (%4) + emlakçı (%2) sürtünme maliyeti
+    const deedAndAgentCostTL = Math.round(propertyPriceTL * 0.06);
+    const initialOutlayTL = downPaymentTL + deedAndAgentCostTL;
+
+    const r = monthlyRatePct / 100;
+    const monthlyPaymentTL = loanPrincipalTL > 0
+      ? Math.round((loanPrincipalTL * r * Math.pow(1 + r, termMonths)) / (Math.pow(1 + r, termMonths) - 1))
+      : 0;
+    const totalLoanRepaymentTL = monthlyPaymentTL * termMonths;
+
+    // Kira Çarpanı & Amortisman Yılı
+    const rentMultiplierMonths = Math.round(propertyPriceTL / Math.max(1, monthlyRentTL));
+    const paybackYears = +(rentMultiplierMonths / 12).toFixed(1);
+    const grossRentYieldPct = +(((monthlyRentTL * 12) / propertyPriceTL) * 100).toFixed(1);
+
+    // Horizon sonunda (ör. 5 veya 10 yıl) Kalan Kredi Anaparası ve Net Ev Serveti
+    const evalMonths = Math.min(termMonths, horizonYears * 12);
+    let remainingDebtTL = loanPrincipalTL;
+    if (loanPrincipalTL > 0 && evalMonths < termMonths) {
+      remainingDebtTL = Math.round(
+        loanPrincipalTL * ((Math.pow(1 + r, termMonths) - Math.pow(1 + r, evalMonths)) / (Math.pow(1 + r, termMonths) - 1))
+      );
+    } else if (evalMonths >= termMonths) {
+      remainingDebtTL = 0;
+    }
+    const futureHomeValueTL = Math.round(propertyPriceTL * Math.pow(1 + annualHomeGrowthPct / 100, horizonYears));
+    const buyNetWealthTL = Math.max(0, futureHomeValueTL - remainingDebtTL);
+
+    // Alternatif Senaryo: Peşinat + Tapu/Emlakçı masrafını yatırıma koy, kirada otur; kredi taksiti ile kira arasındaki farkı her ay yatırıma ekle!
+    const mYield = Math.pow(1 + altAnnualNetYieldPct / 100, 1 / 12) - 1;
+    const mRentGrow = Math.pow(1 + Math.min(annualHomeGrowthPct, 32) / 100, 1 / 12) - 1;
+    let invPortfolioTL = initialOutlayTL;
+    let curRent = monthlyRentTL;
+    for (let m = 1; m <= horizonYears * 12; m++) {
+      invPortfolioTL *= (1 + mYield);
+      const paymentThisMonth = m <= termMonths ? monthlyPaymentTL : 0;
+      const monthlyDiff = paymentThisMonth - curRent; // Taksit kiradan büyükse artan para yatırıma eklenir; kira taksiti geçerse portföyden çekilir
+      invPortfolioTL = Math.max(0, invPortfolioTL + monthlyDiff);
+      curRent *= (1 + mRentGrow);
+    }
+    const rentAndInvestWealthTL = Math.round(invPortfolioTL);
+    const winner = buyNetWealthTL >= rentAndInvestWealthTL ? 'BUY_HOME' : 'RENT_AND_INVEST';
+    const diffTL = Math.abs(buyNetWealthTL - rentAndInvestWealthTL);
+
+    let verdictPlain = '';
+    if (winner === 'BUY_HOME') {
+      verdictPlain = `${horizonYears} yıl sonunda EV ALMAK +${fmtInt(diffTL)} ₺ daha avantajlı görünüyor! Sabit TL kredi taksiti enflasyonla yıllar içinde küçülürken evin değeri büyüyor.`;
+    } else {
+      verdictPlain = `Bu kredi faiziyle (%${monthlyRatePct}/ay) ${horizonYears} yılda KİRADA OTURUP YATIRIM YAPMAK +${fmtInt(diffTL)} ₺ önde! Peşinat + taksit farkı %${altAnnualNetYieldPct} getiride kartopu gibi büyüyor.`;
+    }
+
+    const paybackVerdict = paybackYears <= 14
+      ? `Çok Cazip (${paybackYears} yıl · TCMB Ort: ${(tcmbPriceToRentMonths / 12).toFixed(1)} yıl)`
+      : (paybackYears <= 20
+        ? `Makul / Dengeli (${paybackYears} yıl)`
+        : `Pahalı Kira Çarpanı (${paybackYears} yıl — Ev fiyatı kiraya göre şişmiş!)`);
+
+    return {
+      propertyPriceTL,
+      downPaymentTL,
+      loanPrincipalTL,
+      deedAndAgentCostTL,
+      monthlyRatePct,
+      termMonths,
+      monthlyPaymentTL,
+      totalLoanRepaymentTL,
+      monthlyRentTL,
+      rentMultiplierMonths,
+      paybackYears,
+      grossRentYieldPct,
+      paybackVerdict,
+      horizonYears,
+      futureHomeValueTL,
+      remainingDebtTL,
+      buyNetWealthTL,
+      rentAndInvestWealthTL,
+      winner,
+      diffTL,
+      verdictPlain,
+      tcmbHpiYoy,
+      altAssetKeys: ['gayrimenkul-konut-ekgyo', 'gayrimenkul-gyo-fonu-optgy', 'kira-sertifikasi-sukuk', 'gram-altin-spot']
+    };
+  }
+
   global.RealInvestmentGuide = {
     explainAsset,
     getPlainAssetVerdict,
-    getGrandmaVerdict: getPlainAssetVerdict,
     getDailyHomeBriefing,
     simulateMacroDominoWhatIf,
     simulateSingleBasketDrop,
@@ -6863,6 +8031,14 @@
     generateLiveKasaDuelRound,
     computeFreedomWheelProjection,
     CRISIS_SCENARIOS,
-    simulatePortfolioCrisis
+    simulatePortfolioCrisis,
+    // AETHER v20.0.0 Canlı Ekonomi Organizması & Gayrimenkul Karar Motoru
+    ORGANISM_TRIGGERS,
+    ORGANISM_CHANNELS,
+    matchOrganismTriggersFromText,
+    simulateOrganismReaction,
+    getOrganismReflexChallenge,
+    getAssetOrganismMap,
+    simulateRealEstateDecision
   };
 })(typeof window !== 'undefined' ? window : globalThis);

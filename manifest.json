@@ -1,14 +1,14 @@
 {
   "name": "AETHER — 1.000.000 ₺ Gerçek Yatırım Meydanı",
   "short_name": "AETHER",
-  "version": "19.0.0",
-  "description": "1.000.000 ₺ başlangıç sermayesiyle Borsa İstanbul, Kapalıçarşı, TEFAS, Sukuk ve Dünya Piyasalarında birebir gerçek kurallarla yatırım ve canlı lig uygulaması.",
+  "version": "20.0.0",
+  "description": "1.000.000 ₺ gerçek zamanlı sermayeyle Canlı Ekonomik Organizma, 753 Türk & Küresel varlık (Sarrafiye, 10 Döviz, TEFAS 30+, ABD $1 Parçalı, VİOP, Eurobond, BES %20, Kripto 7/24) ve canlı lig uygulaması.",
   "start_url": "./?source=ios-app",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#060a12",
-  "theme_color": "#060a12",
+  "background_color": "#050814",
+  "theme_color": "#050814",
   "lang": "tr-TR",
   "icons": [
     {
